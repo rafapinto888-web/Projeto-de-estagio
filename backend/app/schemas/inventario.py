@@ -43,6 +43,7 @@ class InventarioBase(BaseModel):
             raise ValueError("rede tem de ser IPv4")
         return str(rede)
 
+class InventarioCreate(InventarioBase):
     @model_validator(mode="after")
     def validar_regra_tipo_rede(self):
         # Sub-rede exige campo rede; inventario normal nao exige.
@@ -51,12 +52,13 @@ class InventarioBase(BaseModel):
         return self
 
 
-class InventarioCreate(InventarioBase):
-    pass
-
-
 class InventarioUpdate(InventarioBase):
-    pass
+    @model_validator(mode="after")
+    def validar_regra_tipo_rede(self):
+        # Sub-rede exige campo rede; inventario normal nao exige.
+        if self.tipo_inventario == TipoInventarioEnum.sub_rede and not self.rede:
+            raise ValueError("Inventario do tipo sub_rede exige uma rede valida")
+        return self
 
 
 class InventarioResponse(InventarioBase):

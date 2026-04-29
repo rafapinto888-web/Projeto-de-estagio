@@ -38,6 +38,8 @@ const el = {
   scanRede: document.getElementById("scanRede"),
   scanUser: document.getElementById("scanUser"),
   scanPass: document.getElementById("scanPass"),
+  btnToggleScanCreds: document.getElementById("btnToggleScanCreds"),
+  scanCredsRow: document.getElementById("scanCredsRow"),
   btnScan: document.getElementById("btnScan"),
   scanInfo: document.getElementById("scanInfo"),
   ativosBody: document.getElementById("ativosBody"),
@@ -97,10 +99,40 @@ const el = {
 };
 
 el.apiBase.value = store.apiBase;
+let scanCredsVisible = false;
 
 function setStatus(text, level = "ok") {
   el.globalStatus.className = `status ${level}`;
   el.globalStatus.textContent = text;
+}
+
+function syncInventarioConditionalUI() {
+  const isRede = el.invTipo.value === "sub_rede";
+  el.invRede.classList.toggle("is-hidden", !isRede);
+  el.invRede.required = isRede;
+  if (isRede) {
+    el.invRede.placeholder = "IP da rede obrigatorio (ex: 192.168.1.0/24)";
+  } else {
+    el.invRede.value = "";
+    el.invRede.placeholder = "IP da rede (ex: 192.168.1.0/24)";
+  }
+}
+
+function toggleScanCreds() {
+  scanCredsVisible = !scanCredsVisible;
+  el.scanCredsRow.classList.toggle("is-hidden", !scanCredsVisible);
+  el.btnToggleScanCreds.textContent = scanCredsVisible
+    ? "Ocultar credenciais"
+    : "Credenciais remotas";
+  if (!scanCredsVisible) {
+    el.scanUser.value = "";
+    el.scanPass.value = "";
+  }
+}
+
+function labelTipoInventario(tipo) {
+  if (tipo === "sub_rede") return "rede";
+  return tipo || "-";
 }
 
 function selectedInventarioId() {
@@ -150,21 +182,29 @@ async function refreshInventarios() {
     const tr = document.createElement("tr");
     tr.appendChild(td(String(inv.id)));
     tr.appendChild(td(inv.nome));
-    tr.appendChild(td(inv.tipo_inventario));
+    tr.appendChild(td(labelTipoInventario(inv.tipo_inventario)));
     tr.appendChild(td(inv.rede || "-"));
     tr.appendChild(td(inv.descricao || "-"));
     el.inventariosBody.appendChild(tr);
     el.ativoInventarioSelect.appendChild(option(String(inv.id), `${inv.id} - ${inv.nome}`));
   });
 
-  if (!store.selectedInventarioId && inventarios.length > 0) {
-    store.selectedInventarioId = inventarios[0].id;
+  const selectedExists = inventarios.some((inv) => inv.id === store.selectedInventarioId);
+  if (!selectedExists) {
+    store.selectedInventarioId = inventarios.length > 0 ? inventarios[0].id : null;
   }
-  if (store.selectedInventarioId) {
-    el.ativoInventarioSelect.value = String(store.selectedInventarioId);
-  }
+  el.ativoInventarioSelect.value = store.selectedInventarioId ? String(store.selectedInventarioId) : "";
   setSelectedInventarioLabel();
   el.kpiInventarios.textContent = `Inventarios: ${inventarios.length}`;
+  el.apiStatus.textContent = `Inventarios carregados: ${inventarios.length}`;
+}
+
+function validarInventarioForm() {
+  const tipo = el.invTipo.value;
+  const ipRede = el.invRede.value.trim();
+  if (tipo === "sub_rede" && !ipRede) {
+    throw new Error("Para inventario do tipo rede, o campo IP e obrigatorio.");
+  }
 }
 
 async function refreshComputadores() {
@@ -247,6 +287,7 @@ async function refreshAtivos() {
 async function handleInventarioCreate(ev) {
   ev.preventDefault();
   try {
+    validarInventarioForm();
     await inventariosApi.create({
       nome: el.invNome.value.trim(),
       descricao: el.invDesc.value.trim() || null,
@@ -264,6 +305,7 @@ async function handleInventarioUpdate() {
   const id = toNullableInt(el.invId.value);
   if (!id) return setStatus("Indica invId", "warn");
   try {
+    validarInventarioForm();
     await inventariosApi.update(id, {
       nome: el.invNome.value.trim(),
       descricao: el.invDesc.value.trim() || null,
@@ -577,6 +619,7 @@ async function handleLogsInventario() {
 async function init() {
   try {
     setStatus("A carregar...", "warn");
+    syncInventarioConditionalUI();
     await Promise.all([
       refreshInventarios(),
       refreshComputadores(),
@@ -617,6 +660,7 @@ el.testApi.addEventListener("click", async () => {
 el.inventarioForm.addEventListener("submit", handleInventarioCreate);
 el.btnInvUpdate.addEventListener("click", handleInventarioUpdate);
 el.btnInvDelete.addEventListener("click", handleInventarioDelete);
+el.invTipo.addEventListener("change", syncInventarioConditionalUI);
 el.reloadInventarios.addEventListener("click", refreshInventarios);
 el.ativoInventarioSelect.addEventListener("change", async () => {
   setSelectedInventarioLabel();
@@ -625,6 +669,7 @@ el.ativoInventarioSelect.addEventListener("change", async () => {
 el.btnAtivoReload.addEventListener("click", refreshAtivos);
 el.btnAtivoPesquisar.addEventListener("click", handleAtivoPesquisar);
 el.btnScan.addEventListener("click", handleScan);
+el.btnToggleScanCreds.addEventListener("click", toggleScanCreds);
 
 el.computadorForm.addEventListener("submit", handlePcCreate);
 el.btnPcPut.addEventListener("click", handlePcPut);
