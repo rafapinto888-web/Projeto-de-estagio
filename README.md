@@ -92,7 +92,7 @@ Entrar na pasta do backend e instalar dependencias:
 
 ```bash
 cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
-pip install -r requirements.txt
+.\..\venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 ### 2) Frontend (modo simples)
@@ -104,7 +104,7 @@ O frontend atual e estatico e pode ser aberto diretamente:
 ou servir por um servidor simples:
 
 ```bash
-cd frontend
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
 python -m http.server 5500
 ```
 
