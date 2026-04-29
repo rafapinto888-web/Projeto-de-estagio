@@ -175,7 +175,7 @@ def consultar_logs_dispositivo(
     if tipo_log is not None:
         tipo_log_limpo = tipo_log.strip()
         if tipo_log_limpo:
-            query_logs = query_logs.filter(LogDispositivoDB.tipo_log.ilike(f"%{tipo_log_limpo}%"))
+            query_logs = query_logs.filter(LogDispositivoDB.tipo_log == tipo_log_limpo)
             filtros_aplicados["tipo_log"] = tipo_log_limpo
 
     logs = query_logs.all()

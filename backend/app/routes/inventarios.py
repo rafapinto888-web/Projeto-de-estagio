@@ -174,7 +174,7 @@ def criar_inventario_rapido(
 
     existente = db.query(InventarioDB).filter(InventarioDB.nome == payload.nome).first()
     if existente is not None:
-        raise HTTPException(status_code=400, detail="Nome de inventario ja existe")
+        raise HTTPException(status_code=409, detail="Nome de inventario ja existe")
 
     novo_inventario = InventarioDB(
         nome=payload.nome,
@@ -598,7 +598,7 @@ def criar_inventario(inventario: InventarioCreate, db: Session = Depends(get_db)
         db.query(InventarioDB).filter(InventarioDB.nome == inventario.nome).first()
     )
     if existente is not None:
-        raise HTTPException(status_code=400, detail="Nome de inventario ja existe")
+        raise HTTPException(status_code=409, detail="Nome de inventario ja existe")
 
     novo_inventario = InventarioDB(
         nome=inventario.nome,
@@ -635,7 +635,7 @@ def atualizar_inventario(
         .first()
     )
     if existente is not None and existente.id != inventario_id:
-        raise HTTPException(status_code=400, detail="Nome de inventario ja existe")
+        raise HTTPException(status_code=409, detail="Nome de inventario ja existe")
 
     inventario.nome = inventario_atualizado.nome
     inventario.descricao = inventario_atualizado.descricao

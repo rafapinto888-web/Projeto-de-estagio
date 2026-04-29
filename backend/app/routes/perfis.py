@@ -10,6 +10,13 @@ from app.schemas.perfil import PerfilCreate, PerfilResponse, PerfilUpdate
 router = APIRouter(prefix="/perfis", tags=["Perfis"])
 
 
+def obter_perfil_ou_404(db: Session, perfil_id: int) -> PerfilDB:
+    perfil = db.get(PerfilDB, perfil_id)
+    if perfil is None:
+        raise HTTPException(status_code=404, detail="Perfil nao encontrado")
+    return perfil
+
+
 @router.get("/", response_model=list[PerfilResponse])
 def listar_perfis(db: Session = Depends(get_db)):
     return db.query(PerfilDB).order_by(PerfilDB.id).all()
@@ -17,17 +24,14 @@ def listar_perfis(db: Session = Depends(get_db)):
 
 @router.get("/{perfil_id}", response_model=PerfilResponse)
 def obter_perfil(perfil_id: int, db: Session = Depends(get_db)):
-    perfil = db.get(PerfilDB, perfil_id)
-    if perfil is None:
-        raise HTTPException(status_code=404, detail="Perfil nao encontrado")
-    return perfil
+    return obter_perfil_ou_404(db, perfil_id)
 
 
 @router.post("/", response_model=PerfilResponse, status_code=status.HTTP_201_CREATED)
 def criar_perfil(perfil: PerfilCreate, db: Session = Depends(get_db)):
     existente = db.query(PerfilDB).filter(PerfilDB.nome == perfil.nome).first()
     if existente is not None:
-        raise HTTPException(status_code=400, detail="Nome de perfil ja existe")
+        raise HTTPException(status_code=409, detail="Nome de perfil ja existe")
 
     novo_perfil = PerfilDB(nome=perfil.nome, descricao=perfil.descricao)
     db.add(novo_perfil)
@@ -36,7 +40,7 @@ def criar_perfil(perfil: PerfilCreate, db: Session = Depends(get_db)):
     except IntegrityError:
         db.rollback()
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail="Nome de perfil ja existe",
         ) from None
     db.refresh(novo_perfil)
@@ -49,15 +53,13 @@ def atualizar_perfil(
     perfil_atualizado: PerfilUpdate,
     db: Session = Depends(get_db),
 ):
-    perfil = db.get(PerfilDB, perfil_id)
-    if perfil is None:
-        raise HTTPException(status_code=404, detail="Perfil nao encontrado")
+    perfil = obter_perfil_ou_404(db, perfil_id)
 
     existente = (
         db.query(PerfilDB).filter(PerfilDB.nome == perfil_atualizado.nome).first()
     )
     if existente is not None and existente.id != perfil_id:
-        raise HTTPException(status_code=400, detail="Nome de perfil ja existe")
+        raise HTTPException(status_code=409, detail="Nome de perfil ja existe")
 
     perfil.nome = perfil_atualizado.nome
     perfil.descricao = perfil_atualizado.descricao
@@ -66,7 +68,7 @@ def atualizar_perfil(
     except IntegrityError:
         db.rollback()
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail="Nome de perfil ja existe",
         ) from None
     db.refresh(perfil)
@@ -75,9 +77,7 @@ def atualizar_perfil(
 
 @router.delete("/{perfil_id}", status_code=status.HTTP_204_NO_CONTENT)
 def apagar_perfil(perfil_id: int, db: Session = Depends(get_db)):
-    perfil = db.get(PerfilDB, perfil_id)
-    if perfil is None:
-        raise HTTPException(status_code=404, detail="Perfil nao encontrado")
+    perfil = obter_perfil_ou_404(db, perfil_id)
 
     db.delete(perfil)
     try:

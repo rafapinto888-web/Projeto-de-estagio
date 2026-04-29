@@ -34,7 +34,7 @@ def validar_email_unico(
 ) -> None:
     existente = db.query(UtilizadorDB).filter(UtilizadorDB.email == email).first()
     if existente is not None and existente.id != utilizador_id:
-        raise HTTPException(status_code=400, detail="Email de utilizador ja existe")
+        raise HTTPException(status_code=409, detail="Email de utilizador ja existe")
 
 
 def validar_username_unico(
@@ -44,7 +44,7 @@ def validar_username_unico(
         db.query(UtilizadorDB).filter(UtilizadorDB.username == username).first()
     )
     if existente is not None and existente.id != utilizador_id:
-        raise HTTPException(status_code=400, detail="Username de utilizador ja existe")
+        raise HTTPException(status_code=409, detail="Username de utilizador ja existe")
 
 
 @router.get("/", response_model=list[UtilizadorResponse])

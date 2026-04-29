@@ -53,7 +53,7 @@ def criar_localizacao(localizacao: LocalizacaoCreate, db: Session = Depends(get_
     )
     if existente is not None:
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail="Ja existe uma localizacao com o mesmo nome e descricao",
         )
 
@@ -67,7 +67,7 @@ def criar_localizacao(localizacao: LocalizacaoCreate, db: Session = Depends(get_
     except IntegrityError:
         db.rollback()
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail="Ja existe uma localizacao com o mesmo nome e descricao",
         ) from None
     db.refresh(nova_localizacao)
@@ -89,7 +89,7 @@ def atualizar_localizacao(
     )
     if existente is not None and existente.id != localizacao_id:
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail="Ja existe uma localizacao com o mesmo nome e descricao",
         )
 
@@ -100,7 +100,7 @@ def atualizar_localizacao(
     except IntegrityError:
         db.rollback()
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail="Ja existe uma localizacao com o mesmo nome e descricao",
         ) from None
     db.refresh(localizacao)
