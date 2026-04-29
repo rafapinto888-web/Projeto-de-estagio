@@ -1,0 +1,164 @@
+estrutura de requisitos do projeto
+introdução do projeto:
+O projeto consiste no desenvolvimento de uma aplicação web para gestão de inventário informático. A ideia é criar um sistema onde seja possível registar e organizar computadores de forma simples, agrupando-os em diferentes inventários, que podem representar uma rede, uma sub-rede ou apenas um conjunto lógico de dispositivos. A aplicação vai permitir adicionar equipamentos manualmente, consultar informação relevante como IP, hostname ou estado, e gerir esses dados através de uma interface acessível por browser.
+
+Para além da gestão manual, o sistema também inclui funcionalidades ligadas à área de redes, como a realização de scans para identificar dispositivos ativos dentro de um intervalo de IPs, permitindo depois adicionar esses dispositivos ao inventário. O projeto também prevê autenticação de utilizadores, controlo de acessos e registo de logs, incluindo logs de segurança e RDP. No geral, o objetivo é criar um sistema simples mas funcional, que combine conceitos de desenvolvimento web com algumas funcionalidades práticas relacionadas com redes.
+
+Objetivo mínimo (MVP):
+O objetivo mínimo do projeto é desenvolver uma versão funcional do sistema que permita a autenticação de utilizadores, a criação e consulta de inventários, o registo manual de computadores e a consulta básica do inventário através de uma interface web. Para além disso, o sistema deverá incluir uma funcionalidade inicial de scan de rede, capaz de identificar dispositivos ativos num intervalo de endereços IP e apresentar os resultados ao utilizador autorizado.
+
+Requisitos 
+O sistema deverá permitir a gestão de inventário informático de forma centralizada, segura e organizada. A aplicação deverá ser disponibilizada através de um web server, comunicar com um web service responsável pela lógica da aplicação e armazenar a informação numa base de dados. O sistema deverá ainda incluir mecanismos de autenticação, autorização e registo de logs, sendo executado em ambiente Docker. Além disso, o sistema deverá permitir a consulta de logs de segurança e logs RDP provenientes dos computadores monitorizados, a descoberta automática de dispositivos na rede através de mecanismos de scan e a disponibilização de uma interface frontend básica para interação com o utilizador. O sistema deverá também permitir a organização de equipamentos em diferentes inventários, associados a sub-redes ou grupos lógicos distintos
+
+
+
+Requisitos funcionais 
+Gestão de inventários
+O sistema deve permitir criar inventários.
+O sistema deve permitir listar inventários.
+O sistema deve permitir consultar os dados de um inventário específico.
+O sistema deve permitir editar inventários.
+O sistema deve permitir remover inventários.
+O sistema deve permitir associar computadores a um inventário.
+O sistema deve permitir associar dispositivos descobertos a um inventário.
+O sistema deve permitir associar utilizadores a inventários.
+O sistema deve permitir definir o tipo de inventário (sub-rede ou grupo lógico/normal).
+O sistema deve permitir listar os ativos de um inventário de forma unificada (computadores registados e dispositivos descobertos), mantendo distinção da origem.
+
+Gestão de computadores
+O sistema deve permitir o registo de computadores no inventário.
+O sistema deve permitir listar todos os computadores registados.
+O sistema deve permitir consultar os dados de um computador específico.
+O sistema deve permitir pesquisar computadores pelo identificador interno da base de dados.
+O sistema deve permitir pesquisar computadores pelo número de série.
+O sistema deve permitir editar a informação de um computador.
+O sistema deve permitir remover computadores do inventário.
+O sistema deve permitir associar computadores a utilizadores responsáveis.
+O sistema deve permitir associar computadores a localizações.
+O sistema deve permitir identificar o estado de cada equipamento.
+O sistema deve permitir distinguir entre computadores registados manualmente e dispositivos descobertos automaticamente, caso estes sejam importados/associados ao inventário.
+
+Gestão de utilizadores e perfis
+O sistema deve permitir a autenticação de utilizadores.
+O sistema deve permitir diferentes níveis de acesso consoante o perfil do utilizador.
+O sistema deve permitir gerir perfis de utilizador.
+O sistema deve permitir registar utilizadores.
+O sistema deve permitir associar utilizadores a perfis.
+O sistema deve permitir associar utilizadores a inventários.
+
+Logs
+O sistema deve registar logs das ações realizadas no sistema.
+O sistema deve permitir ao utilizador consultar o seu próprio histórico de ações.
+O sistema deve permitir ao administrador consultar os logs dos utilizadores.
+O sistema deve permitir consultar logs de segurança e logs RDP provenientes dos computadores monitorizados.
+O sistema deve permitir associar os logs recolhidos ao respetivo computador.
+O sistema deve permitir consultar logs por computador, número de série, nome ou hostname.
+O sistema deve permitir filtrar logs por tipo (seguranca ou rdp).
+
+Scan de rede
+O sistema deve permitir realizar o scan de uma rede através de um intervalo de endereços IP.
+O sistema deve permitir identificar dispositivos ativos na rede.
+O sistema deve permitir recolher informações básicas dos dispositivos, como endereço IP, hostname e, quando possível, modelo.
+O sistema deve permitir importar para o inventário os dispositivos encontrados através do scan de rede.
+O sistema deve permitir distinguir dispositivos registados manualmente de dispositivos descobertos automaticamente.
+O sistema deve evitar duplicados de dispositivos descobertos dentro do mesmo inventário (por inventário + IP).
+O sistema deve atualizar dispositivos já existentes do inventário quando o IP já tiver sido descoberto.
+O sistema deve atualizar o estado dos dispositivos descobertos (ativo/inativo) e guardar a última vez em que estiveram ativos.
+
+Interface frontend
+O sistema deve disponibilizar uma interface frontend para autenticação de utilizadores.
+O sistema deve disponibilizar uma interface frontend para consulta e gestão do inventário.
+O sistema deve disponibilizar uma interface frontend para consulta e gestão de computadores.
+O sistema deve disponibilizar uma interface frontend para consulta de logs do sistema.
+O sistema deve disponibilizar uma interface frontend para consulta dos dispositivos encontrados através do scan de rede.
+
+Requisitos Não Funcionais
+Integridade e Fiabilidade
+O sistema deve assegurar a integridade e consistência dos dados, mesmo em caso de falhas inesperadas.
+O sistema deve manter estabilidade durante a execução, evitando interrupções ou erros críticos.
+
+Arquitetura e Manutenção
+O sistema deve apresentar uma estrutura modular que facilite a manutenção e atualização.
+O sistema deve permitir expansão futura para novos módulos sem necessidade de reescrever os componentes principais.
+
+Segurança
+O sistema deve implementar mecanismos de autenticação segura dos utilizadores.
+O sistema deve proteger dados sensíveis contra acessos não autorizados.
+
+Comunicação e Disponibilidade
+O sistema deve responder corretamente a pedidos HTTP.
+O sistema deve disponibilizar os seus serviços através de um web service funcional e acessível via HTTP.
+O sistema deve ser disponibilizado através de um web server adequado, garantindo acesso contínuo à aplicação.
+
+Usabilidade
+O sistema deve apresentar uma interface simples e intuitiva para os utilizadores.
+O frontend deve permitir navegação clara entre as funcionalidades principais do sistema.
+
+Regras de negócio
+
+Cada computador deve possuir um identificador único.
+Cada computador deve possuir um número de série único.
+Cada computador deve ter sempre um estado definido.
+Apenas utilizadores autenticados podem aceder ao sistema.
+Apenas utilizadores autorizados podem criar, editar ou remover computadores.
+Apenas administradores podem gerir utilizadores.
+Apenas utilizadores autorizados podem executar a funcionalidade de scan de rede.
+Todas as ações críticas devem ser registadas em log.
+Cada computador pode estar associado a uma localização.
+Cada computador pode estar associado a um utilizador responsável.
+A remoção de um registo deve ficar refletida nos logs do sistema.
+O sistema não deve permitir a criação de registos incompletos nos campos obrigatórios.
+Cada log de dispositivo deve estar obrigatoriamente associado a um computador.
+O sistema deve permitir a consulta de logs de dispositivo apenas a utilizadores autorizados.
+Os logs recolhidos dos computadores devem conservar, no mínimo, a data, o tipo de log e a descrição do evento.
+Os logs de dispositivo considerados pelo sistema devem restringir-se a logs de segurança e logs RDP.
+Cada utilizador deve poder consultar apenas o seu próprio histórico de ações, salvo utilizadores com perfil de administrador.
+Os administradores devem poder consultar os logs de todos os utilizadores do sistema.
+Os dispositivos descobertos automaticamente devem poder ser adicionados ao inventário.
+Cada dispositivo descoberto deve ser identificado, no mínimo, pelo seu endereço IP.
+Os dispositivos devem ter indicação da origem do registo, manual ou automática.
+Cada computador deve estar associado a um inventário.
+Cada inventário pode agrupar computadores de uma sub-rede ou grupo lógico específico.
+Os dispositivos descobertos através de scan podem ser associados a um inventário.
+Apenas administradores podem criar, editar e remover inventários.
+O scan não deve criar computadores manualmente registados de forma automática.
+A identificação de duplicados em dispositivos descobertos deve considerar, no mínimo, inventário + IP.
+Quando um dispositivo não for encontrado em scans subsequentes, deve poder ser marcado como inativo mantendo histórico da última vez ativo.
+
+Stack Tecnológica
+
+Backend / Web Service
+Python
+FastAPI
+uvicorn(cd "c:\Users\Jose\Desktop\Projeto de estagio\Projeto de estagio\backend"
+>> .\venv\Scripts\python.exe -m uvicorn app.core.main:app --reload)#comando pra dar run
+
+Web Server
+Nginx
+
+Base de Dados
+PostgreSQL
+
+Frontend
+HTML
+CSS
+JavaScript
+
+Containerização
+Docker
+Docker Compose
+
+Documentação e Testes
+Swagger / OpenAPI
+
+Ferramentas de Desenvolvimento
+Visual Studio Code
+Visual Paradigm
+Nota importante sobre o frontend
+
+O frontend do projeto não precisa de ser avançado. Para este trabalho, é suficiente uma interface básica que permita:
+login
+consulta de computadores
+gestão de inventário
+consulta de logs
+consulta de dispositivos descobertos

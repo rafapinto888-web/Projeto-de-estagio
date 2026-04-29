@@ -1,0 +1,31 @@
+Projeto de estagio
+
+Objetivo:
+Desenvolver uma aplicacao com Docker para gerir o inventario de computadores.
+
+Componentes principais:
+- Backend para expor a API.
+- Base de dados para guardar computadores, ativos e logs.
+- Docker para correr os servicos do projeto.
+
+Funcionalidades previstas:
+- Consultar inventario de computadores.
+- Registar novos computadores.
+- Mostrar ativos.
+- Guardar logs de seguranca.
+- Implementar autenticacao.
+- Proteger rotas sensiveis.
+
+Diagramas a preparar:
+- Diagramas de casos de uso.
+- Diagrama de classes.
+- Diagrama entidade-relacionamento.
+
+Organizacao:
+- O codigo do backend fica em backend/app.
+- Os modelos ficam em backend/app/models.
+- As rotas ficam em backend/app/routes.
+- A logica de negocio fica em backend/app/services.
+- As configuracoes e seguranca ficam em backend/app/core.
+- A ligacao a base de dados fica em backend/app/db.
+- As notas e diagramas ficam em docs.

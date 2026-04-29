@@ -1,0 +1,37 @@
+Projeto: Sistema de Inventário Informático/projeto de estagio
+Projeto: Sistema de Inventário Informático
+
+Descrição:
+Aplicação web para gestão de inventário informático com suporte a:
+- registo manual de computadores
+- gestão de inventários (sub-redes ou grupos lógicos)
+- autenticação de utilizadores
+- logs do sistema
+- logs de dispositivos (segurança e RDP)
+- scan de rede para descoberta de dispositivos
+
+Stack:
+- Backend: FastAPI (Python)
+- Base de dados: PostgreSQL
+- Web Server: Nginx
+- Frontend: HTML/CSS/JS
+- Docker
+
+Arquitetura:
+Cliente (browser) -> Nginx -> FastAPI -> PostgreSQL
+
+Regras importantes:
+- número de série único no sistema
+- cada computador pertence a um inventário
+- apenas admin cria utilizadores
+- logs obrigatórios para ações críticas
+- scan de rede disponível para utilizadores autorizados
+
+Funcionalidades principais:
+- login
+- criar inventário
+- listar inventários
+- adicionar computador
+- listar computadores
+- executar scan de rede
+- consultar logs

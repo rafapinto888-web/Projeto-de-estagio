@@ -1,0 +1,276 @@
+DEPENDÊNCIAS DO BACKEND / DOCKER
+Projeto: Sistema de Gestão de Inventário Informático
+
+Este ficheiro serve como referência para quando o projeto for colocado em Docker.
+Versão atualizada para usar password hashing moderno com Argon2, através de pwdlib.
+
+============================================================
+1. STACK PRINCIPAL DO BACKEND
+============================================================
+
+O backend do projeto usa:
+
+- Python
+- FastAPI
+- Uvicorn
+- Pydantic
+- SQLAlchemy
+- PostgreSQL
+- psycopg2-binary
+- pwdlib[argon2] para hashing moderno de palavras-passe
+
+============================================================
+2. DEPENDÊNCIAS PYTHON NECESSÁRIAS
+============================================================
+
+Estas dependências devem estar no ficheiro requirements.txt do backend:
+
+fastapi>=0.115.0,<1.0.0
+uvicorn[standard]>=0.30.0,<1.0.0
+pydantic>=2.0.0,<3.0.0
+sqlalchemy>=2.0.0,<3.0.0
+psycopg2-binary>=2.9.0,<3.0.0
+httpx>=0.27.0,<1.0.0
+pwdlib[argon2]>=0.2.0,<1.0.0
+
+============================================================
+3. DEPENDÊNCIAS A REMOVER
+============================================================
+
+Se o projeto for migrado para Argon2 com pwdlib, estas dependências antigas já não devem ser necessárias:
+
+passlib[bcrypt]
+bcrypt
+
+Podem ser removidas do requirements.txt depois da alteração do código.
+
+============================================================
+4. NOTA IMPORTANTE SOBRE PASSWORD HASHING
+============================================================
+
+A API deve receber a palavra-passe em texto normal apenas no pedido de criação/edição:
+
+palavra_passe
+
+Mas a base de dados deve guardar apenas:
+
+palavra_passe_hash
+
+A resposta da API nunca deve devolver:
+- palavra_passe
+- palavra_passe_hash
+
+Com Argon2, a hash guardada na base de dados deverá começar normalmente por:
+
+$argon2id$
+
+Exemplo visual:
+
+$argon2id$v=19$...
+
+============================================================
+5. BASE DE DADOS
+============================================================
+
+O projeto usa PostgreSQL.
+
+No Docker, será necessário ter um serviço para a base de dados.
+
+Imagem recomendada:
+postgres:16
+
+Variáveis de ambiente esperadas:
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=12345a.
+POSTGRES_DB=inventario
+
+Exemplo de connection string dentro do Docker Compose:
+postgresql+psycopg2://postgres:12345a.@db:5432/inventario
+
+Nota importante:
+No Docker, o host da base de dados normalmente não deve ser 127.0.0.1.
+Dentro do Docker Compose, o host deve ser o nome do serviço da base de dados, por exemplo:
+
+db
+
+============================================================
+6. DEPENDÊNCIAS DO SISTEMA NO DOCKER
+============================================================
+
+Como o projeto usa psycopg2-binary, normalmente não é necessário instalar bibliotecas extra do PostgreSQL.
+
+No entanto, se for usada uma imagem slim do Python e houver erros de instalação de dependências, podem ser necessárias bibliotecas de sistema como:
+
+- gcc
+- libpq-dev
+- build-essential
+
+Exemplo no Dockerfile, se necessário:
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+============================================================
+7. COMANDO PARA ARRANCAR A API
+============================================================
+
+Durante o desenvolvimento local:
+
+uvicorn app.core.main:app --reload
+
+No Docker:
+
+uvicorn app.core.main:app --host 0.0.0.0 --port 8000
+
+============================================================
+8. PORTAS
+============================================================
+
+Backend FastAPI:
+8000
+
+PostgreSQL:
+5432
+
+Swagger:
+http://localhost:8000/docs
+
+Root da API:
+http://localhost:8000/
+
+============================================================
+9. MÓDULOS JÁ EXISTENTES / A CONSIDERAR
+============================================================
+
+Módulos já trabalhados:
+- inventários
+- computadores
+- localizações
+- perfis
+- utilizadores
+- hashing da palavra-passe
+- endpoints centrados no inventário
+
+Módulos futuros:
+- associação utilizador-inventário
+- login/autenticação
+- permissões
+- logs reais
+- scan de rede
+- frontend
+- Docker completo
+
+============================================================
+10. EXEMPLO DE requirements.txt ATUALIZADO
+============================================================
+
+fastapi>=0.115.0,<1.0.0
+uvicorn[standard]>=0.30.0,<1.0.0
+pydantic>=2.0.0,<3.0.0
+sqlalchemy>=2.0.0,<3.0.0
+psycopg2-binary>=2.9.0,<3.0.0
+httpx>=0.27.0,<1.0.0
+pwdlib[argon2]>=0.2.0,<1.0.0
+
+============================================================
+11. EXEMPLO DE DOCKERFILE FUTURO
+============================================================
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["uvicorn", "app.core.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+Nota:
+Se houver erro ao instalar dependências relacionadas com PostgreSQL, adicionar as dependências de sistema referidas na secção 6.
+
+============================================================
+12. EXEMPLO DE docker-compose.yml FUTURO
+============================================================
+
+services:
+  db:
+    image: postgres:16
+    container_name: inventario_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345a.
+      POSTGRES_DB: inventario
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: .
+    container_name: inventario_api
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:12345a.@db:5432/inventario
+    command: uvicorn app.core.main:app --host 0.0.0.0 --port 8000
+
+volumes:
+  postgres_data:
+
+============================================================
+13. NOTAS PARA NÃO PARTIR O PROJETO
+============================================================
+
+- Não trocar PostgreSQL por SQLite.
+- Não alterar connection.py sem necessidade.
+- Não apagar tabelas manualmente.
+- Não criar outro main.py.
+- Não criar arquitetura paralela.
+- No Docker, usar db como host da base de dados em vez de 127.0.0.1.
+- Garantir que requirements.txt contém todas as dependências antes de construir a imagem.
+- Se for migrado para pwdlib[argon2], remover passlib[bcrypt] e bcrypt para evitar confusão.
+- Criar utilizadores novos depois da migração para confirmar que a hash começa por $argon2id$.
+- Utilizadores antigos com hash bcrypt podem precisar de nova password ou recriação antes de existir login.
+
+============================================================
+14. TESTE RÁPIDO DO HASHING
+============================================================
+
+Depois de instalar pwdlib[argon2], pode ser feito um teste rápido no terminal Python:
+
+python -c "from pwdlib import PasswordHash; ph = PasswordHash.recommended(); print(ph.hash('12345'))"
+
+Resultado esperado:
+Uma hash começada por $argon2id$.
+
+============================================================
+15. COMANDOS LOCAIS ÚTEIS
+============================================================
+
+Instalar dependências:
+
+python -m pip install -r requirements.txt
+
+Remover dependências antigas, se necessário:
+
+python -m pip uninstall -y passlib bcrypt
+
+Instalar pwdlib com Argon2:
+
+python -m pip install "pwdlib[argon2]"
+
+Compilar/verificar imports:
+
+python -m compileall app
+
+Arrancar API:
+
+uvicorn app.core.main:app --reload

@@ -1,0 +1,913 @@
+QUERIES SQL ÚTEIS PARA O PROJETO DE INVENTÁRIO INFORMÁTICO
+============================================================
+
+NOTA:
+Estas queries assumem nomes de tabelas/campos como:
+
+Tabelas:
+- inventarios
+- computadores
+- localizacoes
+- utilizadores
+- perfis
+- dispositivos_descobertos
+- logs_sistema
+- logs_dispositivo
+
+Campos principais esperados:
+
+computadores:
+- id
+- nome
+- marca
+- modelo
+- numero_serie
+- estado
+- inventario_id
+- localizacao_id
+- utilizador_responsavel_id
+
+inventarios:
+- id
+- nome
+- descricao
+
+localizacoes:
+- id
+- nome
+- descricao
+
+utilizadores:
+- id
+- nome
+- email
+- perfil_id
+
+perfis:
+- id
+- nome
+- descricao
+
+dispositivos_descobertos:
+- id
+- ip
+- hostname
+- mac_address
+- estado
+- inventario_id
+
+Se algum nome for diferente no código real, basta adaptar a query.
+
+
+1. VER TODOS OS INVENTÁRIOS
+---------------------------
+
+SELECT *
+FROM inventarios;
+
+Serve para listar todos os inventários criados.
+
+
+2. VER UM INVENTÁRIO ESPECÍFICO
+-------------------------------
+
+SELECT *
+FROM inventarios
+WHERE id = 1;
+
+Serve para consultar os dados do inventário com ID 1.
+
+
+3. VER TODOS OS COMPUTADORES
+----------------------------
+
+SELECT *
+FROM computadores;
+
+Lista todos os computadores registados no sistema.
+
+
+4. VER TODOS OS COMPUTADORES DE UM INVENTÁRIO
+---------------------------------------------
+
+SELECT *
+FROM computadores
+WHERE inventario_id = 1;
+
+Serve para responder:
+Quais são os computadores que pertencem ao inventário 1?
+
+
+5. VER COMPUTADORES DE UM INVENTÁRIO COM NOME DO INVENTÁRIO
+-----------------------------------------------------------
+
+SELECT
+    i.id AS inventario_id,
+    i.nome AS inventario_nome,
+    c.id AS computador_id,
+    c.nome AS computador_nome,
+    c.marca,
+    c.modelo,
+    c.numero_serie,
+    c.estado
+FROM inventarios i
+JOIN computadores c
+    ON c.inventario_id = i.id
+WHERE i.id = 1;
+
+Serve para mostrar o inventário e os PCs associados.
+
+
+6. VER COMPUTADORES COM LOCALIZAÇÃO
+-----------------------------------
+
+SELECT
+    c.id,
+    c.nome,
+    c.marca,
+    c.modelo,
+    c.numero_serie,
+    c.estado,
+    l.nome AS localizacao_nome,
+    l.descricao AS localizacao_descricao
+FROM computadores c
+LEFT JOIN localizacoes l
+    ON c.localizacao_id = l.id;
+
+Serve para listar PCs e mostrar onde estão.
+O LEFT JOIN permite que apareçam também PCs sem localização.
+
+
+7. VER COMPUTADORES DE UM INVENTÁRIO COM LOCALIZAÇÃO
+----------------------------------------------------
+
+SELECT
+    c.id,
+    c.nome,
+    c.marca,
+    c.modelo,
+    c.numero_serie,
+    c.estado,
+    l.nome AS localizacao_nome,
+    l.descricao AS localizacao_descricao
+FROM computadores c
+LEFT JOIN localizacoes l
+    ON c.localizacao_id = l.id
+WHERE c.inventario_id = 1;
+
+Serve para responder:
+Que PCs existem neste inventário e onde estão?
+
+
+8. VER COMPUTADORES COM RESPONSÁVEL
+-----------------------------------
+
+SELECT
+    c.id,
+    c.nome,
+    c.marca,
+    c.modelo,
+    c.numero_serie,
+    c.estado,
+    u.nome AS responsavel_nome,
+    u.email AS responsavel_email
+FROM computadores c
+LEFT JOIN utilizadores u
+    ON c.utilizador_responsavel_id = u.id;
+
+Serve para ver quem é responsável por cada PC.
+
+
+9. VER COMPUTADORES DE UM INVENTÁRIO COM LOCALIZAÇÃO E RESPONSÁVEL
+-------------------------------------------------------------------
+
+SELECT
+    c.id AS computador_id,
+    c.nome AS computador_nome,
+    c.marca,
+    c.modelo,
+    c.numero_serie,
+    c.estado,
+
+    l.id AS localizacao_id,
+    l.nome AS localizacao_nome,
+    l.descricao AS localizacao_descricao,
+
+    u.id AS responsavel_id,
+    u.nome AS responsavel_nome,
+    u.email AS responsavel_email
+FROM computadores c
+LEFT JOIN localizacoes l
+    ON c.localizacao_id = l.id
+LEFT JOIN utilizadores u
+    ON c.utilizador_responsavel_id = u.id
+WHERE c.inventario_id = 1;
+
+Esta é uma das queries mais úteis.
+Ela devolve literalmente os PCs do inventário com localização e responsável.
+
+
+10. VER COMPUTADORES SEM LOCALIZAÇÃO
+------------------------------------
+
+SELECT *
+FROM computadores
+WHERE localizacao_id IS NULL;
+
+Serve para ver PCs que ainda não têm sala/local definido.
+
+
+11. VER COMPUTADORES SEM LOCALIZAÇÃO DENTRO DE UM INVENTÁRIO
+------------------------------------------------------------
+
+SELECT *
+FROM computadores
+WHERE inventario_id = 1
+  AND localizacao_id IS NULL;
+
+Serve para responder:
+Que PCs deste inventário ainda não têm localização?
+
+
+12. VER COMPUTADORES SEM RESPONSÁVEL
+------------------------------------
+
+SELECT *
+FROM computadores
+WHERE utilizador_responsavel_id IS NULL;
+
+Serve para ver PCs sem utilizador responsável.
+
+
+13. VER COMPUTADORES SEM RESPONSÁVEL DENTRO DE UM INVENTÁRIO
+------------------------------------------------------------
+
+SELECT *
+FROM computadores
+WHERE inventario_id = 1
+  AND utilizador_responsavel_id IS NULL;
+
+Serve para responder:
+Que PCs deste inventário ainda não têm responsável?
+
+
+14. VER COMPUTADORES COM DADOS INCOMPLETOS
+------------------------------------------
+
+SELECT *
+FROM computadores
+WHERE nome IS NULL
+   OR nome = ''
+   OR marca IS NULL
+   OR marca = ''
+   OR modelo IS NULL
+   OR modelo = ''
+   OR numero_serie IS NULL
+   OR numero_serie = ''
+   OR estado IS NULL
+   OR estado = '';
+
+Serve para encontrar computadores mal preenchidos.
+
+
+15. VER COMPUTADORES COM DADOS INCOMPLETOS NUM INVENTÁRIO
+---------------------------------------------------------
+
+SELECT *
+FROM computadores
+WHERE inventario_id = 1
+  AND (
+        nome IS NULL
+     OR nome = ''
+     OR marca IS NULL
+     OR marca = ''
+     OR modelo IS NULL
+     OR modelo = ''
+     OR numero_serie IS NULL
+     OR numero_serie = ''
+     OR estado IS NULL
+     OR estado = ''
+  );
+
+Serve para ver problemas nos PCs de um inventário específico.
+
+
+16. CONTAR COMPUTADORES DE UM INVENTÁRIO
+----------------------------------------
+
+SELECT COUNT(*) AS total_computadores
+FROM computadores
+WHERE inventario_id = 1;
+
+Serve para saber quantos PCs existem naquele inventário.
+
+
+17. CONTAR COMPUTADORES POR ESTADO
+----------------------------------
+
+SELECT
+    estado,
+    COUNT(*) AS total
+FROM computadores
+GROUP BY estado;
+
+Serve para saber quantos estão ativos, em manutenção, avariados, etc.
+
+
+18. CONTAR COMPUTADORES POR ESTADO DENTRO DE UM INVENTÁRIO
+----------------------------------------------------------
+
+SELECT
+    estado,
+    COUNT(*) AS total
+FROM computadores
+WHERE inventario_id = 1
+GROUP BY estado;
+
+Serve para saber o estado geral dos PCs de um inventário.
+
+
+19. CONTAR COMPUTADORES POR LOCALIZAÇÃO
+---------------------------------------
+
+SELECT
+    COALESCE(l.nome, 'Sem localização') AS localizacao,
+    COUNT(c.id) AS total
+FROM computadores c
+LEFT JOIN localizacoes l
+    ON c.localizacao_id = l.id
+GROUP BY COALESCE(l.nome, 'Sem localização');
+
+Serve para saber quantos PCs existem por sala/local.
+
+
+20. CONTAR COMPUTADORES POR LOCALIZAÇÃO DENTRO DE UM INVENTÁRIO
+---------------------------------------------------------------
+
+SELECT
+    COALESCE(l.nome, 'Sem localização') AS localizacao,
+    COUNT(c.id) AS total
+FROM computadores c
+LEFT JOIN localizacoes l
+    ON c.localizacao_id = l.id
+WHERE c.inventario_id = 1
+GROUP BY COALESCE(l.nome, 'Sem localização');
+
+Serve para saber a distribuição dos PCs do inventário por localização.
+
+
+21. VER COMPUTADORES POR MARCA
+------------------------------
+
+SELECT
+    marca,
+    COUNT(*) AS total
+FROM computadores
+GROUP BY marca;
+
+Serve para saber quantos Dell, HP, Lenovo, etc.
+
+
+22. VER COMPUTADORES POR MARCA DENTRO DE UM INVENTÁRIO
+------------------------------------------------------
+
+SELECT
+    marca,
+    COUNT(*) AS total
+FROM computadores
+WHERE inventario_id = 1
+GROUP BY marca;
+
+Útil para estatísticas do inventário.
+
+
+23. VER COMPUTADORES POR MODELO
+-------------------------------
+
+SELECT
+    marca,
+    modelo,
+    COUNT(*) AS total
+FROM computadores
+GROUP BY marca, modelo;
+
+Serve para saber quantos equipamentos de cada modelo existem.
+
+
+24. PROCURAR COMPUTADOR POR NÚMERO DE SÉRIE
+-------------------------------------------
+
+SELECT *
+FROM computadores
+WHERE numero_serie = 'ABC123';
+
+Serve para encontrar um equipamento específico.
+
+
+25. VER SE HÁ NÚMEROS DE SÉRIE DUPLICADOS
+-----------------------------------------
+
+SELECT
+    numero_serie,
+    COUNT(*) AS total
+FROM computadores
+GROUP BY numero_serie
+HAVING COUNT(*) > 1;
+
+Muito útil para inventário.
+Serve para detetar erro de registo.
+
+
+26. VER COMPUTADORES COM NÚMERO DE SÉRIE DUPLICADO
+--------------------------------------------------
+
+SELECT *
+FROM computadores
+WHERE numero_serie IN (
+    SELECT numero_serie
+    FROM computadores
+    GROUP BY numero_serie
+    HAVING COUNT(*) > 1
+);
+
+Mostra os PCs concretos que têm número de série duplicado.
+
+
+27. VER TODAS AS LOCALIZAÇÕES
+-----------------------------
+
+SELECT *
+FROM localizacoes;
+
+Lista todas as salas/departamentos/locais.
+
+
+28. VER COMPUTADORES NUMA LOCALIZAÇÃO ESPECÍFICA
+------------------------------------------------
+
+SELECT *
+FROM computadores
+WHERE localizacao_id = 1;
+
+Serve para saber que PCs estão numa sala/local.
+
+
+29. VER COMPUTADORES NUMA LOCALIZAÇÃO PELO NOME
+-----------------------------------------------
+
+SELECT
+    c.*
+FROM computadores c
+JOIN localizacoes l
+    ON c.localizacao_id = l.id
+WHERE l.nome = 'Sala 1';
+
+Serve para consultar por nome da sala.
+
+
+30. VER UTILIZADORES E PERFIS
+-----------------------------
+
+SELECT
+    u.id,
+    u.nome,
+    u.email,
+    p.nome AS perfil
+FROM utilizadores u
+LEFT JOIN perfis p
+    ON u.perfil_id = p.id;
+
+Serve para ver os utilizadores e o perfil de cada um.
+
+
+31. VER COMPUTADORES ATRIBUÍDOS A UM UTILIZADOR
+-----------------------------------------------
+
+SELECT
+    c.id,
+    c.nome,
+    c.marca,
+    c.modelo,
+    c.numero_serie,
+    c.estado
+FROM computadores c
+WHERE c.utilizador_responsavel_id = 1;
+
+Serve para saber que PCs estão associados a um responsável.
+
+
+32. VER COMPUTADORES ATRIBUÍDOS A UM UTILIZADOR COM NOME
+--------------------------------------------------------
+
+SELECT
+    u.nome AS responsavel,
+    u.email,
+    c.nome AS computador,
+    c.marca,
+    c.modelo,
+    c.numero_serie,
+    c.estado
+FROM utilizadores u
+JOIN computadores c
+    ON c.utilizador_responsavel_id = u.id
+WHERE u.id = 1;
+
+Serve para mostrar o responsável e os seus equipamentos.
+
+
+33. VER DISPOSITIVOS DESCOBERTOS
+--------------------------------
+
+SELECT *
+FROM dispositivos_descobertos;
+
+Lista os dispositivos encontrados por scan.
+
+
+34. VER DISPOSITIVOS DESCOBERTOS DE UM INVENTÁRIO
+-------------------------------------------------
+
+SELECT *
+FROM dispositivos_descobertos
+WHERE inventario_id = 1;
+
+Serve para saber que dispositivos foram encontrados para aquele inventário.
+
+
+35. VER DISPOSITIVOS DESCOBERTOS COM DADOS DO INVENTÁRIO
+--------------------------------------------------------
+
+SELECT
+    i.nome AS inventario_nome,
+    d.id AS dispositivo_id,
+    d.ip,
+    d.hostname,
+    d.mac_address,
+    d.estado
+FROM dispositivos_descobertos d
+JOIN inventarios i
+    ON d.inventario_id = i.id
+WHERE i.id = 1;
+
+Serve para ligar scan/dispositivos ao inventário.
+
+
+36. VER DISPOSITIVOS DESCOBERTOS QUE AINDA NÃO EXISTEM COMO COMPUTADORES PELO HOSTNAME
+--------------------------------------------------------------------------------------
+
+SELECT
+    d.*
+FROM dispositivos_descobertos d
+LEFT JOIN computadores c
+    ON d.hostname = c.nome
+WHERE c.id IS NULL;
+
+Serve para responder:
+Que dispositivos apareceram na rede mas ainda não estão registados como computador?
+
+Esta query só funciona bem se o hostname do dispositivo descoberto corresponder ao nome do computador.
+
+
+37. VER DISPOSITIVOS DESCOBERTOS NÃO REGISTADOS DENTRO DE UM INVENTÁRIO
+-----------------------------------------------------------------------
+
+SELECT
+    d.*
+FROM dispositivos_descobertos d
+LEFT JOIN computadores c
+    ON d.hostname = c.nome
+   AND d.inventario_id = c.inventario_id
+WHERE d.inventario_id = 1
+  AND c.id IS NULL;
+
+Serve para ver dispositivos encontrados no scan que ainda não estão registados naquele inventário.
+
+
+38. VER COMPUTADORES REGISTADOS QUE NÃO APARECERAM NO SCAN
+----------------------------------------------------------
+
+SELECT
+    c.*
+FROM computadores c
+LEFT JOIN dispositivos_descobertos d
+    ON c.nome = d.hostname
+   AND c.inventario_id = d.inventario_id
+WHERE c.inventario_id = 1
+  AND d.id IS NULL;
+
+Serve para responder:
+Que PCs estão no inventário mas não foram encontrados na rede?
+
+Muito útil para a parte de redes.
+
+
+39. COMPARAR COMPUTADORES REGISTADOS COM DISPOSITIVOS DESCOBERTOS
+------------------------------------------------------------------
+
+SELECT
+    c.id AS computador_id,
+    c.nome AS computador_nome,
+    c.numero_serie,
+    d.id AS dispositivo_id,
+    d.ip,
+    d.hostname,
+    d.mac_address,
+    CASE
+        WHEN d.id IS NULL THEN 'Não encontrado no scan'
+        ELSE 'Encontrado no scan'
+    END AS estado_scan
+FROM computadores c
+LEFT JOIN dispositivos_descobertos d
+    ON c.nome = d.hostname
+   AND c.inventario_id = d.inventario_id
+WHERE c.inventario_id = 1;
+
+Esta é uma das melhores queries para um projeto de redes.
+Mostra se cada PC registado apareceu ou não no scan.
+
+
+40. VER LOGS DO SISTEMA
+-----------------------
+
+SELECT *
+FROM logs_sistema;
+
+Mostra eventos gerais do sistema.
+
+
+41. VER LOGS DO SISTEMA COM UTILIZADOR
+--------------------------------------
+
+SELECT
+    ls.id,
+    ls.acao,
+    ls.descricao,
+    ls.data_hora,
+    u.nome AS utilizador_nome,
+    u.email AS utilizador_email
+FROM logs_sistema ls
+LEFT JOIN utilizadores u
+    ON ls.utilizador_id = u.id
+ORDER BY ls.data_hora DESC;
+
+Serve para saber quem fez o quê.
+
+
+42. VER LOGS DE UM UTILIZADOR
+-----------------------------
+
+SELECT *
+FROM logs_sistema
+WHERE utilizador_id = 1
+ORDER BY data_hora DESC;
+
+Serve para histórico de ações de um utilizador.
+
+
+43. VER LOGS DE DISPOSITIVO
+---------------------------
+
+SELECT *
+FROM logs_dispositivo;
+
+Mostra histórico ligado a dispositivos/computadores.
+
+
+44. VER LOGS DE UM COMPUTADOR ESPECÍFICO
+----------------------------------------
+
+SELECT *
+FROM logs_dispositivo
+WHERE computador_id = 1
+ORDER BY data_hora DESC;
+
+Serve para ver histórico de alterações/ações sobre um PC.
+
+Atenção: esta query só funciona se logs_dispositivo tiver o campo computador_id.
+
+
+45. VER LOGS DE DISPOSITIVOS COM DADOS DO COMPUTADOR
+----------------------------------------------------
+
+SELECT
+    ld.id,
+    ld.acao,
+    ld.descricao,
+    ld.data_hora,
+    c.nome AS computador_nome,
+    c.numero_serie
+FROM logs_dispositivo ld
+JOIN computadores c
+    ON ld.computador_id = c.id
+ORDER BY ld.data_hora DESC;
+
+Serve para mostrar logs com contexto do equipamento.
+
+Atenção: esta query só funciona se logs_dispositivo tiver o campo computador_id.
+
+
+46. VER INVENTÁRIOS VAZIOS
+--------------------------
+
+SELECT
+    i.*
+FROM inventarios i
+LEFT JOIN computadores c
+    ON c.inventario_id = i.id
+WHERE c.id IS NULL;
+
+Serve para encontrar inventários sem computadores.
+
+
+47. VER INVENTÁRIOS COM QUANTIDADE DE COMPUTADORES
+--------------------------------------------------
+
+SELECT
+    i.id,
+    i.nome,
+    i.descricao,
+    COUNT(c.id) AS total_computadores
+FROM inventarios i
+LEFT JOIN computadores c
+    ON c.inventario_id = i.id
+GROUP BY i.id, i.nome, i.descricao;
+
+Serve para listar inventários e ver quantos PCs cada um tem.
+
+
+48. VER INVENTÁRIO COMPLETO COM PCs, LOCALIZAÇÃO E RESPONSÁVEL
+--------------------------------------------------------------
+
+SELECT
+    i.id AS inventario_id,
+    i.nome AS inventario_nome,
+
+    c.id AS computador_id,
+    c.nome AS computador_nome,
+    c.marca,
+    c.modelo,
+    c.numero_serie,
+    c.estado,
+
+    l.nome AS localizacao_nome,
+
+    u.nome AS responsavel_nome,
+    u.email AS responsavel_email
+FROM inventarios i
+LEFT JOIN computadores c
+    ON c.inventario_id = i.id
+LEFT JOIN localizacoes l
+    ON c.localizacao_id = l.id
+LEFT JOIN utilizadores u
+    ON c.utilizador_responsavel_id = u.id
+WHERE i.id = 1
+ORDER BY c.nome;
+
+Esta é provavelmente a query mais completa para apresentar.
+Ela mostra o inventário 1 com todos os seus computadores, localização e responsável.
+
+
+49. VER PENDÊNCIAS DE UM INVENTÁRIO
+-----------------------------------
+
+SELECT
+    c.id,
+    c.nome,
+    c.marca,
+    c.modelo,
+    c.numero_serie,
+    c.estado,
+    CASE
+        WHEN c.localizacao_id IS NULL THEN 'Sem localização'
+        WHEN c.utilizador_responsavel_id IS NULL THEN 'Sem responsável'
+        WHEN c.nome IS NULL OR c.nome = '' THEN 'Sem nome'
+        WHEN c.marca IS NULL OR c.marca = '' THEN 'Sem marca'
+        WHEN c.modelo IS NULL OR c.modelo = '' THEN 'Sem modelo'
+        WHEN c.numero_serie IS NULL OR c.numero_serie = '' THEN 'Sem número de série'
+        WHEN c.estado IS NULL OR c.estado = '' THEN 'Sem estado'
+        ELSE 'Sem pendência'
+    END AS pendencia
+FROM computadores c
+WHERE c.inventario_id = 1
+  AND (
+        c.localizacao_id IS NULL
+     OR c.utilizador_responsavel_id IS NULL
+     OR c.nome IS NULL OR c.nome = ''
+     OR c.marca IS NULL OR c.marca = ''
+     OR c.modelo IS NULL OR c.modelo = ''
+     OR c.numero_serie IS NULL OR c.numero_serie = ''
+     OR c.estado IS NULL OR c.estado = ''
+  );
+
+Serve para listar PCs problemáticos dentro de um inventário.
+
+
+50. VISÃO GERAL DO INVENTÁRIO - VERSÃO COM SUBQUERIES
+-----------------------------------------------------
+
+SELECT
+    i.id AS inventario_id,
+    i.nome AS inventario_nome,
+
+    (
+        SELECT COUNT(*)
+        FROM computadores c
+        WHERE c.inventario_id = i.id
+    ) AS total_computadores,
+
+    (
+        SELECT COUNT(*)
+        FROM computadores c
+        WHERE c.inventario_id = i.id
+          AND c.localizacao_id IS NULL
+    ) AS computadores_sem_localizacao,
+
+    (
+        SELECT COUNT(*)
+        FROM computadores c
+        WHERE c.inventario_id = i.id
+          AND c.utilizador_responsavel_id IS NULL
+    ) AS computadores_sem_responsavel,
+
+    (
+        SELECT COUNT(*)
+        FROM dispositivos_descobertos d
+        WHERE d.inventario_id = i.id
+    ) AS dispositivos_descobertos
+
+FROM inventarios i
+WHERE i.id = 1;
+
+Esta query dá uma visão geral do inventário.
+A versão com subqueries evita contagens repetidas causadas por vários LEFT JOINs.
+
+
+QUERIES MAIS IMPORTANTES PARA DECORAR
+=====================================
+
+A) VER PCs DE UM INVENTÁRIO
+---------------------------
+
+SELECT *
+FROM computadores
+WHERE inventario_id = 1;
+
+
+B) VER PCs DE UM INVENTÁRIO COM LOCALIZAÇÃO E RESPONSÁVEL
+---------------------------------------------------------
+
+SELECT
+    c.id,
+    c.nome,
+    c.marca,
+    c.modelo,
+    c.numero_serie,
+    c.estado,
+    l.nome AS localizacao,
+    u.nome AS responsavel
+FROM computadores c
+LEFT JOIN localizacoes l
+    ON c.localizacao_id = l.id
+LEFT JOIN utilizadores u
+    ON c.utilizador_responsavel_id = u.id
+WHERE c.inventario_id = 1;
+
+
+C) VER PCs SEM LOCALIZAÇÃO
+--------------------------
+
+SELECT *
+FROM computadores
+WHERE inventario_id = 1
+  AND localizacao_id IS NULL;
+
+
+D) VER PCs SEM RESPONSÁVEL
+--------------------------
+
+SELECT *
+FROM computadores
+WHERE inventario_id = 1
+  AND utilizador_responsavel_id IS NULL;
+
+
+E) VER DISPOSITIVOS DESCOBERTOS DE UM INVENTÁRIO
+------------------------------------------------
+
+SELECT *
+FROM dispositivos_descobertos
+WHERE inventario_id = 1;
+
+
+F) VER DISPOSITIVOS DESCOBERTOS QUE AINDA NÃO ESTÃO REGISTADOS COMO COMPUTADORES
+--------------------------------------------------------------------------------
+
+SELECT
+    d.*
+FROM dispositivos_descobertos d
+LEFT JOIN computadores c
+    ON d.hostname = c.nome
+   AND d.inventario_id = c.inventario_id
+WHERE d.inventario_id = 1
+  AND c.id IS NULL;
+
