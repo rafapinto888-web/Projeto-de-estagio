@@ -48,7 +48,7 @@ backend/
     services/      # logica de scan de rede e logs Windows
 frontend/          # interface web estatica (HTML/CSS/JS)
 docs/              # documentacao funcional e tecnica
-script de rede defenitivo/  # scripts utilitarios de teste de rede/logs
+script de rede/  # scripts utilitarios de teste de rede/logs
 ```
 
 ## Funcionalidades Principais
@@ -77,7 +77,7 @@ script de rede defenitivo/  # scripts utilitarios de teste de rede/logs
 No terminal, a partir da raiz do projeto:
 
 ```bash
-cd "c:\Users\Jose\Desktop\Projeto de estagio\Projeto de estagio\backend"
+cd "C:\Users\Jose\Desktop\Projeto de estagio"
 python -m venv venv
 ```
 
@@ -88,9 +88,10 @@ Ativar ambiente virtual:
 .\venv\Scripts\Activate.ps1
 ```
 
-Instalar dependencias:
+Entrar na pasta do backend e instalar dependencias:
 
 ```bash
+cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
 pip install -r requirements.txt
 ```
 
@@ -109,11 +110,11 @@ python -m http.server 5500
 
 ## Como Executar
 
-Com o ambiente virtual ativo dentro de `backend`:
+Com o ambiente virtual na raiz e executando a API dentro de `backend`:
 
 ```bash
-cd "c:\Users\Jose\Desktop\Projeto de estagio\Projeto de estagio\backend"
-.\venv\Scripts\python.exe -m uvicorn app.core.main:app --reload
+cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
+.\..\venv\Scripts\python.exe -m uvicorn app.core.main:app --reload
 ```
 
 API disponivel em:
