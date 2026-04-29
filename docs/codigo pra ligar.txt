@@ -1,7 +1,7 @@
-cd "C:\Users\Jose\Desktop\Projeto de estagio\Projeto de estagio\Projeto de estagio\backend"
-.\.venv\Scripts\Activate.ps1
-python -m uvicorn app.core.main:app --reload
+backend
+cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
+.\..\venv\Scripts\python.exe -m uvicorn app.core.main:app --reload
 
 frontend
-cd "C:\Users\Jose\Desktop\Projeto de estagio\Projeto de estagio\Projeto de estagio\frontend"
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
 python -m http.server 5500
