@@ -86,6 +86,26 @@ function setScanInfo(message, isError = false) {
   setGlobalStatus(isError ? "Erro" : "OK", isError ? "err" : "ok");
 }
 
+function formatDateTime(value) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString("pt-PT");
+}
+
+function formatTipo(value) {
+  if (value === "computador") return "Computador";
+  if (value === "dispositivo_descoberto") return "Descoberto";
+  return value || "-";
+}
+
+function formatEstado(value) {
+  const estado = (value || "").toLowerCase();
+  if (estado === "ativo") return '<span class="chip chip-ok">ativo</span>';
+  if (estado === "inativo") return '<span class="chip chip-warn">inativo</span>';
+  return "-";
+}
+
 function applyFilters(data) {
   const termo = el.termoPesquisa.value.trim().toLowerCase();
   const tipo = el.filtroTipo.value;
@@ -130,13 +150,17 @@ function renderAtivos(ativos) {
   el.ativosTableBody.innerHTML = "";
   updateKpis(ativos);
   ativos.forEach((a) => {
+    const ultimaVez = (a.tipo === "dispositivo_descoberto" && (a.estado || "").toLowerCase() === "inativo")
+      ? formatDateTime(a.ultima_vez_ativo_em)
+      : "-";
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${a.tipo || "-"}</td>
+      <td>${formatTipo(a.tipo)}</td>
       <td>${a.nome || a.hostname || "-"}</td>
       <td>${a.ip || "-"}</td>
       <td>${a.numero_serie || "-"}</td>
-      <td>${a.estado || "-"}</td>
+      <td>${formatEstado(a.estado)}</td>
+      <td>${ultimaVez}</td>
       <td>${a.marca || "-"}</td>
       <td>${a.modelo || "-"}</td>
       <td>${a.localizacao_nome || "-"}</td>
@@ -191,6 +215,9 @@ async function executarScan() {
     setScanInfo("Seleciona um inventario primeiro.", true);
     return;
   }
+  el.btnScan.disabled = true;
+  setGlobalStatus("Scan em execucao...", "warn");
+  setScanInfo("Scan em execucao...");
   try {
     const body = { rede: el.redeScan.value.trim() || null };
     const out = await req(`/inventarios/${state.inventarioId}/scan`, {
@@ -206,6 +233,8 @@ async function executarScan() {
     await carregarAtivos();
   } catch (err) {
     setScanInfo(`Erro no scan: ${err.message}`, true);
+  } finally {
+    el.btnScan.disabled = false;
   }
 }
 

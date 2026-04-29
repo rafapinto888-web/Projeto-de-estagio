@@ -5,3 +5,7 @@ cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
 frontend
 cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
 python -m http.server 5500
+
+links
+API Swagger: http://127.0.0.1:8000/docs
+Frontend: http://127.0.0.1:5500

@@ -18,7 +18,7 @@ from app.schemas.dispositivo_descoberto import (
     DispositivoDescobertoResponse,
     DispositivoDescobertoScanResponse,
 )
-from app.services.scan_rede import descobrir_dispositivos_ativos, obter_info_windows_por_ip
+from app.services.scan_rede import descobrir_dispositivos_enriquecidos
 from app.services.windows_logs import coletar_logs_windows
 from app.schemas.log_dispositivo import LogsDispositivoConsultaResponse
 from app.schemas.inventario import (
@@ -235,6 +235,7 @@ def listar_computadores_do_inventario(
             modelo=c.modelo,
             localizacao_nome=c.localizacao_nome,
             utilizador_responsavel_nome=c.utilizador_responsavel_nome,
+            ultima_vez_ativo_em=None,
         )
         for c in computadores
     )
@@ -252,6 +253,7 @@ def listar_computadores_do_inventario(
             modelo=d.modelo,
             localizacao_nome=None,
             utilizador_responsavel_nome=None,
+            ultima_vez_ativo_em=d.ultima_vez_ativo_em,
         )
         for d in dispositivos
     )
@@ -391,20 +393,14 @@ def executar_scan_do_inventario(
             detail="Inventario sub_rede precisa de rede definida para executar scan",
         )
 
-    # Descobre IPs ativos e tenta obter MAC/hostname para cada IP.
-    dispositivos_ativos = descobrir_dispositivos_ativos(rede_alvo)
+    # Usa pipeline consolidado do scan (descoberta + enriquecimento tecnico por IP).
+    dispositivos_ativos = descobrir_dispositivos_enriquecidos(
+        rede_alvo,
+        pedido_scan.utilizador,
+        pedido_scan.password,
+    )
     ips_ativos = list(dict.fromkeys([d["ip"] for d in dispositivos_ativos if d.get("ip")]))
-    mac_por_ip = {
-        d["ip"]: d.get("mac_address") for d in dispositivos_ativos if d.get("ip")
-    }
-    hostname_por_ip = {
-        d["ip"]: d.get("hostname") for d in dispositivos_ativos if d.get("ip")
-    }
-    # Tenta recolher dados de inventario tecnico por IP quando credenciais forem fornecidas.
-    info_windows_por_ip = {
-        ip: obter_info_windows_por_ip(ip, pedido_scan.utilizador, pedido_scan.password)
-        for ip in ips_ativos
-    }
+    ativos_por_ip = {d["ip"]: d for d in dispositivos_ativos if d.get("ip")}
     # Carrega os dispositivos já existentes neste inventário (por IP).
     existentes_por_ip = obter_dispositivos_descobertos_por_ips(
         db,
@@ -419,20 +415,20 @@ def executar_scan_do_inventario(
         # Cria novos ou atualiza existentes sem duplicar (inventario_id + ip).
         for ip in ips_ativos:
             dispositivo = existentes_por_ip.get(ip)
-            hostname_novo = hostname_por_ip.get(ip)
-            info_windows = info_windows_por_ip.get(ip, {})
+            dados_scan = ativos_por_ip.get(ip, {})
+            hostname_novo = dados_scan.get("hostname")
             if dispositivo is None:
                 # Novo IP no inventário: cria registo como ativo.
                 dispositivo = DispositivoDescobertoDB(
                     inventario_id=inventario_id,
                     ip=ip,
                     estado="ativo",
-                    mac_address=mac_por_ip.get(ip),
+                    mac_address=dados_scan.get("mac_address"),
                     hostname=hostname_novo,
-                    marca=info_windows.get("marca"),
-                    modelo=info_windows.get("modelo"),
-                    numero_serie=info_windows.get("numero_serie"),
-                    sistema_operativo=info_windows.get("sistema_operativo"),
+                    marca=dados_scan.get("marca"),
+                    modelo=dados_scan.get("modelo"),
+                    numero_serie=dados_scan.get("numero_serie"),
+                    sistema_operativo=dados_scan.get("sistema_operativo"),
                     origem_registo="scan",
                     ultima_vez_ativo_em=instante_scan,
                 )
@@ -442,14 +438,14 @@ def executar_scan_do_inventario(
                 # IP já existe: marca ativo e atualiza campos sem apagar valores antigos.
                 dispositivo.estado = "ativo"
                 dispositivo.ultima_vez_ativo_em = instante_scan
-                dispositivo.mac_address = mac_por_ip.get(ip) or dispositivo.mac_address
+                dispositivo.mac_address = dados_scan.get("mac_address") or dispositivo.mac_address
                 if hostname_novo and hostname_novo != dispositivo.hostname:
                     dispositivo.hostname = hostname_novo
-                dispositivo.marca = info_windows.get("marca") or dispositivo.marca
-                dispositivo.modelo = info_windows.get("modelo") or dispositivo.modelo
-                dispositivo.numero_serie = info_windows.get("numero_serie") or dispositivo.numero_serie
+                dispositivo.marca = dados_scan.get("marca") or dispositivo.marca
+                dispositivo.modelo = dados_scan.get("modelo") or dispositivo.modelo
+                dispositivo.numero_serie = dados_scan.get("numero_serie") or dispositivo.numero_serie
                 dispositivo.sistema_operativo = (
-                    info_windows.get("sistema_operativo") or dispositivo.sistema_operativo
+                    dados_scan.get("sistema_operativo") or dispositivo.sistema_operativo
                 )
 
             # Tenta recolher logs reais do Windows para o dispositivo/computador associado.

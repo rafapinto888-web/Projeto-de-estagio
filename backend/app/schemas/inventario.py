@@ -1,6 +1,7 @@
 # Schemas de inventarios, detalhes e respostas de scan.
 from enum import Enum
 from ipaddress import ip_network
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from typing import Literal
@@ -149,6 +150,7 @@ class AtivoInventarioItem(BaseModel):
     modelo: str | None = None
     localizacao_nome: str | None = None
     utilizador_responsavel_nome: str | None = None
+    ultima_vez_ativo_em: datetime | None = None
 
 
 class InventarioDetalhesResponse(InventarioResponse):

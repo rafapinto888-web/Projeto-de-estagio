@@ -11,6 +11,40 @@ import os
 import json
 
 
+def _limpo_ou_none(valor: object) -> str | None:
+    # Converte valores vazios/placeholders para None para nao poluir a BD.
+    texto = str(valor or "").strip()
+    if not texto:
+        return None
+    normalizado = texto.lower()
+    placeholders = {
+        "n/a",
+        "na",
+        "null",
+        "none",
+        "erro",
+        "error",
+        "nao acessivel",
+        "não acessível",
+        "indisponivel",
+        "indisponível",
+    }
+    if normalizado in placeholders:
+        return None
+    return texto
+
+
+def _normalizar_mac(mac: object) -> str | None:
+    # Mantem MAC no formato aa:bb:cc:dd:ee:ff quando possivel.
+    limpo = _limpo_ou_none(mac)
+    if limpo is None:
+        return None
+    padrao = re.search(r"(?i)\b([0-9a-f]{2}(?:[:-][0-9a-f]{2}){5})\b", limpo)
+    if not padrao:
+        return None
+    return padrao.group(1).replace("-", ":").lower()
+
+
 def ping_host(ip: str) -> bool:
     # Faz ping ao IP (Windows/Linux) para saber se está ativo.
     sistema = platform.system().lower()
@@ -151,6 +185,8 @@ def obter_info_windows_por_ip(
     # Recolhe dados Windows remotos por CIM; se falhar, devolve campos nulos.
     if not utilizador or not password:
         return {
+            "hostname": None,
+            "mac_address": None,
             "marca": None,
             "modelo": None,
             "numero_serie": None,
@@ -182,14 +218,44 @@ function Try-CimInfo {
         $cs = Get-CimInstance -CimSession $session -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
         $bios = Get-CimInstance -CimSession $session -ClassName Win32_BIOS -ErrorAction SilentlyContinue
         $os = Get-CimInstance -CimSession $session -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
+        $nics = Get-CimInstance -CimSession $session -ClassName Win32_NetworkAdapterConfiguration -ErrorAction SilentlyContinue |
+            Where-Object { $_.IPEnabled -eq $true }
+
+        $hostname = $null
+        if ($cs -and $cs.Name) { $hostname = $cs.Name }
+
+        # Prioriza NIC que contenha o IP alvo para obter MAC mais fiavel.
+        $mac = $null
+        $nicMatch = $nics | Where-Object { $_.IPAddress -contains $target } | Select-Object -First 1
+        if (-not $nicMatch) {
+            $nicMatch = $nics | Select-Object -First 1
+        }
+        if ($nicMatch) { $mac = $nicMatch.MACAddress }
+
+        $modelo = $null
+        if ($cs) {
+            $fabricante = ""
+            if ($cs.Manufacturer) { $fabricante = $cs.Manufacturer.ToString().ToLower() }
+            if ($fabricante -match "lenovo" -and $cs.SystemFamily) {
+                $modelo = $cs.SystemFamily
+            } elseif ($fabricante -match "hp|hewlett" -and $cs.Model) {
+                $modelo = $cs.Model
+            } elseif ($cs.Model) {
+                $modelo = $cs.Model
+            } elseif ($cs.SystemFamily) {
+                $modelo = $cs.SystemFamily
+            }
+        }
 
         if ($session) {
             Remove-CimSession $session -ErrorAction SilentlyContinue
         }
 
         [pscustomobject]@{
+            hostname = $hostname
+            mac_address = $mac
             marca = if ($cs) { $cs.Manufacturer } else { $null }
-            modelo = if ($cs) { $cs.Model } else { $null }
+            modelo = $modelo
             numero_serie = if ($bios) { $bios.SerialNumber } else { $null }
             sistema_operativo = if ($os) { $os.Caption } else { $null }
         }
@@ -224,6 +290,8 @@ if ($dados) {
         )
     except (OSError, subprocess.SubprocessError):
         return {
+            "hostname": None,
+            "mac_address": None,
             "marca": None,
             "modelo": None,
             "numero_serie": None,
@@ -237,13 +305,49 @@ if ($dados) {
     if not isinstance(payload, dict):
         payload = {}
 
-    def _limpo(v: object) -> str | None:
-        texto = str(v or "").strip()
-        return texto or None
-
     return {
-        "marca": _limpo(payload.get("marca")),
-        "modelo": _limpo(payload.get("modelo")),
-        "numero_serie": _limpo(payload.get("numero_serie")),
-        "sistema_operativo": _limpo(payload.get("sistema_operativo")),
+        "hostname": _limpo_ou_none(payload.get("hostname")),
+        "mac_address": _normalizar_mac(payload.get("mac_address")),
+        "marca": _limpo_ou_none(payload.get("marca")),
+        "modelo": _limpo_ou_none(payload.get("modelo")),
+        "numero_serie": _limpo_ou_none(payload.get("numero_serie")),
+        "sistema_operativo": _limpo_ou_none(payload.get("sistema_operativo")),
     }
+
+
+def descobrir_dispositivos_enriquecidos(
+    rede: str,
+    utilizador: str | None,
+    password: str | None,
+) -> list[dict[str, str | None]]:
+    # Pipeline unico do scan: descoberta base + enriquecimento Windows por IP.
+    dispositivos_base = descobrir_dispositivos_ativos(rede)
+    if not dispositivos_base:
+        return []
+
+    ips_ativos = [d["ip"] for d in dispositivos_base if d.get("ip")]
+    info_por_ip = {
+        ip: obter_info_windows_por_ip(ip, utilizador, password)
+        for ip in ips_ativos
+    }
+
+    enriquecidos: list[dict[str, str | None]] = []
+    for dispositivo in dispositivos_base:
+        ip = dispositivo.get("ip")
+        if not ip:
+            continue
+        info_windows = info_por_ip.get(ip, {})
+        hostname = _limpo_ou_none(dispositivo.get("hostname")) or info_windows.get("hostname")
+        mac = _normalizar_mac(dispositivo.get("mac_address")) or info_windows.get("mac_address")
+        enriquecidos.append(
+            {
+                "ip": ip,
+                "hostname": hostname,
+                "mac_address": mac,
+                "marca": info_windows.get("marca"),
+                "modelo": info_windows.get("modelo"),
+                "numero_serie": info_windows.get("numero_serie"),
+                "sistema_operativo": info_windows.get("sistema_operativo"),
+            }
+        )
+    return enriquecidos

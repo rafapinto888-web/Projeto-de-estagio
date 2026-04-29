@@ -235,6 +235,24 @@ th {
   background: #f7f9ff;
 }
 
+.chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chip-ok {
+  background: #e7f8ee;
+  color: #067647;
+}
+
+.chip-warn {
+  background: #fff4e5;
+  color: #b54708;
+}
+
 .help-list {
   margin: 8px 0 0 20px;
   padding: 0;
