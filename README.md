@@ -12,13 +12,28 @@ O sistema foi desenhado para suportar o ciclo completo de inventario tecnico:
 - Enriquecer dispositivos descobertos com dados tecnicos (quando disponiveis).
 - Consultar e pesquisar informacao de forma centralizada por API.
 
-## Stack Tecnologica
+## Stack Tecnologico
 
-- **Backend:** FastAPI
-- **Persistencia:** SQLAlchemy
-- **Validacao:** Pydantic
-- **Base de dados:** SQLite por omissao (suporta `DATABASE_URL`)
-- **Servidor ASGI:** Uvicorn
+- **Backend / Web Service**
+  - Python
+  - FastAPI
+  - Uvicorn
+- **Web Server**
+  - Nginx
+- **Base de Dados**
+  - PostgreSQL
+- **Frontend**
+  - HTML
+  - CSS
+  - JavaScript
+- **Containerizacao**
+  - Docker
+  - Docker Compose
+- **Documentacao e Testes de API**
+  - Swagger / OpenAPI
+- **Ferramentas de Desenvolvimento**
+  - Visual Studio Code
+  - Visual Paradigm
 
 ## Estrutura do Projeto
 
@@ -51,25 +66,26 @@ script de rede defenitivo/  # scripts utilitarios de teste de rede/logs
 ## Requisitos
 
 - Python 3.11+ (recomendado)
-- Windows (para todas as funcionalidades de coleta remota via PowerShell/CIM)
+- PostgreSQL em execucao (local ou remoto)
 - Dependencias em `backend/requirements.txt`
+- Docker e Docker Compose (opcional, para ambiente containerizado)
 
 ## Instalacao
 
-### 1) Backend
+### 1) Backend (FastAPI)
 
-No terminal, na raiz do projeto:
+No terminal, a partir da raiz do projeto:
 
 ```bash
-cd backend
-python -m venv .venv
+cd "c:\Users\Jose\Desktop\Projeto de estagio\Projeto de estagio\backend"
+python -m venv venv
 ```
 
 Ativar ambiente virtual:
 
-- **PowerShell**
+- **PowerShell (Windows)**
 ```bash
-.venv\Scripts\Activate.ps1
+.\venv\Scripts\Activate.ps1
 ```
 
 Instalar dependencias:
@@ -96,7 +112,8 @@ python -m http.server 5500
 Com o ambiente virtual ativo dentro de `backend`:
 
 ```bash
-uvicorn app.core.main:app --reload
+cd "c:\Users\Jose\Desktop\Projeto de estagio\Projeto de estagio\backend"
+.\venv\Scripts\python.exe -m uvicorn app.core.main:app --reload
 ```
 
 API disponivel em:
@@ -113,11 +130,16 @@ API disponivel em:
 4. Guarda/atualiza dispositivos descobertos (IP, hostname, MAC e metadados disponiveis).
 5. Disponibiliza pesquisa e endpoints de consulta para integracao com frontend.
 
-## Configuracao de Base de Dados
+## Configuracao de Base de Dados (PostgreSQL)
 
-- Por omissao, usa SQLite local.
-- Para trocar a base, define `DATABASE_URL` antes de arrancar a API.
-- No arranque, a aplicacao cria tabelas em falta e aplica compatibilidades basicas de schema para SQLite.
+- Define a variavel `DATABASE_URL` antes de iniciar a API.
+- Exemplo:
+
+```bash
+DATABASE_URL=postgresql+psycopg2://utilizador:password@localhost:5432/inventario
+```
+
+- A aplicacao usa esta ligacao para persistencia dos dados do sistema.
 
 ## Boas Praticas de Repositorio
 
@@ -137,3 +159,10 @@ API disponivel em:
 ## Estado Atual
 
 Projeto em evolucao, com backend funcional para operacoes principais de inventario e scan, e frontend em fase de melhoria visual/ux.
+
+## Arquitetura de Deploy (Resumo)
+
+- `FastAPI + Uvicorn` exposto internamente como servico da API.
+- `Nginx` como web server/reverse proxy na frente do backend.
+- `PostgreSQL` para armazenamento persistente.
+- `Docker Compose` para orquestrar os servicos em ambiente de desenvolvimento/entrega.
