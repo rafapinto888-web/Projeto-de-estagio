@@ -1,15 +1,21 @@
 import { store } from "./store.js";
 
 export async function http(path, options = {}, timeoutMs = 20000) {
+  const { skipAuth = false, ...fetchOptions } = options;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    const headers = {
+      ...(fetchOptions.headers || {}),
+    };
+    if (!skipAuth && store.authToken) {
+      headers.Authorization = `Bearer ${store.authToken}`;
+    }
+
     const res = await fetch(`${store.apiBase}${path}`, {
-      ...options,
+      ...fetchOptions,
       signal: controller.signal,
-      headers: {
-        ...(options.headers || {}),
-      },
+      headers,
     });
 
     const raw = await res.text();
@@ -26,6 +32,11 @@ export async function http(path, options = {}, timeoutMs = 20000) {
       const detail =
         (body && typeof body === "object" && body.detail) ||
         (typeof body === "string" ? body : `${res.status} ${res.statusText}`);
+      if (res.status === 401 || res.status === 403) {
+        window.dispatchEvent(
+          new CustomEvent("auth-error", { detail: { status: res.status, message: detail } })
+        );
+      }
       const err = new Error(detail);
       err.status = res.status;
       throw err;

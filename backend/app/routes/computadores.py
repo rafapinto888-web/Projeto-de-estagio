@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.deps import require_admin
 from app.database.computadores import (
     apagar_computador as apagar_computador_db,
     atualizar_computador as atualizar_computador_db,
@@ -212,7 +213,12 @@ def buscar_computador(computador_id: int, db: Session = Depends(get_db)):
     return computador
 
 
-@router.post("/", response_model=ComputadorResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=ComputadorResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
 def adicionar_computador(
     computador: ComputadorCreate, db: Session = Depends(get_db)
 ):
@@ -233,7 +239,11 @@ def adicionar_computador(
         ) from None
 
 
-@router.put("/{computador_id}", response_model=ComputadorResponse)
+@router.put(
+    "/{computador_id}",
+    response_model=ComputadorResponse,
+    dependencies=[Depends(require_admin)],
+)
 def editar_computador(
     computador_id: int,
     computador_atualizado: ComputadorReplace,
@@ -265,7 +275,11 @@ def editar_computador(
     return computador
 
 
-@router.patch("/{computador_id}", response_model=ComputadorResponse)
+@router.patch(
+    "/{computador_id}",
+    response_model=ComputadorResponse,
+    dependencies=[Depends(require_admin)],
+)
 def atualizar_parcialmente_computador(
     computador_id: int,
     computador_atualizado: ComputadorUpdate,
@@ -308,7 +322,11 @@ def atualizar_parcialmente_computador(
     return computador
 
 
-@router.delete("/{computador_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{computador_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 def apagar_computador(computador_id: int, db: Session = Depends(get_db)):
     # Remove um computador pelo id.
     removido = apagar_computador_db(db, computador_id)

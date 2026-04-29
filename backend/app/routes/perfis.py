@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.deps import require_admin
 from app.database.connection import get_db
 from app.models.perfil_db import PerfilDB
 from app.schemas.perfil import PerfilCreate, PerfilResponse, PerfilUpdate
@@ -27,7 +28,12 @@ def obter_perfil(perfil_id: int, db: Session = Depends(get_db)):
     return obter_perfil_ou_404(db, perfil_id)
 
 
-@router.post("/", response_model=PerfilResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=PerfilResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
 def criar_perfil(perfil: PerfilCreate, db: Session = Depends(get_db)):
     existente = db.query(PerfilDB).filter(PerfilDB.nome == perfil.nome).first()
     if existente is not None:
@@ -47,7 +53,11 @@ def criar_perfil(perfil: PerfilCreate, db: Session = Depends(get_db)):
     return novo_perfil
 
 
-@router.put("/{perfil_id}", response_model=PerfilResponse)
+@router.put(
+    "/{perfil_id}",
+    response_model=PerfilResponse,
+    dependencies=[Depends(require_admin)],
+)
 def atualizar_perfil(
     perfil_id: int,
     perfil_atualizado: PerfilUpdate,
@@ -75,7 +85,11 @@ def atualizar_perfil(
     return perfil
 
 
-@router.delete("/{perfil_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{perfil_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 def apagar_perfil(perfil_id: int, db: Session = Depends(get_db)):
     perfil = obter_perfil_ou_404(db, perfil_id)
 

@@ -4,6 +4,7 @@ from pwdlib import PasswordHash
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.deps import require_admin
 from app.database.connection import get_db
 from app.models.perfil_db import PerfilDB
 from app.models.utilizador_db import UtilizadorDB
@@ -60,7 +61,12 @@ def obter_utilizador(utilizador_id: int, db: Session = Depends(get_db)):
     return utilizador
 
 
-@router.post("/", response_model=UtilizadorResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=UtilizadorResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
 def criar_utilizador(utilizador: UtilizadorCreate, db: Session = Depends(get_db)):
     validar_perfil(db, utilizador.perfil_id)
     validar_email_unico(db, utilizador.email)
@@ -86,7 +92,11 @@ def criar_utilizador(utilizador: UtilizadorCreate, db: Session = Depends(get_db)
     return novo_utilizador
 
 
-@router.put("/{utilizador_id}", response_model=UtilizadorResponse)
+@router.put(
+    "/{utilizador_id}",
+    response_model=UtilizadorResponse,
+    dependencies=[Depends(require_admin)],
+)
 def atualizar_utilizador(
     utilizador_id: int,
     utilizador_atualizado: UtilizadorUpdate,
@@ -120,7 +130,11 @@ def atualizar_utilizador(
     return utilizador
 
 
-@router.delete("/{utilizador_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{utilizador_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 def apagar_utilizador(utilizador_id: int, db: Session = Depends(get_db)):
     utilizador = db.get(UtilizadorDB, utilizador_id)
     if utilizador is None:

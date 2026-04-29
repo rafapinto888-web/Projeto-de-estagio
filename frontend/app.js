@@ -7,8 +7,19 @@ import { utilizadoresApi } from "./js/api/utilizadoresApi.js";
 import { perfisApi } from "./js/api/perfisApi.js";
 import { localizacoesApi } from "./js/api/localizacoesApi.js";
 import { pesquisaApi } from "./js/api/pesquisaApi.js";
+import { authApi } from "./js/api/authApi.js";
+import { clearSession, isAdmin, isAuthenticated, saveSession } from "./js/core/session.js";
 
 const el = {
+  appRoot: document.getElementById("appRoot"),
+  loginScreen: document.getElementById("loginScreen"),
+  loginForm: document.getElementById("loginForm"),
+  loginIdentificador: document.getElementById("loginIdentificador"),
+  loginPassword: document.getElementById("loginPassword"),
+  loginError: document.getElementById("loginError"),
+  authUser: document.getElementById("authUser"),
+  authPerfil: document.getElementById("authPerfil"),
+  btnLogout: document.getElementById("btnLogout"),
   apiBase: document.getElementById("apiBase"),
   saveApiBase: document.getElementById("saveApiBase"),
   testApi: document.getElementById("testApi"),
@@ -17,10 +28,21 @@ const el = {
   selectedInventario: document.getElementById("selectedInventario"),
   tabs: Array.from(document.querySelectorAll(".tab-btn")),
   panels: Array.from(document.querySelectorAll(".panel")),
+  actionRows: Array.from(document.querySelectorAll(".action-row")),
   kpiInventarios: document.getElementById("kpiInventarios"),
   kpiComputadores: document.getElementById("kpiComputadores"),
   kpiUtilizadores: document.getElementById("kpiUtilizadores"),
   kpiLocalizacoes: document.getElementById("kpiLocalizacoes"),
+  dashInventariosBody: document.getElementById("dashInventariosBody"),
+  dashAtividade: document.getElementById("dashAtividade"),
+  btnQuickInventario: document.getElementById("btnQuickInventario"),
+  btnGoAtivos: document.getElementById("btnGoAtivos"),
+  btnGoInventarios: document.getElementById("btnGoInventarios"),
+  btnGoLogs: document.getElementById("btnGoLogs"),
+  btnGoComputadores: document.getElementById("btnGoComputadores"),
+  btnGoUtilizadores: document.getElementById("btnGoUtilizadores"),
+  btnGoPesquisa: document.getElementById("btnGoPesquisa"),
+  btnGoLogs2: document.getElementById("btnGoLogs2"),
   inventariosBody: document.getElementById("inventariosBody"),
   inventarioForm: document.getElementById("inventarioForm"),
   invId: document.getElementById("invId"),
@@ -30,6 +52,11 @@ const el = {
   invDesc: document.getElementById("invDesc"),
   btnInvUpdate: document.getElementById("btnInvUpdate"),
   btnInvDelete: document.getElementById("btnInvDelete"),
+  btnInvCancel: document.getElementById("btnInvCancel"),
+  btnOpenInventarioModal: document.getElementById("btnOpenInventarioModal"),
+  inventarioModal: document.getElementById("inventarioModal"),
+  inventarioModalTitle: document.getElementById("inventarioModalTitle"),
+  btnCloseInventarioModal: document.getElementById("btnCloseInventarioModal"),
   reloadInventarios: document.getElementById("reloadInventarios"),
   ativoInventarioSelect: document.getElementById("ativoInventarioSelect"),
   ativoPesquisa: document.getElementById("ativoPesquisa"),
@@ -56,6 +83,8 @@ const el = {
   btnPcPut: document.getElementById("btnPcPut"),
   btnPcPatch: document.getElementById("btnPcPatch"),
   btnPcDelete: document.getElementById("btnPcDelete"),
+  btnPcCreate: document.getElementById("btnPcCreate"),
+  btnPcCancel: document.getElementById("btnPcCancel"),
   computadoresBody: document.getElementById("computadoresBody"),
   utilizadorForm: document.getElementById("utilizadorForm"),
   utId: document.getElementById("utId"),
@@ -66,6 +95,8 @@ const el = {
   utPassword: document.getElementById("utPassword"),
   btnUtUpdate: document.getElementById("btnUtUpdate"),
   btnUtDelete: document.getElementById("btnUtDelete"),
+  btnUtCreate: document.getElementById("btnUtCreate"),
+  btnUtCancel: document.getElementById("btnUtCancel"),
   utilizadoresBody: document.getElementById("utilizadoresBody"),
   perfilForm: document.getElementById("perfilForm"),
   pfId: document.getElementById("pfId"),
@@ -73,6 +104,8 @@ const el = {
   pfDesc: document.getElementById("pfDesc"),
   btnPfUpdate: document.getElementById("btnPfUpdate"),
   btnPfDelete: document.getElementById("btnPfDelete"),
+  btnPfCreate: document.getElementById("btnPfCreate"),
+  btnPfCancel: document.getElementById("btnPfCancel"),
   perfisBody: document.getElementById("perfisBody"),
   localizacaoForm: document.getElementById("localizacaoForm"),
   lcId: document.getElementById("lcId"),
@@ -80,6 +113,8 @@ const el = {
   lcDesc: document.getElementById("lcDesc"),
   btnLcUpdate: document.getElementById("btnLcUpdate"),
   btnLcDelete: document.getElementById("btnLcDelete"),
+  btnLcCreate: document.getElementById("btnLcCreate"),
+  btnLcCancel: document.getElementById("btnLcCancel"),
   localizacoesBody: document.getElementById("localizacoesBody"),
   globalTermo: document.getElementById("globalTermo"),
   btnGlobalSearch: document.getElementById("btnGlobalSearch"),
@@ -100,10 +135,133 @@ const el = {
 
 el.apiBase.value = store.apiBase;
 let scanCredsVisible = false;
+const selectedEntity = {
+  inventarioId: null,
+  computadorId: null,
+  utilizadorId: null,
+  perfilId: null,
+  localizacaoId: null,
+};
+const uiActivityLog = [];
 
 function setStatus(text, level = "ok") {
   el.globalStatus.className = `status ${level}`;
   el.globalStatus.textContent = text;
+  const now = new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+  uiActivityLog.unshift({ text, time: now, level });
+  if (uiActivityLog.length > 8) {
+    uiActivityLog.length = 8;
+  }
+  renderDashboardActivity();
+}
+
+function setSelectOptions(selectEl, items, getValue, getLabel, placeholder) {
+  if (!selectEl) return;
+  const previous = selectEl.value;
+  clear(selectEl);
+  if (placeholder) {
+    selectEl.appendChild(option("", placeholder));
+  }
+  items.forEach((item) => {
+    selectEl.appendChild(option(String(getValue(item)), getLabel(item)));
+  });
+  if (previous && Array.from(selectEl.options).some((o) => o.value === previous)) {
+    selectEl.value = previous;
+  }
+}
+
+function makeRowActionButton(text, className, onClick) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = text;
+  btn.className = className;
+  btn.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    onClick();
+  });
+  return btn;
+}
+
+function setLoginError(message = "") {
+  if (!message) {
+    el.loginError.classList.add("is-hidden");
+    el.loginError.textContent = "";
+    return;
+  }
+  el.loginError.classList.remove("is-hidden");
+  el.loginError.textContent = message;
+}
+
+function showApp(isVisible) {
+  el.appRoot.classList.toggle("is-hidden", !isVisible);
+  el.loginScreen.classList.toggle("is-hidden", isVisible);
+}
+
+function setAuthUi() {
+  const user = store.currentUser;
+  el.authUser.textContent = user ? user.nome : "Sem sessao";
+  el.authPerfil.textContent = `Perfil: ${user?.perfil_nome || "-"}`;
+}
+
+function applyRoleUi() {
+  const admin = isAdmin();
+  [
+    el.inventarioForm,
+    el.computadorForm,
+    el.utilizadorForm,
+    el.perfilForm,
+    el.localizacaoForm,
+    ...el.actionRows,
+    el.btnScan,
+    el.btnOpenInventarioModal,
+    el.btnQuickInventario,
+    el.btnPcCreate,
+    el.btnUtCreate,
+    el.btnPfCreate,
+    el.btnLcCreate,
+  ].forEach((node) => {
+    if (!node) return;
+    node.classList.toggle("is-hidden", !admin);
+  });
+  if (!admin) {
+    el.scanInfo.textContent = "Sessao em modo consulta: apenas administradores podem alterar dados.";
+  }
+}
+
+function openInventarioModal(mode = "create") {
+  if (!isAdmin()) return;
+  if (mode === "create") {
+    clearInventarioForm();
+    el.inventarioModalTitle.textContent = "Criar inventario";
+  } else {
+    el.inventarioModalTitle.textContent = "Editar inventario";
+  }
+  el.inventarioModal.classList.remove("is-hidden");
+}
+
+function closeInventarioModal() {
+  clearInventarioForm();
+  el.inventarioModal.classList.add("is-hidden");
+}
+
+function clearInventarioForm() {
+  el.invId.value = "";
+  selectedEntity.inventarioId = null;
+  el.invNome.value = "";
+  el.invTipo.value = "normal";
+  el.invRede.value = "";
+  el.invDesc.value = "";
+  syncInventarioConditionalUI();
+}
+
+function preencherInventarioForm(inv) {
+  selectedEntity.inventarioId = inv.id;
+  el.invId.value = String(inv.id ?? "");
+  el.invNome.value = inv.nome || "";
+  el.invTipo.value = inv.tipo_inventario || "normal";
+  el.invRede.value = inv.rede || "";
+  el.invDesc.value = inv.descricao || "";
+  syncInventarioConditionalUI();
 }
 
 function syncInventarioConditionalUI() {
@@ -142,12 +300,23 @@ function selectedInventarioId() {
 function setSelectedInventarioLabel() {
   const id = selectedInventarioId();
   store.selectedInventarioId = id;
-  el.selectedInventario.textContent = id ? `Inventario: ${id}` : "Inventario: nenhum";
+  const selectedOption = el.ativoInventarioSelect.selectedOptions?.[0];
+  const selectedLabel = selectedOption?.textContent?.trim() || "";
+  const nome = selectedLabel.includes(" - ")
+    ? selectedLabel.split(" - ").slice(1).join(" - ").trim()
+    : "";
+  el.selectedInventario.textContent = id
+    ? `Inventario selecionado: ${nome || `ID ${id}`}`
+    : "Inventario selecionado: nenhum";
 }
 
 function activateTab(tabName) {
   el.tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.tab === tabName));
   el.panels.forEach((panel) => panel.classList.toggle("active", panel.id === `panel-${tabName}`));
+}
+
+function openTab(tabName) {
+  activateTab(tabName);
 }
 
 function toNullableInt(v) {
@@ -173,18 +342,138 @@ function formatDate(v) {
   return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString("pt-PT");
 }
 
+function addAtivoRow(item, { offlineDateMode = "inactiveOnly" } = {}) {
+  const tr = document.createElement("tr");
+  tr.appendChild(td(item.tipo));
+  tr.appendChild(td(item.nome || item.hostname || "-"));
+  tr.appendChild(td(item.ip || "-"));
+  tr.appendChild(td(item.numero_serie || "-"));
+  const estadoCell = document.createElement("td");
+  estadoCell.appendChild(activeStatusChip(item.estado));
+  tr.appendChild(estadoCell);
+
+  let ultimaVezAtivo = "-";
+  if (offlineDateMode === "inactiveOnly") {
+    ultimaVezAtivo = item.estado === "inativo" ? formatDate(item.ultima_vez_ativo_em) : "-";
+  } else if (offlineDateMode === "raw") {
+    ultimaVezAtivo = item.ultima_vez_ativo_em || "-";
+  }
+  tr.appendChild(td(ultimaVezAtivo));
+  tr.appendChild(td(item.marca || "-"));
+  tr.appendChild(td(item.modelo || "-"));
+  el.ativosBody.appendChild(tr);
+}
+
+function renderDashboardInventarios(inventarios) {
+  if (!el.dashInventariosBody) return;
+  clear(el.dashInventariosBody);
+  const top = inventarios.slice(0, 5);
+  if (!top.length) {
+    const tr = document.createElement("tr");
+    tr.appendChild(td("-"));
+    tr.appendChild(td("Sem inventarios"));
+    tr.appendChild(td("-"));
+    tr.appendChild(td("-"));
+    el.dashInventariosBody.appendChild(tr);
+    return;
+  }
+  top.forEach((inv) => {
+    const tr = document.createElement("tr");
+    tr.appendChild(td(String(inv.id)));
+    tr.appendChild(td(inv.nome || "-"));
+    tr.appendChild(td(labelTipoInventario(inv.tipo_inventario)));
+    tr.appendChild(td(inv.rede || "-"));
+    el.dashInventariosBody.appendChild(tr);
+  });
+}
+
+function renderDashboardActivity() {
+  if (!el.dashAtividade) return;
+  clear(el.dashAtividade);
+  if (!uiActivityLog.length) {
+    const li = document.createElement("li");
+    li.textContent = "Sem atividade recente.";
+    el.dashAtividade.appendChild(li);
+    return;
+  }
+  uiActivityLog.forEach((item) => {
+    const li = document.createElement("li");
+    const txt = document.createElement("span");
+    txt.textContent = item.text;
+    const time = document.createElement("span");
+    time.className = "activity-time";
+    time.textContent = item.time;
+    li.appendChild(txt);
+    li.appendChild(time);
+    el.dashAtividade.appendChild(li);
+  });
+}
+
 async function refreshInventarios() {
+  const admin = isAdmin();
   const inventarios = await inventariosApi.list();
+  renderDashboardInventarios(inventarios);
   clear(el.inventariosBody);
   clear(el.ativoInventarioSelect);
   el.ativoInventarioSelect.appendChild(option("", "Seleciona inventario"));
+  setSelectOptions(
+    el.pcInventarioId,
+    inventarios,
+    (inv) => inv.id,
+    (inv) => `${inv.nome} (#${inv.id})`,
+    "Seleciona inventario"
+  );
+
   inventarios.forEach((inv) => {
     const tr = document.createElement("tr");
+    tr.dataset.clickable = "true";
     tr.appendChild(td(String(inv.id)));
     tr.appendChild(td(inv.nome));
     tr.appendChild(td(labelTipoInventario(inv.tipo_inventario)));
     tr.appendChild(td(inv.rede || "-"));
     tr.appendChild(td(inv.descricao || "-"));
+    const tdAcoes = document.createElement("td");
+    const actions = document.createElement("div");
+    actions.className = "table-actions";
+    actions.appendChild(
+      makeRowActionButton("Selecionar", "btn-inline", async () => {
+        store.selectedInventarioId = inv.id;
+        selectedEntity.inventarioId = inv.id;
+        el.ativoInventarioSelect.value = String(inv.id);
+        setSelectedInventarioLabel();
+        await refreshAtivos();
+      })
+    );
+    if (admin) {
+      actions.appendChild(
+        makeRowActionButton("Editar", "btn-inline", () => {
+          preencherInventarioForm(inv);
+          selectedEntity.inventarioId = inv.id;
+          openInventarioModal("edit");
+        })
+      );
+      actions.appendChild(
+        makeRowActionButton("Apagar", "btn-inline btn-inline-danger", async () => {
+          if (!window.confirm(`Apagar inventario ${inv.id}?`)) return;
+          try {
+            await inventariosApi.remove(inv.id);
+            await refreshInventarios();
+            setStatus("Inventario apagado", "ok");
+          } catch (err) {
+            setStatus(`Erro ao apagar inventario: ${err.message}`, "err");
+          }
+        })
+      );
+    }
+    tdAcoes.appendChild(actions);
+    tr.appendChild(tdAcoes);
+    tr.addEventListener("click", () => {
+      preencherInventarioForm(inv);
+      selectedEntity.inventarioId = inv.id;
+      if (isAdmin()) {
+        openInventarioModal("edit");
+      }
+    });
     el.inventariosBody.appendChild(tr);
     el.ativoInventarioSelect.appendChild(option(String(inv.id), `${inv.id} - ${inv.nome}`));
   });
@@ -195,7 +484,7 @@ async function refreshInventarios() {
   }
   el.ativoInventarioSelect.value = store.selectedInventarioId ? String(store.selectedInventarioId) : "";
   setSelectedInventarioLabel();
-  el.kpiInventarios.textContent = `Inventarios: ${inventarios.length}`;
+  el.kpiInventarios.textContent = String(inventarios.length);
   el.apiStatus.textContent = `Inventarios carregados: ${inventarios.length}`;
 }
 
@@ -208,59 +497,199 @@ function validarInventarioForm() {
 }
 
 async function refreshComputadores() {
+  const admin = isAdmin();
   const pcs = await computadoresApi.list();
   clear(el.computadoresBody);
   pcs.forEach((pc) => {
     const tr = document.createElement("tr");
+    tr.dataset.clickable = "true";
     tr.appendChild(td(String(pc.id)));
     tr.appendChild(td(pc.nome));
     tr.appendChild(td(pc.numero_serie));
     tr.appendChild(td(pc.inventario_nome || String(pc.inventario_id)));
     tr.appendChild(td(pc.localizacao_nome || "-"));
     tr.appendChild(td(pc.utilizador_responsavel_nome || "-"));
+    const tdAcoes = document.createElement("td");
+    const actions = document.createElement("div");
+    actions.className = "table-actions";
+    if (admin) {
+      actions.appendChild(
+        makeRowActionButton("Editar", "btn-inline", () => preencherComputadorForm(pc))
+      );
+      actions.appendChild(
+        makeRowActionButton("Apagar", "btn-inline btn-inline-danger", async () => {
+          if (!window.confirm(`Apagar computador ${pc.id}?`)) return;
+          try {
+            await computadoresApi.remove(pc.id);
+            await refreshComputadores();
+            setStatus("Computador apagado", "ok");
+          } catch (err) {
+            setStatus(`Erro ao apagar computador: ${err.message}`, "err");
+          }
+        })
+      );
+    } else {
+      actions.appendChild(makeRowActionButton("Detalhe", "btn-inline", () => preencherComputadorForm(pc)));
+    }
+    tdAcoes.appendChild(actions);
+    tr.appendChild(tdAcoes);
+    tr.addEventListener("click", () => preencherComputadorForm(pc));
     el.computadoresBody.appendChild(tr);
   });
-  el.kpiComputadores.textContent = `Computadores: ${pcs.length}`;
+  el.kpiComputadores.textContent = String(pcs.length);
 }
 
 async function refreshUtilizadores() {
+  const admin = isAdmin();
   const uts = await utilizadoresApi.list();
+  const perfis = await perfisApi.list();
+  setSelectOptions(
+    el.pcUtilizadorId,
+    uts,
+    (u) => u.id,
+    (u) => `${u.nome} (#${u.id})`,
+    "Sem responsavel"
+  );
+  setSelectOptions(
+    el.utPerfilId,
+    perfis,
+    (p) => p.id,
+    (p) => `${p.nome} (#${p.id})`,
+    "Seleciona perfil"
+  );
   clear(el.utilizadoresBody);
   uts.forEach((u) => {
     const tr = document.createElement("tr");
+    tr.dataset.clickable = "true";
     tr.appendChild(td(String(u.id)));
     tr.appendChild(td(u.nome));
     tr.appendChild(td(u.username));
     tr.appendChild(td(u.email));
-    tr.appendChild(td(String(u.perfil_id)));
+    const perfil = perfis.find((p) => p.id === u.perfil_id);
+    tr.appendChild(td(perfil ? perfil.nome : String(u.perfil_id)));
+    const tdAcoes = document.createElement("td");
+    const actions = document.createElement("div");
+    actions.className = "table-actions";
+    if (admin) {
+      actions.appendChild(
+        makeRowActionButton("Editar", "btn-inline", () => preencherUtilizadorForm(u))
+      );
+      actions.appendChild(
+        makeRowActionButton("Apagar", "btn-inline btn-inline-danger", async () => {
+          if (!window.confirm(`Apagar utilizador ${u.id}?`)) return;
+          try {
+            await utilizadoresApi.remove(u.id);
+            await refreshUtilizadores();
+            setStatus("Utilizador apagado", "ok");
+          } catch (err) {
+            setStatus(`Erro ao apagar utilizador: ${err.message}`, "err");
+          }
+        })
+      );
+    } else {
+      actions.appendChild(makeRowActionButton("Detalhe", "btn-inline", () => preencherUtilizadorForm(u)));
+    }
+    tdAcoes.appendChild(actions);
+    tr.appendChild(tdAcoes);
+    tr.addEventListener("click", () => preencherUtilizadorForm(u));
     el.utilizadoresBody.appendChild(tr);
   });
-  el.kpiUtilizadores.textContent = `Utilizadores: ${uts.length}`;
+  el.kpiUtilizadores.textContent = String(uts.length);
 }
 
 async function refreshPerfis() {
+  const admin = isAdmin();
   const perfis = await perfisApi.list();
+  setSelectOptions(
+    el.utPerfilId,
+    perfis,
+    (p) => p.id,
+    (p) => `${p.nome} (#${p.id})`,
+    "Seleciona perfil"
+  );
   clear(el.perfisBody);
   perfis.forEach((p) => {
     const tr = document.createElement("tr");
+    tr.dataset.clickable = "true";
     tr.appendChild(td(String(p.id)));
     tr.appendChild(td(p.nome));
     tr.appendChild(td(p.descricao || "-"));
+    const tdAcoes = document.createElement("td");
+    const actions = document.createElement("div");
+    actions.className = "table-actions";
+    if (admin) {
+      actions.appendChild(
+        makeRowActionButton("Editar", "btn-inline", () => preencherPerfilForm(p))
+      );
+      actions.appendChild(
+        makeRowActionButton("Apagar", "btn-inline btn-inline-danger", async () => {
+          if (!window.confirm(`Apagar perfil ${p.id}?`)) return;
+          try {
+            await perfisApi.remove(p.id);
+            await refreshPerfis();
+            setStatus("Perfil apagado", "ok");
+          } catch (err) {
+            setStatus(`Erro ao apagar perfil: ${err.message}`, "err");
+          }
+        })
+      );
+    } else {
+      actions.appendChild(makeRowActionButton("Detalhe", "btn-inline", () => preencherPerfilForm(p)));
+    }
+    tdAcoes.appendChild(actions);
+    tr.appendChild(tdAcoes);
+    tr.addEventListener("click", () => preencherPerfilForm(p));
     el.perfisBody.appendChild(tr);
   });
 }
 
 async function refreshLocalizacoes() {
+  const admin = isAdmin();
   const locs = await localizacoesApi.list();
+  setSelectOptions(
+    el.pcLocalizacaoId,
+    locs,
+    (l) => l.id,
+    (l) => `${l.nome} (#${l.id})`,
+    "Sem localizacao"
+  );
   clear(el.localizacoesBody);
   locs.forEach((l) => {
     const tr = document.createElement("tr");
+    tr.dataset.clickable = "true";
     tr.appendChild(td(String(l.id)));
     tr.appendChild(td(l.nome));
     tr.appendChild(td(l.descricao || "-"));
+    const tdAcoes = document.createElement("td");
+    const actions = document.createElement("div");
+    actions.className = "table-actions";
+    if (admin) {
+      actions.appendChild(
+        makeRowActionButton("Editar", "btn-inline", () => preencherLocalizacaoForm(l))
+      );
+      actions.appendChild(
+        makeRowActionButton("Apagar", "btn-inline btn-inline-danger", async () => {
+          if (!window.confirm(`Apagar localizacao ${l.id}?`)) return;
+          try {
+            await localizacoesApi.remove(l.id);
+            await refreshLocalizacoes();
+            setStatus("Localizacao apagada", "ok");
+          } catch (err) {
+            setStatus(`Erro ao apagar localizacao: ${err.message}`, "err");
+          }
+        })
+      );
+    } else {
+      actions.appendChild(
+        makeRowActionButton("Detalhe", "btn-inline", () => preencherLocalizacaoForm(l))
+      );
+    }
+    tdAcoes.appendChild(actions);
+    tr.appendChild(tdAcoes);
+    tr.addEventListener("click", () => preencherLocalizacaoForm(l));
     el.localizacoesBody.appendChild(tr);
   });
-  el.kpiLocalizacoes.textContent = `Localizacoes: ${locs.length}`;
+  el.kpiLocalizacoes.textContent = String(locs.length);
 }
 
 async function refreshAtivos() {
@@ -268,20 +697,7 @@ async function refreshAtivos() {
   if (!invId) return;
   const ativos = await inventariosApi.listAtivos(invId);
   clear(el.ativosBody);
-  ativos.forEach((a) => {
-    const tr = document.createElement("tr");
-    tr.appendChild(td(a.tipo));
-    tr.appendChild(td(a.nome || a.hostname || "-"));
-    tr.appendChild(td(a.ip || "-"));
-    tr.appendChild(td(a.numero_serie || "-"));
-    const cellEstado = document.createElement("td");
-    cellEstado.appendChild(activeStatusChip(a.estado));
-    tr.appendChild(cellEstado);
-    tr.appendChild(td(a.estado === "inativo" ? formatDate(a.ultima_vez_ativo_em) : "-"));
-    tr.appendChild(td(a.marca || "-"));
-    tr.appendChild(td(a.modelo || "-"));
-    el.ativosBody.appendChild(tr);
-  });
+  ativos.forEach((a) => addAtivoRow(a, { offlineDateMode: "inactiveOnly" }));
 }
 
 async function handleInventarioCreate(ev) {
@@ -296,14 +712,15 @@ async function handleInventarioCreate(ev) {
     });
     await refreshInventarios();
     setStatus("Inventario criado", "ok");
+    closeInventarioModal();
   } catch (err) {
     setStatus(`Erro inventario: ${err.message}`, "err");
   }
 }
 
 async function handleInventarioUpdate() {
-  const id = toNullableInt(el.invId.value);
-  if (!id) return setStatus("Indica invId", "warn");
+  const id = selectedEntity.inventarioId || toNullableInt(el.invId.value);
+  if (!id) return setStatus("Seleciona um inventario na tabela para atualizar", "warn");
   try {
     validarInventarioForm();
     await inventariosApi.update(id, {
@@ -314,19 +731,21 @@ async function handleInventarioUpdate() {
     });
     await refreshInventarios();
     setStatus("Inventario atualizado", "ok");
+    closeInventarioModal();
   } catch (err) {
     setStatus(`Erro update inventario: ${err.message}`, "err");
   }
 }
 
 async function handleInventarioDelete() {
-  const id = toNullableInt(el.invId.value);
-  if (!id) return setStatus("Indica invId", "warn");
+  const id = selectedEntity.inventarioId || toNullableInt(el.invId.value);
+  if (!id) return setStatus("Seleciona um inventario na tabela para apagar", "warn");
   if (!window.confirm(`Apagar inventario ${id}?`)) return;
   try {
     await inventariosApi.remove(id);
     await refreshInventarios();
     setStatus("Inventario apagado", "ok");
+    closeInventarioModal();
   } catch (err) {
     setStatus(`Erro apagar inventario: ${err.message}`, "err");
   }
@@ -361,20 +780,7 @@ async function handleAtivoPesquisar() {
     const data = await inventariosApi.searchAtivos(id, el.ativoPesquisa.value.trim());
     clear(el.ativosBody);
     const todos = [...data.computadores, ...data.dispositivos_descobertos];
-    todos.forEach((a) => {
-      const tr = document.createElement("tr");
-      tr.appendChild(td(a.tipo));
-      tr.appendChild(td(a.nome || a.hostname || "-"));
-      tr.appendChild(td(a.ip || "-"));
-      tr.appendChild(td(a.numero_serie || "-"));
-      const c = document.createElement("td");
-      c.appendChild(activeStatusChip(a.estado));
-      tr.appendChild(c);
-      tr.appendChild(td(a.ultima_vez_ativo_em || "-"));
-      tr.appendChild(td(a.marca || "-"));
-      tr.appendChild(td(a.modelo || "-"));
-      el.ativosBody.appendChild(tr);
-    });
+    todos.forEach((a) => addAtivoRow(a, { offlineDateMode: "raw" }));
     setStatus("Pesquisa no inventario concluida", "ok");
   } catch (err) {
     setStatus(`Erro pesquisa inventario: ${err.message}`, "err");
@@ -400,6 +806,82 @@ function buildComputadorPayload(full = true) {
   return out;
 }
 
+function clearComputadorForm() {
+  el.pcId.value = "";
+  selectedEntity.computadorId = null;
+  el.pcNome.value = "";
+  el.pcMarca.value = "";
+  el.pcModelo.value = "";
+  el.pcSerie.value = "";
+  el.pcEstado.value = "ativo";
+  el.pcInventarioId.value = "";
+  el.pcLocalizacaoId.value = "";
+  el.pcUtilizadorId.value = "";
+}
+
+function preencherComputadorForm(pc) {
+  selectedEntity.computadorId = pc.id;
+  el.pcId.value = String(pc.id);
+  el.pcNome.value = pc.nome || "";
+  el.pcMarca.value = pc.marca || "";
+  el.pcModelo.value = pc.modelo || "";
+  el.pcSerie.value = pc.numero_serie || "";
+  el.pcEstado.value = pc.estado || "ativo";
+  el.pcInventarioId.value = pc.inventario_id ? String(pc.inventario_id) : "";
+  el.pcLocalizacaoId.value = pc.localizacao_id ? String(pc.localizacao_id) : "";
+  el.pcUtilizadorId.value = pc.utilizador_responsavel_id
+    ? String(pc.utilizador_responsavel_id)
+    : "";
+}
+
+function clearUtilizadorForm() {
+  el.utId.value = "";
+  selectedEntity.utilizadorId = null;
+  el.utNome.value = "";
+  el.utUsername.value = "";
+  el.utEmail.value = "";
+  el.utPerfilId.value = "";
+  el.utPassword.value = "";
+}
+
+function preencherUtilizadorForm(u) {
+  selectedEntity.utilizadorId = u.id;
+  el.utId.value = String(u.id);
+  el.utNome.value = u.nome || "";
+  el.utUsername.value = u.username || "";
+  el.utEmail.value = u.email || "";
+  el.utPerfilId.value = u.perfil_id ? String(u.perfil_id) : "";
+  el.utPassword.value = "";
+}
+
+function clearPerfilForm() {
+  el.pfId.value = "";
+  selectedEntity.perfilId = null;
+  el.pfNome.value = "";
+  el.pfDesc.value = "";
+}
+
+function preencherPerfilForm(p) {
+  selectedEntity.perfilId = p.id;
+  el.pfId.value = String(p.id);
+  el.pfNome.value = p.nome || "";
+  el.pfDesc.value = p.descricao || "";
+}
+
+function clearLocalizacaoForm() {
+  el.lcId.value = "";
+  selectedEntity.localizacaoId = null;
+  el.lcNome.value = "";
+  el.lcDesc.value = "";
+}
+
+function preencherLocalizacaoForm(l) {
+  selectedEntity.localizacaoId = l.id;
+  el.lcId.value = String(l.id);
+  el.lcNome.value = l.nome || "";
+  el.lcDesc.value = l.descricao || "";
+}
+
 async function handlePcCreate(ev) {
   ev.preventDefault();
   try {
@@ -412,8 +894,8 @@ async function handlePcCreate(ev) {
 }
 
 async function handlePcPut() {
-  const id = toNullableInt(el.pcId.value);
-  if (!id) return setStatus("Indica pcId", "warn");
+  const id = selectedEntity.computadorId || toNullableInt(el.pcId.value);
+  if (!id) return setStatus("Seleciona um computador na tabela para atualizar", "warn");
   try {
     await computadoresApi.replace(id, buildComputadorPayload(true));
     await refreshComputadores();
@@ -424,8 +906,8 @@ async function handlePcPut() {
 }
 
 async function handlePcPatch() {
-  const id = toNullableInt(el.pcId.value);
-  if (!id) return setStatus("Indica pcId", "warn");
+  const id = selectedEntity.computadorId || toNullableInt(el.pcId.value);
+  if (!id) return setStatus("Seleciona um computador na tabela para atualizar", "warn");
   try {
     await computadoresApi.patch(id, buildComputadorPayload(false));
     await refreshComputadores();
@@ -436,8 +918,8 @@ async function handlePcPatch() {
 }
 
 async function handlePcDelete() {
-  const id = toNullableInt(el.pcId.value);
-  if (!id) return setStatus("Indica pcId", "warn");
+  const id = selectedEntity.computadorId || toNullableInt(el.pcId.value);
+  if (!id) return setStatus("Seleciona um computador na tabela para apagar", "warn");
   if (!window.confirm(`Apagar computador ${id}?`)) return;
   try {
     await computadoresApi.remove(id);
@@ -466,8 +948,8 @@ async function handleUtilizadorCreate(ev) {
 }
 
 async function handleUtilizadorUpdate() {
-  const id = toNullableInt(el.utId.value);
-  if (!id) return setStatus("Indica utId", "warn");
+  const id = selectedEntity.utilizadorId || toNullableInt(el.utId.value);
+  if (!id) return setStatus("Seleciona um utilizador na tabela para atualizar", "warn");
   try {
     await utilizadoresApi.update(id, {
       nome: el.utNome.value.trim(),
@@ -484,8 +966,8 @@ async function handleUtilizadorUpdate() {
 }
 
 async function handleUtilizadorDelete() {
-  const id = toNullableInt(el.utId.value);
-  if (!id) return setStatus("Indica utId", "warn");
+  const id = selectedEntity.utilizadorId || toNullableInt(el.utId.value);
+  if (!id) return setStatus("Seleciona um utilizador na tabela para apagar", "warn");
   if (!window.confirm(`Apagar utilizador ${id}?`)) return;
   try {
     await utilizadoresApi.remove(id);
@@ -508,8 +990,8 @@ async function handlePerfilCreate(ev) {
 }
 
 async function handlePerfilUpdate() {
-  const id = toNullableInt(el.pfId.value);
-  if (!id) return setStatus("Indica pfId", "warn");
+  const id = selectedEntity.perfilId || toNullableInt(el.pfId.value);
+  if (!id) return setStatus("Seleciona um perfil na tabela para atualizar", "warn");
   try {
     await perfisApi.update(id, { nome: el.pfNome.value.trim(), descricao: el.pfDesc.value.trim() || null });
     await refreshPerfis();
@@ -520,8 +1002,8 @@ async function handlePerfilUpdate() {
 }
 
 async function handlePerfilDelete() {
-  const id = toNullableInt(el.pfId.value);
-  if (!id) return setStatus("Indica pfId", "warn");
+  const id = selectedEntity.perfilId || toNullableInt(el.pfId.value);
+  if (!id) return setStatus("Seleciona um perfil na tabela para apagar", "warn");
   if (!window.confirm(`Apagar perfil ${id}?`)) return;
   try {
     await perfisApi.remove(id);
@@ -544,8 +1026,8 @@ async function handleLocalizacaoCreate(ev) {
 }
 
 async function handleLocalizacaoUpdate() {
-  const id = toNullableInt(el.lcId.value);
-  if (!id) return setStatus("Indica lcId", "warn");
+  const id = selectedEntity.localizacaoId || toNullableInt(el.lcId.value);
+  if (!id) return setStatus("Seleciona uma localizacao na tabela para atualizar", "warn");
   try {
     await localizacoesApi.update(id, { nome: el.lcNome.value.trim(), descricao: el.lcDesc.value.trim() || null });
     await refreshLocalizacoes();
@@ -556,8 +1038,8 @@ async function handleLocalizacaoUpdate() {
 }
 
 async function handleLocalizacaoDelete() {
-  const id = toNullableInt(el.lcId.value);
-  if (!id) return setStatus("Indica lcId", "warn");
+  const id = selectedEntity.localizacaoId || toNullableInt(el.lcId.value);
+  if (!id) return setStatus("Seleciona uma localizacao na tabela para apagar", "warn");
   if (!window.confirm(`Apagar localizacao ${id}?`)) return;
   try {
     await localizacoesApi.remove(id);
@@ -634,6 +1116,61 @@ async function init() {
   }
 }
 
+async function bootstrapAuth() {
+  if (!isAuthenticated()) {
+    clearSession();
+    showApp(false);
+    return;
+  }
+  try {
+    const me = await authApi.me();
+    saveSession(store.authToken, me);
+    setAuthUi();
+    applyRoleUi();
+    showApp(true);
+    await init();
+  } catch {
+    clearSession();
+    showApp(false);
+  }
+}
+
+async function handleLogin(ev) {
+  ev.preventDefault();
+  setLoginError("");
+  try {
+    const loginOut = await authApi.login(
+      el.loginIdentificador.value.trim(),
+      el.loginPassword.value
+    );
+    const token = loginOut.access_token;
+    saveSession(token, null);
+    const me = await authApi.me();
+    saveSession(token, me);
+    setAuthUi();
+    applyRoleUi();
+    showApp(true);
+    await init();
+  } catch (err) {
+    clearSession();
+    showApp(false);
+    setLoginError(err.message || "Falha no login.");
+  }
+}
+
+function handleLogout() {
+  clearSession();
+  showApp(false);
+  setStatus("Sessao terminada", "warn");
+}
+
+function handleAuthError(ev) {
+  if (!isAuthenticated()) return;
+  clearSession();
+  showApp(false);
+  setLoginError(ev?.detail?.message || "Sessao expirada. Inicia sessao novamente.");
+}
+
 el.tabs.forEach((tab) => tab.addEventListener("click", () => activateTab(tab.dataset.tab)));
 
 el.saveApiBase.addEventListener("click", async () => {
@@ -657,9 +1194,28 @@ el.testApi.addEventListener("click", async () => {
   }
 });
 
+el.btnQuickInventario.addEventListener("click", () => {
+  if (!isAdmin()) return;
+  openTab("inventarios");
+  openInventarioModal("create");
+});
+el.btnGoAtivos.addEventListener("click", () => openTab("ativos"));
+el.btnGoInventarios.addEventListener("click", () => openTab("inventarios"));
+el.btnGoLogs.addEventListener("click", () => openTab("logs"));
+el.btnGoComputadores.addEventListener("click", () => openTab("computadores"));
+el.btnGoUtilizadores.addEventListener("click", () => openTab("utilizadores"));
+el.btnGoPesquisa.addEventListener("click", () => openTab("pesquisa"));
+el.btnGoLogs2.addEventListener("click", () => openTab("logs"));
+
+el.loginForm.addEventListener("submit", handleLogin);
+el.btnLogout.addEventListener("click", handleLogout);
+
 el.inventarioForm.addEventListener("submit", handleInventarioCreate);
 el.btnInvUpdate.addEventListener("click", handleInventarioUpdate);
 el.btnInvDelete.addEventListener("click", handleInventarioDelete);
+el.btnInvCancel.addEventListener("click", closeInventarioModal);
+el.btnOpenInventarioModal.addEventListener("click", () => openInventarioModal("create"));
+el.btnCloseInventarioModal.addEventListener("click", closeInventarioModal);
 el.invTipo.addEventListener("change", syncInventarioConditionalUI);
 el.reloadInventarios.addEventListener("click", refreshInventarios);
 el.ativoInventarioSelect.addEventListener("change", async () => {
@@ -675,21 +1231,26 @@ el.computadorForm.addEventListener("submit", handlePcCreate);
 el.btnPcPut.addEventListener("click", handlePcPut);
 el.btnPcPatch.addEventListener("click", handlePcPatch);
 el.btnPcDelete.addEventListener("click", handlePcDelete);
+el.btnPcCancel.addEventListener("click", clearComputadorForm);
 
 el.utilizadorForm.addEventListener("submit", handleUtilizadorCreate);
 el.btnUtUpdate.addEventListener("click", handleUtilizadorUpdate);
 el.btnUtDelete.addEventListener("click", handleUtilizadorDelete);
+el.btnUtCancel.addEventListener("click", clearUtilizadorForm);
 
 el.perfilForm.addEventListener("submit", handlePerfilCreate);
 el.btnPfUpdate.addEventListener("click", handlePerfilUpdate);
 el.btnPfDelete.addEventListener("click", handlePerfilDelete);
+el.btnPfCancel.addEventListener("click", clearPerfilForm);
 
 el.localizacaoForm.addEventListener("submit", handleLocalizacaoCreate);
 el.btnLcUpdate.addEventListener("click", handleLocalizacaoUpdate);
 el.btnLcDelete.addEventListener("click", handleLocalizacaoDelete);
+el.btnLcCancel.addEventListener("click", clearLocalizacaoForm);
 
 el.btnGlobalSearch.addEventListener("click", handlePesquisaGlobal);
 el.btnLogsComputador.addEventListener("click", handleLogsComputador);
 el.btnLogsInventario.addEventListener("click", handleLogsInventario);
+window.addEventListener("auth-error", handleAuthError);
 
-init();
+bootstrapAuth();

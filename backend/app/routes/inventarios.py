@@ -7,6 +7,7 @@ from sqlalchemy import String, cast, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, contains_eager, joinedload
 
+from app.core.deps import require_admin
 from app.database.connection import get_db
 from app.models.computador_db import ComputadorDB
 from app.models.dispositivo_descoberto_db import DispositivoDescobertoDB
@@ -156,7 +157,12 @@ def obter_inventario(inventario_id: int, db: Session = Depends(get_db)):
     return obter_inventario_ou_404(db, inventario_id)
 
 
-@router.post("/criar-rapido", response_model=InventarioResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/criar-rapido",
+    response_model=InventarioResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
 def criar_inventario_rapido(
     nome: str = Query(..., min_length=1),
     tipo_inventario: TipoInventarioEnum = Query(default=TipoInventarioEnum.normal),
@@ -371,6 +377,7 @@ def obter_detalhes_do_inventario(
 @router.post(
     "/{inventario_id}/scan",
     response_model=ScanRedeResponse,
+    dependencies=[Depends(require_admin)],
 )
 def executar_scan_do_inventario(
     inventario_id: int,
@@ -592,7 +599,12 @@ def listar_logs_dos_dispositivos_descobertos(
     return {"filtros": filtros, "total_logs": len(logs), "logs": logs}
 
 
-@router.post("/", response_model=InventarioResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=InventarioResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
 def criar_inventario(inventario: InventarioCreate, db: Session = Depends(get_db)):
     existente = (
         db.query(InventarioDB).filter(InventarioDB.nome == inventario.nome).first()
@@ -619,7 +631,11 @@ def criar_inventario(inventario: InventarioCreate, db: Session = Depends(get_db)
     return novo_inventario
 
 
-@router.put("/{inventario_id}", response_model=InventarioResponse)
+@router.put(
+    "/{inventario_id}",
+    response_model=InventarioResponse,
+    dependencies=[Depends(require_admin)],
+)
 def atualizar_inventario(
     inventario_id: int,
     inventario_atualizado: InventarioUpdate,
@@ -653,7 +669,11 @@ def atualizar_inventario(
     return inventario
 
 
-@router.delete("/{inventario_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{inventario_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 def apagar_inventario(inventario_id: int, db: Session = Depends(get_db)):
     inventario = obter_inventario_ou_404(db, inventario_id)
 

@@ -13,6 +13,7 @@ from app.models.log_dispositivo_db import LogDispositivoDB
 from app.models.log_sistema_db import LogSistemaDB
 from app.models.perfil_db import PerfilDB
 from app.models.utilizador_db import UtilizadorDB
+from app.routes.auth import router as auth_router
 from app.routes.computadores import router as computadores_router
 from app.routes.inventarios import router as inventarios_router
 from app.routes.localizacoes import router as localizacoes_router
@@ -75,6 +76,7 @@ Base.metadata.create_all(bind=engine)
 garantir_compatibilidade_schema_sqlite()
 
 app.include_router(computadores_router)
+app.include_router(auth_router)
 app.include_router(inventarios_router)
 app.include_router(localizacoes_router)
 app.include_router(pesquisa_router)

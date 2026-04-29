@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
+from app.core.deps import require_admin
 from app.database.connection import get_db
 from app.models.computador_db import ComputadorDB
 from app.models.localizacao_db import LocalizacaoDB
@@ -46,7 +47,12 @@ def obter_localizacao(localizacao_id: int, db: Session = Depends(get_db)):
     return localizacao
 
 
-@router.post("/", response_model=LocalizacaoResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=LocalizacaoResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
 def criar_localizacao(localizacao: LocalizacaoCreate, db: Session = Depends(get_db)):
     existente = obter_localizacao_duplicada(
         db, localizacao.nome, localizacao.descricao
@@ -74,7 +80,11 @@ def criar_localizacao(localizacao: LocalizacaoCreate, db: Session = Depends(get_
     return nova_localizacao
 
 
-@router.put("/{localizacao_id}", response_model=LocalizacaoResponse)
+@router.put(
+    "/{localizacao_id}",
+    response_model=LocalizacaoResponse,
+    dependencies=[Depends(require_admin)],
+)
 def atualizar_localizacao(
     localizacao_id: int,
     localizacao_atualizada: LocalizacaoUpdate,
@@ -107,7 +117,11 @@ def atualizar_localizacao(
     return localizacao
 
 
-@router.delete("/{localizacao_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{localizacao_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 def apagar_localizacao(localizacao_id: int, db: Session = Depends(get_db)):
     localizacao = db.get(LocalizacaoDB, localizacao_id)
     if localizacao is None:
