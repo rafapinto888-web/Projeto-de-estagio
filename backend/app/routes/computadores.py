@@ -5,12 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.deps import require_admin
+from app.core.deps import get_current_user, is_admin_user, require_admin
 from app.database.computadores import (
     apagar_computador as apagar_computador_db,
     atualizar_computador as atualizar_computador_db,
     criar_computador as criar_computador_db,
-    listar_computadores as listar_computadores_db,
     obter_computador,
     obter_computador_por_numero_serie,
 )
@@ -73,10 +72,34 @@ def validar_utilizador_responsavel(
         )
 
 
+def _query_computadores_visiveis(db: Session, current_user: UtilizadorDB):
+    # Admin ve tudo; utilizador normal so os computadores associados a si.
+    query = db.query(ComputadorDB)
+    if is_admin_user(current_user):
+        return query
+    return query.filter(ComputadorDB.utilizador_responsavel_id == current_user.id)
+
+
+def _garantir_acesso_computador(
+    computador: ComputadorDB | None, current_user: UtilizadorDB
+) -> ComputadorDB:
+    if computador is None:
+        raise HTTPException(status_code=404, detail="Computador nao encontrado")
+    if not is_admin_user(current_user) and computador.utilizador_responsavel_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Sem permissao para aceder a este computador",
+        )
+    return computador
+
+
 @router.get("/", response_model=list[ComputadorResponse])
-def listar_computadores(db: Session = Depends(get_db)):
-    # Lista todos os computadores registados.
-    return listar_computadores_db(db)
+def listar_computadores(
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    # Lista visivel por perfil: admin ve tudo; utilizador ve apenas os seus.
+    return _query_computadores_visiveis(db, current_user).order_by(ComputadorDB.id).all()
 
 
 @router.get("/logs/dispositivo", response_model=LogsDispositivoConsultaResponse)
@@ -87,6 +110,7 @@ def consultar_logs_dispositivo(
     hostname: str | None = Query(default=None),
     tipo_log: Literal["seguranca", "rdp"] | None = Query(default=None),
     db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
 ):
     # Valida se existe pelo menos um identificador para procurar logs.
     if (
@@ -106,8 +130,7 @@ def consultar_logs_dispositivo(
     # Resolve o computador diretamente pelo ID da base de dados.
     if computador_id is not None:
         computador = obter_computador(db, computador_id)
-        if computador is None:
-            raise HTTPException(status_code=404, detail="Computador nao encontrado")
+        computador = _garantir_acesso_computador(computador, current_user)
         computadores_alvo.add(computador.id)
         filtros_aplicados["computador_id"] = computador_id
 
@@ -117,7 +140,7 @@ def consultar_logs_dispositivo(
         if not nome_limpo:
             raise HTTPException(status_code=400, detail="nome nao pode estar vazio")
         computadores_por_nome = (
-            db.query(ComputadorDB)
+            _query_computadores_visiveis(db, current_user)
             .filter(ComputadorDB.nome.ilike(f"%{nome_limpo}%"))
             .all()
         )
@@ -130,7 +153,10 @@ def consultar_logs_dispositivo(
         if not numero_serie_limpo:
             raise HTTPException(status_code=400, detail="numero_serie nao pode estar vazio")
         computador = obter_computador_por_numero_serie(db, numero_serie_limpo)
-        if computador is None:
+        if computador is None or (
+            not is_admin_user(current_user)
+            and computador.utilizador_responsavel_id != current_user.id
+        ):
             raise HTTPException(
                 status_code=404, detail="Computador com esse numero_serie nao encontrado"
             )
@@ -154,7 +180,7 @@ def consultar_logs_dispositivo(
         }
         if numeros_serie_descobertos:
             computadores_por_serie = (
-                db.query(ComputadorDB)
+                _query_computadores_visiveis(db, current_user)
                 .filter(ComputadorDB.numero_serie.in_(numeros_serie_descobertos))
                 .all()
             )
@@ -188,11 +214,11 @@ def listar_logs_do_computador(
     computador_id: int,
     tipo_log: Literal["seguranca", "rdp"] | None = Query(default=None),
     db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
 ):
     # Lista logs diretamente por computador para facilitar no frontend.
     computador = obter_computador(db, computador_id)
-    if computador is None:
-        raise HTTPException(status_code=404, detail="Computador nao encontrado")
+    _garantir_acesso_computador(computador, current_user)
 
     query_logs = (
         db.query(LogDispositivoDB)
@@ -205,12 +231,14 @@ def listar_logs_do_computador(
 
 
 @router.get("/{computador_id}", response_model=ComputadorResponse)
-def buscar_computador(computador_id: int, db: Session = Depends(get_db)):
+def buscar_computador(
+    computador_id: int,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
     # Devolve um computador pelo id.
     computador = obter_computador(db, computador_id)
-    if computador is None:
-        raise HTTPException(status_code=404, detail="Computador nao encontrado")
-    return computador
+    return _garantir_acesso_computador(computador, current_user)
 
 
 @router.post(

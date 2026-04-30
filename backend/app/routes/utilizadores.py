@@ -4,7 +4,7 @@ from pwdlib import PasswordHash
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.deps import require_admin
+from app.core.deps import get_current_user, is_admin_user, require_admin
 from app.database.connection import get_db
 from app.models.perfil_db import PerfilDB
 from app.models.utilizador_db import UtilizadorDB
@@ -50,15 +50,30 @@ def validar_username_unico(
 
 
 @router.get("/", response_model=list[UtilizadorResponse])
-def listar_utilizadores(db: Session = Depends(get_db)):
+def listar_utilizadores(
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    # Em perfil normal, devolve apenas o proprio utilizador.
+    if not is_admin_user(current_user):
+        return [current_user]
     return db.query(UtilizadorDB).order_by(UtilizadorDB.id).all()
 
 
 @router.get("/{utilizador_id}", response_model=UtilizadorResponse)
-def obter_utilizador(utilizador_id: int, db: Session = Depends(get_db)):
+def obter_utilizador(
+    utilizador_id: int,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
     utilizador = db.get(UtilizadorDB, utilizador_id)
     if utilizador is None:
         raise HTTPException(status_code=404, detail="Utilizador nao encontrado")
+    if not is_admin_user(current_user) and current_user.id != utilizador_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Sem permissao para consultar outros utilizadores",
+        )
     return utilizador
 
 

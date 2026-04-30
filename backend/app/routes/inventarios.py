@@ -7,7 +7,7 @@ from sqlalchemy import String, cast, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, contains_eager, joinedload
 
-from app.core.deps import require_admin
+from app.core.deps import get_current_user, is_admin_user, require_admin
 from app.database.connection import get_db
 from app.models.computador_db import ComputadorDB
 from app.models.dispositivo_descoberto_db import DispositivoDescobertoDB
@@ -147,14 +147,55 @@ def _guardar_logs_windows_no_computador(
     return guardados
 
 
+def _inventarios_visiveis_query(db: Session, current_user: UtilizadorDB):
+    # Admin ve todos; utilizador normal apenas inventarios dos seus computadores.
+    if is_admin_user(current_user):
+        return db.query(InventarioDB)
+    return (
+        db.query(InventarioDB)
+        .join(ComputadorDB, ComputadorDB.inventario_id == InventarioDB.id)
+        .filter(ComputadorDB.utilizador_responsavel_id == current_user.id)
+        .distinct()
+    )
+
+
+def _garantir_acesso_inventario(
+    db: Session, inventario_id: int, current_user: UtilizadorDB
+) -> InventarioDB:
+    inventario = obter_inventario_ou_404(db, inventario_id)
+    if is_admin_user(current_user):
+        return inventario
+    permitido = (
+        db.query(ComputadorDB.id)
+        .filter(
+            ComputadorDB.inventario_id == inventario_id,
+            ComputadorDB.utilizador_responsavel_id == current_user.id,
+        )
+        .first()
+    )
+    if permitido is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Sem permissao para aceder a este inventario",
+        )
+    return inventario
+
+
 @router.get("/", response_model=list[InventarioResponse])
-def listar_inventarios(db: Session = Depends(get_db)):
-    return db.query(InventarioDB).order_by(InventarioDB.id).all()
+def listar_inventarios(
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    return _inventarios_visiveis_query(db, current_user).order_by(InventarioDB.id).all()
 
 
 @router.get("/{inventario_id}", response_model=InventarioResponse)
-def obter_inventario(inventario_id: int, db: Session = Depends(get_db)):
-    return obter_inventario_ou_404(db, inventario_id)
+def obter_inventario(
+    inventario_id: int,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    return _garantir_acesso_inventario(db, inventario_id, current_user)
 
 
 @router.post(
@@ -205,9 +246,10 @@ def criar_inventario_rapido(
 def listar_computadores_do_inventario(
     inventario_id: int,
     db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
 ):
     # Devolve lista unificada de computadores manuais e dispositivos do scan.
-    obter_inventario_ou_404(db, inventario_id)
+    _garantir_acesso_inventario(db, inventario_id, current_user)
 
     computadores = (
         db.query(ComputadorDB)
@@ -219,12 +261,18 @@ def listar_computadores_do_inventario(
         .order_by(ComputadorDB.id)
         .all()
     )
-    dispositivos = (
-        db.query(DispositivoDescobertoDB)
-        .filter(DispositivoDescobertoDB.inventario_id == inventario_id)
-        .order_by(DispositivoDescobertoDB.id)
-        .all()
-    )
+    if not is_admin_user(current_user):
+        computadores = [
+            c for c in computadores if c.utilizador_responsavel_id == current_user.id
+        ]
+    dispositivos = []
+    if is_admin_user(current_user):
+        dispositivos = (
+            db.query(DispositivoDescobertoDB)
+            .filter(DispositivoDescobertoDB.inventario_id == inventario_id)
+            .order_by(DispositivoDescobertoDB.id)
+            .all()
+        )
 
     ativos: list[AtivoInventarioItem] = []
     ativos.extend(
@@ -274,8 +322,9 @@ def pesquisar_computadores_do_inventario(
     inventario_id: int,
     termo: str | None = Query(default=None),
     db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
 ):
-    obter_inventario_ou_404(db, inventario_id)
+    _garantir_acesso_inventario(db, inventario_id, current_user)
 
     query_computadores = (
         db.query(ComputadorDB)
@@ -287,6 +336,10 @@ def pesquisar_computadores_do_inventario(
         )
         .filter(ComputadorDB.inventario_id == inventario_id)
     )
+    if not is_admin_user(current_user):
+        query_computadores = query_computadores.filter(
+            ComputadorDB.utilizador_responsavel_id == current_user.id
+        )
 
     termo_limpo = termo.strip() if termo is not None else ""
     if termo_limpo:
@@ -311,6 +364,8 @@ def pesquisar_computadores_do_inventario(
         db.query(DispositivoDescobertoDB)
         .filter(DispositivoDescobertoDB.inventario_id == inventario_id)
     )
+    if not is_admin_user(current_user):
+        query_dispositivos = query_dispositivos.filter(DispositivoDescobertoDB.id == -1)
     if termo_limpo:
         termo_like = f"%{termo_limpo}%"
         query_dispositivos = query_dispositivos.filter(
@@ -346,8 +401,9 @@ def pesquisar_computadores_do_inventario(
 def obter_detalhes_do_inventario(
     inventario_id: int,
     db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
 ):
-    inventario = obter_inventario_ou_404(db, inventario_id)
+    inventario = _garantir_acesso_inventario(db, inventario_id, current_user)
 
     computadores = (
         db.query(ComputadorDB)
@@ -359,12 +415,18 @@ def obter_detalhes_do_inventario(
         .order_by(ComputadorDB.id)
         .all()
     )
+    if not is_admin_user(current_user):
+        computadores = [
+            c for c in computadores if c.utilizador_responsavel_id == current_user.id
+        ]
     dispositivos_descobertos = (
         db.query(DispositivoDescobertoDB)
         .filter(DispositivoDescobertoDB.inventario_id == inventario_id)
         .order_by(DispositivoDescobertoDB.id)
         .all()
     )
+    if not is_admin_user(current_user):
+        dispositivos_descobertos = []
     return {
         "id": inventario.id,
         "nome": inventario.nome,
@@ -515,8 +577,9 @@ def executar_scan_do_inventario(
 def listar_dispositivos_descobertos_do_inventario(
     inventario_id: int,
     db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
 ):
-    obter_inventario_ou_404(db, inventario_id)
+    _garantir_acesso_inventario(db, inventario_id, current_user)
 
     return (
         db.query(DispositivoDescobertoDB)
@@ -534,8 +597,9 @@ def obter_dispositivo_descoberto(
     inventario_id: int,
     dispositivo_id: int,
     db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
 ):
-    obter_inventario_ou_404(db, inventario_id)
+    _garantir_acesso_inventario(db, inventario_id, current_user)
     return obter_dispositivo_descoberto_ou_404(db, inventario_id, dispositivo_id)
 
 
@@ -549,9 +613,10 @@ def listar_logs_dos_dispositivos_descobertos(
     coletar_agora: bool = Query(default=False),
     tipo_log: Literal["seguranca", "rdp"] | None = Query(default=None),
     db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
 ):
     # Lista logs de um dispositivo especifico ou de todos os dispositivos do inventario.
-    obter_inventario_ou_404(db, inventario_id)
+    _garantir_acesso_inventario(db, inventario_id, current_user)
 
     filtros: dict[str, str | int] = {"inventario_id": inventario_id}
     dispositivos_query = db.query(DispositivoDescobertoDB).filter(
