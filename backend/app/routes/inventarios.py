@@ -462,11 +462,20 @@ def executar_scan_do_inventario(
             detail="Inventario sub_rede precisa de rede definida para executar scan",
         )
 
+    # Mesmo com admin na aplicacao, scan remoto exige credenciais da rede/host alvo.
+    utilizador_rede = pedido_scan.utilizador.strip()
+    password_rede = pedido_scan.password
+    if not utilizador_rede or not password_rede.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Credenciais de rede obrigatorias para executar scan",
+        )
+
     # Usa pipeline consolidado do scan (descoberta + enriquecimento tecnico por IP).
     dispositivos_ativos = descobrir_dispositivos_enriquecidos(
         rede_alvo,
-        pedido_scan.utilizador,
-        pedido_scan.password,
+        utilizador_rede,
+        password_rede,
     )
     ips_ativos = list(dict.fromkeys([d["ip"] for d in dispositivos_ativos if d.get("ip")]))
     ativos_por_ip = {d["ip"]: d for d in dispositivos_ativos if d.get("ip")}

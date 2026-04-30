@@ -69,8 +69,8 @@ class InventarioResponse(InventarioBase):
 
 class ScanRedeRequest(BaseModel):
     rede: str | None = None
-    utilizador: str | None = None
-    password: str | None = None
+    utilizador: str
+    password: str
 
     @field_validator("rede")
     @classmethod
@@ -93,11 +93,18 @@ class ScanRedeRequest(BaseModel):
 
     @field_validator("utilizador")
     @classmethod
-    def validar_utilizador(cls, valor: str | None) -> str | None:
-        if valor is None:
-            return None
+    def validar_utilizador(cls, valor: str) -> str:
         utilizador = valor.strip()
-        return utilizador or None
+        if not utilizador:
+            raise ValueError("utilizador de rede e obrigatorio")
+        return utilizador
+
+    @field_validator("password")
+    @classmethod
+    def validar_password(cls, valor: str) -> str:
+        if not valor or not valor.strip():
+            raise ValueError("password de rede e obrigatoria")
+        return valor
 
 
 class InventarioScanInfo(BaseModel):

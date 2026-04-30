@@ -66,7 +66,6 @@ const el = {
   scanRede: document.getElementById("scanRede"),
   scanUser: document.getElementById("scanUser"),
   scanPass: document.getElementById("scanPass"),
-  btnToggleScanCreds: document.getElementById("btnToggleScanCreds"),
   scanCredsRow: document.getElementById("scanCredsRow"),
   btnScan: document.getElementById("btnScan"),
   scanInfo: document.getElementById("scanInfo"),
@@ -166,7 +165,6 @@ const el = {
 };
 
 el.apiBase.value = store.apiBase;
-let scanCredsVisible = false;
 const selectedEntity = {
   inventarioId: null,
   computadorId: null,
@@ -369,19 +367,6 @@ function syncInventarioConditionalUI() {
   } else {
     el.invRede.value = "";
     el.invRede.placeholder = "IP da rede (ex: 192.168.1.0/24)";
-  }
-}
-
-// Mostra/oculta credenciais remotas usadas no scan.
-function toggleScanCreds() {
-  scanCredsVisible = !scanCredsVisible;
-  el.scanCredsRow.classList.toggle("is-hidden", !scanCredsVisible);
-  el.btnToggleScanCreds.textContent = scanCredsVisible
-    ? "Ocultar credenciais"
-    : "Credenciais remotas";
-  if (!scanCredsVisible) {
-    el.scanUser.value = "";
-    el.scanPass.value = "";
   }
 }
 
@@ -887,13 +872,18 @@ async function handleInventarioDelete() {
 async function handleScan() {
   const id = selectedInventarioId();
   if (!id) return setStatus("Seleciona inventario para scan", "warn");
+  const utilizadorRede = el.scanUser.value.trim();
+  const passwordRede = el.scanPass.value;
+  if (!utilizadorRede || !passwordRede.trim()) {
+    return setStatus("Credenciais de rede obrigatorias para executar scan", "warn");
+  }
   try {
     el.btnScan.disabled = true;
     setStatus("Scan em execucao...", "warn");
     const out = await inventariosApi.scan(id, {
       rede: el.scanRede.value.trim() || null,
-      utilizador: el.scanUser.value.trim() || null,
-      password: el.scanPass.value || null,
+      utilizador: utilizadorRede,
+      password: passwordRede,
     });
     el.scanInfo.textContent = `Scan OK: ${out.total_dispositivos_encontrados} dispositivos, ${out.total_logs_recolhidos} logs`;
     await refreshAtivos();
@@ -1422,7 +1412,6 @@ el.ativoInventarioSelect.addEventListener("change", async () => {
 el.btnAtivoReload.addEventListener("click", refreshAtivos);
 el.btnAtivoPesquisar.addEventListener("click", handleAtivoPesquisar);
 el.btnScan.addEventListener("click", handleScan);
-el.btnToggleScanCreds.addEventListener("click", toggleScanCreds);
 
 el.btnPcCreate.addEventListener("click", openPcCreateModal);
 el.btnPcPut.addEventListener("click", handlePcPut);

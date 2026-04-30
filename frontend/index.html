@@ -22,9 +22,9 @@
 
     <div id="appRoot" class="is-hidden">
     <header class="topbar">
-      <div>
+      <div class="topbar-brand">
         <h1>Inventario Informatico</h1>
-        <p class="subtitle">Painel de operacoes de infraestrutura</p>
+        <p class="subtitle">Painel moderno de operacoes e auditoria</p>
       </div>
       <div class="topbar-actions">
         <div class="topbar-badge" id="authUser">Sessao ativa</div>
@@ -165,12 +165,11 @@
         </div>
         <div class="toolbar toolbar-emphasis">
           <input id="scanRede" placeholder="Rede para scan (opcional)" />
-          <button id="btnToggleScanCreds" type="button">Credenciais remotas</button>
           <button id="btnScan">Executar scan</button>
         </div>
-        <div class="toolbar is-hidden" id="scanCredsRow">
-          <input id="scanUser" placeholder="Utilizador remoto" />
-          <input id="scanPass" type="password" placeholder="Password remota" />
+        <div class="toolbar" id="scanCredsRow">
+          <input id="scanUser" placeholder="Utilizador de rede (obrigatorio)" />
+          <input id="scanPass" type="password" placeholder="Password de rede (obrigatoria)" />
         </div>
         <div id="scanInfo" class="hint"></div>
         <div class="table-wrap">
@@ -378,7 +377,7 @@
           <h3>Criar computador</h3>
           <button id="btnClosePcCreateModal" type="button" class="btn-ghost">Fechar</button>
         </div>
-        <form id="computadorCreateForm" class="form-grid">
+        <form id="computadorCreateForm" class="form-grid modal-form">
           <label class="field"><span>Nome</span><input id="pcCreateNome" placeholder="Nome do computador" required /></label>
           <label class="field"><span>Marca</span><input id="pcCreateMarca" placeholder="Ex: Lenovo, HP" required /></label>
           <label class="field"><span>Modelo</span><input id="pcCreateModelo" placeholder="Ex: ThinkCentre M720" required /></label>
@@ -387,9 +386,11 @@
           <label class="field"><span>Inventario</span><select id="pcCreateInventarioId" required></select></label>
           <label class="field"><span>Localizacao (opcional)</span><select id="pcCreateLocalizacaoId"></select></label>
           <label class="field"><span>Responsavel (opcional)</span><select id="pcCreateUtilizadorId"></select></label>
-          <button type="submit">Guardar</button>
-          <button id="btnCancelPcCreateModal" type="button" class="btn-ghost">Cancelar</button>
         </form>
+        <div class="modal-actions">
+          <button type="submit" form="computadorCreateForm">Guardar</button>
+          <button id="btnCancelPcCreateModal" type="button" class="btn-ghost">Cancelar</button>
+        </div>
       </div>
     </div>
 
@@ -399,15 +400,17 @@
           <h3>Criar utilizador</h3>
           <button id="btnCloseUtCreateModal" type="button" class="btn-ghost">Fechar</button>
         </div>
-        <form id="utilizadorCreateForm" class="form-grid">
+        <form id="utilizadorCreateForm" class="form-grid modal-form">
           <label class="field"><span>Nome</span><input id="utCreateNome" placeholder="Nome completo" required /></label>
           <label class="field"><span>Username</span><input id="utCreateUsername" placeholder="Username de acesso" required /></label>
           <label class="field"><span>Email</span><input id="utCreateEmail" placeholder="email@dominio.com" required /></label>
           <label class="field"><span>Perfil</span><select id="utCreatePerfilId" required></select></label>
           <label class="field"><span>Palavra-passe</span><input id="utCreatePassword" type="password" placeholder="Obrigatoria na criacao" required /></label>
-          <button type="submit">Guardar</button>
-          <button id="btnCancelUtCreateModal" type="button" class="btn-ghost">Cancelar</button>
         </form>
+        <div class="modal-actions">
+          <button type="submit" form="utilizadorCreateForm">Guardar</button>
+          <button id="btnCancelUtCreateModal" type="button" class="btn-ghost">Cancelar</button>
+        </div>
       </div>
     </div>
 
@@ -417,11 +420,13 @@
           <h3>Criar perfil</h3>
           <button id="btnClosePfCreateModal" type="button" class="btn-ghost">Fechar</button>
         </div>
-        <form id="perfilCreateForm" class="form-grid">
+        <form id="perfilCreateForm" class="form-grid modal-form">
           <label class="field"><span>Nome</span><input id="pfCreateNome" placeholder="Nome do perfil" required /></label>
-          <button type="submit">Guardar</button>
-          <button id="btnCancelPfCreateModal" type="button" class="btn-ghost">Cancelar</button>
         </form>
+        <div class="modal-actions">
+          <button type="submit" form="perfilCreateForm">Guardar</button>
+          <button id="btnCancelPfCreateModal" type="button" class="btn-ghost">Cancelar</button>
+        </div>
       </div>
     </div>
 
@@ -431,12 +436,14 @@
           <h3>Criar localizacao</h3>
           <button id="btnCloseLcCreateModal" type="button" class="btn-ghost">Fechar</button>
         </div>
-        <form id="localizacaoCreateForm" class="form-grid">
+        <form id="localizacaoCreateForm" class="form-grid modal-form">
           <label class="field"><span>Nome</span><input id="lcCreateNome" placeholder="Ex: Sala A, Rack 2" required /></label>
           <label class="field"><span>Descricao</span><input id="lcCreateDesc" placeholder="Detalhes opcionais" /></label>
-          <button type="submit">Guardar</button>
-          <button id="btnCancelLcCreateModal" type="button" class="btn-ghost">Cancelar</button>
         </form>
+        <div class="modal-actions">
+          <button type="submit" form="localizacaoCreateForm">Guardar</button>
+          <button id="btnCancelLcCreateModal" type="button" class="btn-ghost">Cancelar</button>
+        </div>
       </div>
     </div>
 
