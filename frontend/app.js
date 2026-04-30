@@ -131,6 +131,38 @@ const el = {
   logColetarAgora: document.getElementById("logColetarAgora"),
   btnLogsInventario: document.getElementById("btnLogsInventario"),
   logsOutput: document.getElementById("logsOutput"),
+  computadorCreateModal: document.getElementById("computadorCreateModal"),
+  btnClosePcCreateModal: document.getElementById("btnClosePcCreateModal"),
+  btnCancelPcCreateModal: document.getElementById("btnCancelPcCreateModal"),
+  computadorCreateForm: document.getElementById("computadorCreateForm"),
+  pcCreateNome: document.getElementById("pcCreateNome"),
+  pcCreateMarca: document.getElementById("pcCreateMarca"),
+  pcCreateModelo: document.getElementById("pcCreateModelo"),
+  pcCreateSerie: document.getElementById("pcCreateSerie"),
+  pcCreateEstado: document.getElementById("pcCreateEstado"),
+  pcCreateInventarioId: document.getElementById("pcCreateInventarioId"),
+  pcCreateLocalizacaoId: document.getElementById("pcCreateLocalizacaoId"),
+  pcCreateUtilizadorId: document.getElementById("pcCreateUtilizadorId"),
+  utilizadorCreateModal: document.getElementById("utilizadorCreateModal"),
+  btnCloseUtCreateModal: document.getElementById("btnCloseUtCreateModal"),
+  btnCancelUtCreateModal: document.getElementById("btnCancelUtCreateModal"),
+  utilizadorCreateForm: document.getElementById("utilizadorCreateForm"),
+  utCreateNome: document.getElementById("utCreateNome"),
+  utCreateUsername: document.getElementById("utCreateUsername"),
+  utCreateEmail: document.getElementById("utCreateEmail"),
+  utCreatePerfilId: document.getElementById("utCreatePerfilId"),
+  utCreatePassword: document.getElementById("utCreatePassword"),
+  perfilCreateModal: document.getElementById("perfilCreateModal"),
+  btnClosePfCreateModal: document.getElementById("btnClosePfCreateModal"),
+  btnCancelPfCreateModal: document.getElementById("btnCancelPfCreateModal"),
+  perfilCreateForm: document.getElementById("perfilCreateForm"),
+  pfCreateNome: document.getElementById("pfCreateNome"),
+  localizacaoCreateModal: document.getElementById("localizacaoCreateModal"),
+  btnCloseLcCreateModal: document.getElementById("btnCloseLcCreateModal"),
+  btnCancelLcCreateModal: document.getElementById("btnCancelLcCreateModal"),
+  localizacaoCreateForm: document.getElementById("localizacaoCreateForm"),
+  lcCreateNome: document.getElementById("lcCreateNome"),
+  lcCreateDesc: document.getElementById("lcCreateDesc"),
 };
 
 el.apiBase.value = store.apiBase;
@@ -247,6 +279,64 @@ function openInventarioModal(mode = "create") {
 function closeInventarioModal() {
   clearInventarioForm();
   el.inventarioModal.classList.add("is-hidden");
+}
+
+function openModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.classList.remove("is-hidden");
+}
+
+function closeModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.classList.add("is-hidden");
+}
+
+function clearPcCreateModalForm() {
+  el.pcCreateNome.value = "";
+  el.pcCreateMarca.value = "";
+  el.pcCreateModelo.value = "";
+  el.pcCreateSerie.value = "";
+  el.pcCreateEstado.value = "ativo";
+  el.pcCreateInventarioId.value = "";
+  el.pcCreateLocalizacaoId.value = "";
+  el.pcCreateUtilizadorId.value = "";
+}
+
+function clearUtCreateModalForm() {
+  el.utCreateNome.value = "";
+  el.utCreateUsername.value = "";
+  el.utCreateEmail.value = "";
+  el.utCreatePerfilId.value = "";
+  el.utCreatePassword.value = "";
+}
+
+function clearPfCreateModalForm() {
+  el.pfCreateNome.value = "";
+}
+
+function clearLcCreateModalForm() {
+  el.lcCreateNome.value = "";
+  el.lcCreateDesc.value = "";
+}
+
+function openPcCreateModal() {
+  clearPcCreateModalForm();
+  openModal(el.computadorCreateModal);
+}
+
+function openUtCreateModal() {
+  clearUtCreateModalForm();
+  openModal(el.utilizadorCreateModal);
+}
+
+function openPfCreateModal() {
+  clearPfCreateModalForm();
+  openModal(el.perfilCreateModal);
+}
+
+function openLcCreateModal() {
+  clearLcCreateModalForm();
+  openModal(el.localizacaoCreateModal);
 }
 
 function clearInventarioForm() {
@@ -434,6 +524,13 @@ async function refreshInventarios() {
     (inv) => `${inv.nome} (#${inv.id})`,
     "Seleciona inventario"
   );
+  setSelectOptions(
+    el.pcCreateInventarioId,
+    inventarios,
+    (inv) => inv.id,
+    (inv) => `${inv.nome} (#${inv.id})`,
+    "Seleciona inventario"
+  );
 
   inventarios.forEach((inv) => {
     const tr = document.createElement("tr");
@@ -561,7 +658,21 @@ async function refreshUtilizadores() {
     "Sem responsavel"
   );
   setSelectOptions(
+    el.pcCreateUtilizadorId,
+    uts,
+    (u) => u.id,
+    (u) => `${u.nome} (#${u.id})`,
+    "Sem responsavel"
+  );
+  setSelectOptions(
     el.utPerfilId,
+    perfis,
+    (p) => p.id,
+    (p) => `${p.nome} (#${p.id})`,
+    "Seleciona perfil"
+  );
+  setSelectOptions(
+    el.utCreatePerfilId,
     perfis,
     (p) => p.id,
     (p) => `${p.nome} (#${p.id})`,
@@ -617,6 +728,13 @@ async function refreshPerfis() {
     (p) => `${p.nome} (#${p.id})`,
     "Seleciona perfil"
   );
+  setSelectOptions(
+    el.utCreatePerfilId,
+    perfis,
+    (p) => p.id,
+    (p) => `${p.nome} (#${p.id})`,
+    "Seleciona perfil"
+  );
   clear(el.perfisBody);
   perfis.forEach((p) => {
     const tr = document.createElement("tr");
@@ -656,6 +774,13 @@ async function refreshLocalizacoes() {
   const locs = await localizacoesApi.list();
   setSelectOptions(
     el.pcLocalizacaoId,
+    locs,
+    (l) => l.id,
+    (l) => `${l.nome} (#${l.id})`,
+    "Sem localizacao"
+  );
+  setSelectOptions(
+    el.pcCreateLocalizacaoId,
     locs,
     (l) => l.id,
     (l) => `${l.nome} (#${l.id})`,
@@ -1054,6 +1179,72 @@ async function handleLocalizacaoDelete() {
   }
 }
 
+async function handlePcCreateModal(ev) {
+  ev.preventDefault();
+  try {
+    await computadoresApi.create({
+      nome: el.pcCreateNome.value.trim(),
+      marca: el.pcCreateMarca.value.trim(),
+      modelo: el.pcCreateModelo.value.trim(),
+      numero_serie: el.pcCreateSerie.value.trim(),
+      estado: el.pcCreateEstado.value.trim(),
+      inventario_id: toNullableInt(el.pcCreateInventarioId.value),
+      localizacao_id: toNullableInt(el.pcCreateLocalizacaoId.value),
+      utilizador_responsavel_id: toNullableInt(el.pcCreateUtilizadorId.value),
+    });
+    await refreshComputadores();
+    setStatus("Computador criado", "ok");
+    closeModal(el.computadorCreateModal);
+  } catch (err) {
+    setStatus(`Erro criar computador: ${err.message}`, "err");
+  }
+}
+
+async function handleUtCreateModal(ev) {
+  ev.preventDefault();
+  try {
+    await utilizadoresApi.create({
+      nome: el.utCreateNome.value.trim(),
+      username: el.utCreateUsername.value.trim(),
+      email: el.utCreateEmail.value.trim(),
+      perfil_id: toNullableInt(el.utCreatePerfilId.value),
+      palavra_passe: el.utCreatePassword.value || "123456",
+    });
+    await refreshUtilizadores();
+    setStatus("Utilizador criado", "ok");
+    closeModal(el.utilizadorCreateModal);
+  } catch (err) {
+    setStatus(`Erro criar utilizador: ${err.message}`, "err");
+  }
+}
+
+async function handlePfCreateModal(ev) {
+  ev.preventDefault();
+  try {
+    await perfisApi.create({ nome: el.pfCreateNome.value.trim() });
+    await refreshPerfis();
+    setStatus("Perfil criado", "ok");
+    closeModal(el.perfilCreateModal);
+  } catch (err) {
+    setStatus(`Erro criar perfil: ${err.message}`, "err");
+  }
+}
+
+async function handleLcCreateModal(ev) {
+  ev.preventDefault();
+  try {
+    await localizacoesApi.create({
+      nome: el.lcCreateNome.value.trim(),
+      descricao: el.lcCreateDesc.value.trim() || null,
+    });
+    await refreshLocalizacoes();
+    setStatus("Localizacao criada", "ok");
+    closeModal(el.localizacaoCreateModal);
+  } catch (err) {
+    setStatus(`Erro criar localizacao: ${err.message}`, "err");
+  }
+}
+
 // Handler da pesquisa global.
 async function handlePesquisaGlobal() {
   const termo = el.globalTermo.value.trim();
@@ -1233,26 +1424,38 @@ el.btnAtivoPesquisar.addEventListener("click", handleAtivoPesquisar);
 el.btnScan.addEventListener("click", handleScan);
 el.btnToggleScanCreds.addEventListener("click", toggleScanCreds);
 
-el.computadorForm.addEventListener("submit", handlePcCreate);
+el.btnPcCreate.addEventListener("click", openPcCreateModal);
 el.btnPcPut.addEventListener("click", handlePcPut);
 el.btnPcPatch.addEventListener("click", handlePcPatch);
 el.btnPcDelete.addEventListener("click", handlePcDelete);
 el.btnPcCancel.addEventListener("click", clearComputadorForm);
+el.btnClosePcCreateModal.addEventListener("click", () => closeModal(el.computadorCreateModal));
+el.btnCancelPcCreateModal.addEventListener("click", () => closeModal(el.computadorCreateModal));
+el.computadorCreateForm.addEventListener("submit", handlePcCreateModal);
 
-el.utilizadorForm.addEventListener("submit", handleUtilizadorCreate);
+el.btnUtCreate.addEventListener("click", openUtCreateModal);
 el.btnUtUpdate.addEventListener("click", handleUtilizadorUpdate);
 el.btnUtDelete.addEventListener("click", handleUtilizadorDelete);
 el.btnUtCancel.addEventListener("click", clearUtilizadorForm);
+el.btnCloseUtCreateModal.addEventListener("click", () => closeModal(el.utilizadorCreateModal));
+el.btnCancelUtCreateModal.addEventListener("click", () => closeModal(el.utilizadorCreateModal));
+el.utilizadorCreateForm.addEventListener("submit", handleUtCreateModal);
 
-el.perfilForm.addEventListener("submit", handlePerfilCreate);
+el.btnPfCreate.addEventListener("click", openPfCreateModal);
 el.btnPfUpdate.addEventListener("click", handlePerfilUpdate);
 el.btnPfDelete.addEventListener("click", handlePerfilDelete);
 el.btnPfCancel.addEventListener("click", clearPerfilForm);
+el.btnClosePfCreateModal.addEventListener("click", () => closeModal(el.perfilCreateModal));
+el.btnCancelPfCreateModal.addEventListener("click", () => closeModal(el.perfilCreateModal));
+el.perfilCreateForm.addEventListener("submit", handlePfCreateModal);
 
-el.localizacaoForm.addEventListener("submit", handleLocalizacaoCreate);
+el.btnLcCreate.addEventListener("click", openLcCreateModal);
 el.btnLcUpdate.addEventListener("click", handleLocalizacaoUpdate);
 el.btnLcDelete.addEventListener("click", handleLocalizacaoDelete);
 el.btnLcCancel.addEventListener("click", clearLocalizacaoForm);
+el.btnCloseLcCreateModal.addEventListener("click", () => closeModal(el.localizacaoCreateModal));
+el.btnCancelLcCreateModal.addEventListener("click", () => closeModal(el.localizacaoCreateModal));
+el.localizacaoCreateForm.addEventListener("submit", handleLcCreateModal);
 
 el.btnGlobalSearch.addEventListener("click", handlePesquisaGlobal);
 el.btnLogsComputador.addEventListener("click", handleLogsComputador);

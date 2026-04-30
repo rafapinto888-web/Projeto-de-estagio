@@ -1,44 +1,57 @@
-# Python
+# Python cache/bytecode
 __pycache__/
 *.py[cod]
+*.pyo
 *.pyd
-*.pkl
-*.log
+
+# Python packaging/build
 *.egg-info/
 .eggs/
+build/
+dist/
+pip-wheel-metadata/
 
-# Virtual environments
+# Virtualenvs
 venv/
 .venv/
 backend/.venv/
 
-# Pastas temporárias de desenvolvimento
-.tmp_python/
+# Test/coverage/cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 
-# PyInstaller / build artefacts
-build/
-dist/
+# Logs e ficheiros temporarios
+*.log
+*.tmp
+*.bak
+
+# PyInstaller
 *.spec
 *.toc
-*.html
 *.exe
 
-# App/runtime outputs (scripts de scan)
+# Runtime outputs (scripts de rede/scan)
 resultado*.txt
 resultado*.json
 
-# Databases
+# Bases de dados locais
 *.sqlite
+*.sqlite3
 *.db
 
-# Frontend (common)
+# Node/frontend
 node_modules/
 
-# IDE
+# IDE / OS
 .vscode/
 .idea/
 .DS_Store
+Thumbs.db
 
-# Env files (nunca commitar credenciais)
+# Segredos / ambiente
 .env
 .env.*

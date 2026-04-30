@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -38,15 +37,6 @@ def autenticar_utilizador(
 @router.post("/login", response_model=AuthTokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     utilizador = autenticar_utilizador(db, payload.identificador, payload.palavra_passe)
-    return {"access_token": criar_access_token(str(utilizador.id)), "token_type": "bearer"}
-
-
-@router.post("/token", response_model=AuthTokenResponse)
-def token(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db),
-):
-    utilizador = autenticar_utilizador(db, form_data.username, form_data.password)
     return {"access_token": criar_access_token(str(utilizador.id)), "token_type": "bearer"}
 
 

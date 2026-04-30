@@ -71,7 +71,6 @@ def obter_logs_rdp(ip, utilizador, password):
     script = f"""
 $securePassword = ConvertTo-SecureString $env:REDE_SCAN_PASSWORD -AsPlainText -Force
 $credential = New-Object System.Management.Automation.PSCredential ($env:REDE_SCAN_USER, $securePassword)
-$start = (Get-Date).AddHours(-24)
 $diag = @()
 $logs = @()
 
@@ -80,7 +79,7 @@ try {{
     $l1 = Get-WinEvent `
         -ComputerName $env:REDE_SCAN_IP `
         -Credential $credential `
-        -FilterHashtable @{{LogName="{LOG_RDP_REMOTECONN}"; Id={EVENTO_RDP_AUTH}; StartTime=$start}} `
+        -FilterHashtable @{{LogName="{LOG_RDP_REMOTECONN}"; Id={EVENTO_RDP_AUTH}}} `
         -ErrorAction Stop |
     ForEach-Object {{
         $user = ""
@@ -107,7 +106,7 @@ try {{
     $l2 = Get-WinEvent `
         -ComputerName $env:REDE_SCAN_IP `
         -Credential $credential `
-        -FilterHashtable @{{LogName="{LOG_RDP_LOCALSESSION}"; Id=@({ids_local}); StartTime=$start}} `
+        -FilterHashtable @{{LogName="{LOG_RDP_LOCALSESSION}"; Id=@({ids_local})}} `
         -ErrorAction Stop |
     ForEach-Object {{
         [pscustomobject]@{{
@@ -182,13 +181,12 @@ def obter_logs_seguranca(ip, utilizador, password):
     script = f"""
 $securePassword = ConvertTo-SecureString $env:REDE_SCAN_PASSWORD -AsPlainText -Force
 $credential = New-Object System.Management.Automation.PSCredential ($env:REDE_SCAN_USER, $securePassword)
-$start = (Get-Date).AddHours(-24)
 $ids = @({ids})
 
 Get-WinEvent `
     -ComputerName $env:REDE_SCAN_IP `
     -Credential $credential `
-    -FilterHashtable @{{LogName="{LOG_SECURITY}"; Id=$ids; StartTime=$start}} `
+    -FilterHashtable @{{LogName="{LOG_SECURITY}"; Id=$ids}} `
     -ErrorAction SilentlyContinue |
 Select-Object -First 30 |
 ForEach-Object {{

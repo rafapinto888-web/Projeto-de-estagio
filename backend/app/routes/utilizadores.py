@@ -19,6 +19,7 @@ password_hash = PasswordHash.recommended()
 
 
 def gerar_hash_palavra_passe(palavra_passe: str) -> str:
+    # Nunca guardar password em claro; persistimos apenas o hash.
     return password_hash.hash(palavra_passe)
 
 
@@ -76,6 +77,7 @@ def criar_utilizador(utilizador: UtilizadorCreate, db: Session = Depends(get_db)
         nome=utilizador.nome,
         username=utilizador.username,
         email=utilizador.email,
+        # A password recebida no pedido e cifrada (hash) antes de ir para a BD.
         palavra_passe_hash=gerar_hash_palavra_passe(utilizador.palavra_passe),
         perfil_id=utilizador.perfil_id,
     )
@@ -114,6 +116,7 @@ def atualizar_utilizador(
     utilizador.username = utilizador_atualizado.username
     utilizador.email = utilizador_atualizado.email
     if utilizador_atualizado.palavra_passe is not None:
+        # Regera o hash apenas quando a password e alterada.
         utilizador.palavra_passe_hash = gerar_hash_palavra_passe(
             utilizador_atualizado.palavra_passe
         )

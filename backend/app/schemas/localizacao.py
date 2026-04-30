@@ -1,10 +1,10 @@
 # Schemas de localizacoes para requests e responses.
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class LocalizacaoBase(BaseModel):
     nome: str
-    descricao: str | None = None
+    descricao: str | None = Field(default=None)
 
     @field_validator("descricao", mode="before")
     @classmethod

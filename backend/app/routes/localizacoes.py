@@ -54,8 +54,15 @@ def obter_localizacao(localizacao_id: int, db: Session = Depends(get_db)):
     dependencies=[Depends(require_admin)],
 )
 def criar_localizacao(localizacao: LocalizacaoCreate, db: Session = Depends(get_db)):
+    nome_limpo = localizacao.nome.strip()
+    if not nome_limpo:
+        raise HTTPException(status_code=400, detail="Nome da localizacao e obrigatorio")
+    descricao_limpa = localizacao.descricao.strip() if isinstance(localizacao.descricao, str) else None
+    if descricao_limpa == "":
+        descricao_limpa = None
+
     existente = obter_localizacao_duplicada(
-        db, localizacao.nome, localizacao.descricao
+        db, nome_limpo, descricao_limpa
     )
     if existente is not None:
         raise HTTPException(
@@ -64,8 +71,8 @@ def criar_localizacao(localizacao: LocalizacaoCreate, db: Session = Depends(get_
         )
 
     nova_localizacao = LocalizacaoDB(
-        nome=localizacao.nome,
-        descricao=localizacao.descricao,
+        nome=nome_limpo,
+        descricao=descricao_limpa,
     )
     db.add(nova_localizacao)
     try:
@@ -94,8 +101,19 @@ def atualizar_localizacao(
     if localizacao is None:
         raise HTTPException(status_code=404, detail="Localizacao nao encontrada")
 
+    nome_limpo = localizacao_atualizada.nome.strip()
+    if not nome_limpo:
+        raise HTTPException(status_code=400, detail="Nome da localizacao e obrigatorio")
+    descricao_limpa = (
+        localizacao_atualizada.descricao.strip()
+        if isinstance(localizacao_atualizada.descricao, str)
+        else None
+    )
+    if descricao_limpa == "":
+        descricao_limpa = None
+
     existente = obter_localizacao_duplicada(
-        db, localizacao_atualizada.nome, localizacao_atualizada.descricao
+        db, nome_limpo, descricao_limpa
     )
     if existente is not None and existente.id != localizacao_id:
         raise HTTPException(
@@ -103,8 +121,8 @@ def atualizar_localizacao(
             detail="Ja existe uma localizacao com o mesmo nome e descricao",
         )
 
-    localizacao.nome = localizacao_atualizada.nome
-    localizacao.descricao = localizacao_atualizada.descricao
+    localizacao.nome = nome_limpo
+    localizacao.descricao = descricao_limpa
     try:
         db.commit()
     except IntegrityError:
