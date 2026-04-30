@@ -278,6 +278,7 @@ export default function App() {
               utilizadores={utilizadores}
               localizacoes={localizacoes}
               loading={loading}
+              onNavigate={setActiveTab}
             />
           )}
 
