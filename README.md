@@ -70,6 +70,56 @@ script de rede/  # scripts utilitarios de teste de rede/logs
 - Dependencias em `backend/requirements.txt`
 - Docker e Docker Compose (opcional, para ambiente containerizado)
 
+## Dependencias do Projeto
+
+### Backend (Python / pip)
+
+Dependencias instaladas via `backend/requirements.txt`:
+
+- `fastapi`
+- `uvicorn[standard]`
+- `pydantic`
+- `sqlalchemy`
+- `psycopg2-binary`
+- `httpx`
+- `pwdlib[argon2]`
+- `PyJWT`
+- `python-multipart`
+
+Instalacao:
+
+```bash
+cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
+.\..\venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+### Frontend (Web estatico)
+
+O frontend nao usa `npm` nem `package.json` neste momento.
+
+- HTML + CSS + JavaScript vanilla
+- Sem dependencias externas de build/runtime no lado do frontend
+
+### Script de rede (pasta `script de rede`)
+
+O script de teste usa apenas modulos da biblioteca padrao do Python:
+
+- `ipaddress`
+- `getpass`
+- `sys`
+- `pathlib`
+- `json`
+- `os`
+- `subprocess`
+- `platform`
+- `concurrent.futures`
+- `ctypes`
+- `queue`
+- `threading`
+
+Nota:
+- Para gerar executavel do script, `pyinstaller` e opcional e deve ser instalado separadamente.
+
 ## Instalacao
 
 ### 1) Backend (FastAPI)
