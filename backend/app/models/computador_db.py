@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Modelo ORM de computadores registados manualmente.
 from __future__ import annotations
 
@@ -59,3 +61,4 @@ class ComputadorDB(Base):
         if self.utilizador_responsavel is None:
             return None
         return self.utilizador_responsavel.nome
+

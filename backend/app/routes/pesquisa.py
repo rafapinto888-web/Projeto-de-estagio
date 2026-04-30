@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Rota de pesquisa global por varias entidades do sistema.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import String, cast, or_
@@ -94,3 +96,4 @@ def pesquisar_global(
         "utilizadores": utilizadores,
         "localizacoes": localizacoes,
     }
+

@@ -1,11 +1,22 @@
-backend
+backend (ligar API)
 cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
-.\..\venv\Scripts\python.exe -m uvicorn app.core.main:app --reload
+.\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload
 
-frontend
+frontend (se npm nao existir, instalar Node.js LTS)
+winget install --id OpenJS.NodeJS.LTS --exact --source winget --accept-package-agreements --accept-source-agreements
+
+frontend (primeira vez - instalar dependencias)
 cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
-python -m http.server 5500
+npm install
+ou
+& "C:\Program Files\nodejs\npm.cmd" install
+
+frontend (ligar app React)
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
+npm run dev
+ou
+& "C:\Program Files\nodejs\npm.cmd" run dev
 
 links
 API Swagger: http://127.0.0.1:8000/docs
-Frontend: http://127.0.0.1:5500
+Frontend: http://127.0.0.1:5173

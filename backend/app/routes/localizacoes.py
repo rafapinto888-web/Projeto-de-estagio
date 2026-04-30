@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Rotas CRUD das localizacoes de equipamentos.
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.exc import IntegrityError
@@ -159,3 +161,4 @@ def apagar_localizacao(localizacao_id: int, db: Session = Depends(get_db)):
     db.delete(localizacao)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+

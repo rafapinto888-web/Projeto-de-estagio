@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Rotas CRUD dos utilizadores e respetivos perfis.
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pwdlib import PasswordHash
@@ -168,3 +170,4 @@ def apagar_utilizador(utilizador_id: int, db: Session = Depends(get_db)):
             detail="Nao e possivel apagar o utilizador porque existem registos associados",
         ) from None
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+

@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Schema de resposta da pesquisa global do sistema.
 from pydantic import BaseModel
 
@@ -12,3 +14,4 @@ class PesquisaGlobalResponse(BaseModel):
     inventarios: list[InventarioResponse]
     utilizadores: list[UtilizadorResponse]
     localizacoes: list[LocalizacaoResponse]
+

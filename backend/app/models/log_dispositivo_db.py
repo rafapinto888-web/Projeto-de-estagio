@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Modelo ORM dos logs associados a computadores.
 from __future__ import annotations
 
@@ -23,3 +25,4 @@ class LogDispositivoDB(Base):
     )
 
     computador: Mapped["ComputadorDB"] = relationship(back_populates="logs_dispositivo")
+

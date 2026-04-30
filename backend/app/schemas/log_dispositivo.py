@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Schemas de resposta para consulta de logs de dispositivo.
 from datetime import datetime
 
@@ -18,3 +20,4 @@ class LogsDispositivoConsultaResponse(BaseModel):
     filtros: dict[str, str | int]
     total_logs: int
     logs: list[LogDispositivoItemResponse]
+

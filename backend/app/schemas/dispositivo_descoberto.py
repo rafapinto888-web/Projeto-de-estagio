@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Schemas dos dispositivos descobertos no scan de rede.
 from datetime import datetime
 
@@ -100,3 +102,4 @@ class DispositivoDescobertoResponse(BaseSchema):
 
 class DispositivoDescobertoScanResponse(DispositivoDescobertoResponse):
     pass
+

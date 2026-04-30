@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Rotas para gestao de computadores e consulta de logs de dispositivo.
 from typing import Literal
 
@@ -361,3 +363,4 @@ def apagar_computador(computador_id: int, db: Session = Depends(get_db)):
     if not removido:
         raise HTTPException(status_code=404, detail="Computador nao encontrado")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+

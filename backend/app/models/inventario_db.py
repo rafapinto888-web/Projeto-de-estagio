@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Modelo ORM dos inventarios de equipamentos.
 from __future__ import annotations
 
@@ -24,3 +26,4 @@ class InventarioDB(Base):
     dispositivos_descobertos: Mapped[list["DispositivoDescobertoDB"]] = relationship(
         back_populates="inventario"
     )
+

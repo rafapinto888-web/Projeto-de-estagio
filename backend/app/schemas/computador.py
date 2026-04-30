@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Schemas de criacao, atualizacao e resposta de computadores.
 from pydantic import BaseModel, ConfigDict
 
@@ -46,3 +48,4 @@ class ComputadorResponse(ComputadorBase):
     inventario_nome: str | None = None
     localizacao_nome: str | None = None
     utilizador_responsavel_nome: str | None = None
+

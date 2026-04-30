@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 import base64
 
 from fastapi import Depends, HTTPException, Request, status
@@ -122,3 +124,4 @@ def require_admin(current_user: UtilizadorDB = Depends(get_current_user)) -> Uti
             detail="Apenas administradores podem executar esta operacao",
         )
     return current_user
+

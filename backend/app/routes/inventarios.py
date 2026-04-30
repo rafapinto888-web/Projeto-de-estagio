@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Rotas para gestao de inventarios, scan e dispositivos descobertos.
 from datetime import datetime
 from typing import Literal
@@ -765,3 +767,4 @@ def apagar_inventario(inventario_id: int, db: Session = Depends(get_db)):
 
     db.delete(inventario)
     db.commit()
+

@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Modelo ORM dos logs de acoes do sistema.
 from __future__ import annotations
 
@@ -23,3 +25,4 @@ class LogSistemaDB(Base):
     )
 
     utilizador: Mapped["UtilizadorDB"] = relationship(back_populates="logs_sistema")
+

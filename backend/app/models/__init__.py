@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Pacote com os modelos ORM da aplicacao.
 """Modelos internos da aplicacao."""
 
@@ -20,3 +22,4 @@ __all__ = [
     "PerfilDB",
     "UtilizadorDB",
 ]
+

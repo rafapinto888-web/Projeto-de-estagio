@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -20,3 +22,4 @@ class AuthMeResponse(BaseModel):
     email: str
     perfil_id: int
     perfil_nome: str | None = None
+

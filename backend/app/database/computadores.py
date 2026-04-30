@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 from collections.abc import Mapping
 
 from sqlalchemy.exc import IntegrityError
@@ -66,3 +68,4 @@ def apagar_computador(db: Session, computador_id: int) -> bool:
     db.delete(computador)
     db.commit()
     return True
+

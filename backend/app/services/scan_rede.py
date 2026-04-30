@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Servico responsavel por descobrir IPs ativos e metadados basicos na rede.
 from __future__ import annotations
 
@@ -351,3 +353,4 @@ def descobrir_dispositivos_enriquecidos(
             }
         )
     return enriquecidos
+

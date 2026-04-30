@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 import subprocess
 import platform
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -45,3 +47,4 @@ def descobrir_hosts_ativos(rede):
 
     # Ordena os IPs numericamente para output estável.
     return sorted(ativos, key=lambda x: tuple(map(int, x.split("."))))
+

@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -50,3 +52,4 @@ def me(current_user: UtilizadorDB = Depends(get_current_user)):
         "perfil_id": current_user.perfil_id,
         "perfil_nome": current_user.perfil.nome if current_user.perfil else None,
     }
+

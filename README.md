@@ -23,9 +23,9 @@ O sistema foi desenhado para suportar o ciclo completo de inventario tecnico:
 - **Base de Dados**
   - PostgreSQL
 - **Frontend**
-  - HTML
-  - CSS
-  - JavaScript
+  - React
+  - Vite
+  - JavaScript (ES Modules)
 - **Containerizacao**
   - Docker
   - Docker Compose
@@ -46,7 +46,7 @@ backend/
     routes/        # endpoints FastAPI
     schemas/       # contratos de request/response
     services/      # logica de scan de rede e logs Windows
-frontend/          # interface web estatica (HTML/CSS/JS)
+frontend/          # frontend React (SPA) com Vite
 docs/              # documentacao funcional e tecnica
 script de rede/  # scripts utilitarios de teste de rede/logs
 ```
@@ -66,6 +66,7 @@ script de rede/  # scripts utilitarios de teste de rede/logs
 ## Requisitos
 
 - Python 3.11+ (recomendado)
+- Node.js 18+ com npm (para frontend React)
 - PostgreSQL em execucao (local ou remoto)
 - Dependencias em `backend/requirements.txt`
 - Docker e Docker Compose (opcional, para ambiente containerizado)
@@ -90,15 +91,17 @@ Instalacao:
 
 ```bash
 cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
-.\..\venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-### Frontend (Web estatico)
+### Frontend (React + Vite)
 
-O frontend nao usa `npm` nem `package.json` neste momento.
+Dependencias declaradas em `frontend/package.json`:
 
-- HTML + CSS + JavaScript vanilla
-- Sem dependencias externas de build/runtime no lado do frontend
+- `react`
+- `react-dom`
+- `vite`
+- `@vitejs/plugin-react`
 
 ### Script de rede (pasta `script de rede`)
 
@@ -122,49 +125,128 @@ Nota:
 
 ## Instalacao
 
+### 0) Se o comando `npm` nao existir no Windows
+
+Instalar Node.js LTS (inclui `npm`):
+
+```bash
+winget install --id OpenJS.NodeJS.LTS --exact --source winget --accept-package-agreements --accept-source-agreements
+```
+
+Depois fecha e abre o terminal novamente, e valida:
+
+```bash
+node -v
+npm -v
+```
+
+Se mesmo assim o `npm` nao for reconhecido no terminal atual, usa diretamente:
+
+```bash
+& "C:\Program Files\nodejs\npm.cmd" -v
+```
+
 ### 1) Backend (FastAPI)
 
-No terminal, a partir da raiz do projeto:
+No terminal, criar ambiente virtual dentro de `backend`:
 
 ```bash
 cd "C:\Users\Jose\Desktop\Projeto de estagio"
-python -m venv venv
+python -m venv backend\.venv
 ```
 
 Ativar ambiente virtual:
 
 - **PowerShell (Windows)**
 ```bash
-.\venv\Scripts\Activate.ps1
+.\backend\.venv\Scripts\Activate.ps1
+```
+
+Se der erro de politica PowerShell, usa diretamente o Python da venv (sem ativar):
+
+```bash
+cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 Entrar na pasta do backend e instalar dependencias:
 
 ```bash
 cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
-.\..\venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-### 2) Frontend (modo simples)
+### 2) Frontend (React)
 
-O frontend atual e estatico e pode ser aberto diretamente:
-
-- abrir `frontend/index.html` no browser
-
-ou servir por um servidor simples:
+Entrar na pasta do frontend e instalar dependencias:
 
 ```bash
 cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
-python -m http.server 5500
+npm install
+```
+
+Fallback no Windows (quando `npm` nao esta no PATH):
+
+```bash
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
+& "C:\Program Files\nodejs\npm.cmd" install
+```
+
+Executar em desenvolvimento:
+
+```bash
+npm run dev
+```
+
+Fallback no Windows:
+
+```bash
+& "C:\Program Files\nodejs\npm.cmd" run dev
+```
+
+Build de producao:
+
+```bash
+npm run build
 ```
 
 ## Como Executar
 
-Com o ambiente virtual na raiz e executando a API dentro de `backend`:
+### Arranque rapido (copiar e colar)
+
+Backend:
 
 ```bash
 cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
-.\..\venv\Scripts\python.exe -m uvicorn app.core.main:app --reload
+.\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload
+```
+
+Frontend:
+
+```bash
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
+npm run dev
+```
+
+Fallback no Windows (quando `npm` nao for reconhecido no terminal):
+
+```bash
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
+& "C:\Program Files\nodejs\npm.cmd" run dev
+```
+
+### Primeira execucao (apenas uma vez)
+
+```bash
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
+npm install
+```
+
+Fallback no Windows:
+
+```bash
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
+& "C:\Program Files\nodejs\npm.cmd" install
 ```
 
 API disponivel em:
@@ -173,13 +255,18 @@ API disponivel em:
 - Redoc: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
 - Health basico: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 
+Frontend React (dev) disponivel em:
+
+- [http://127.0.0.1:5173](http://127.0.0.1:5173)
+
 ## O que a Aplicacao Vai Fazer (na pratica)
 
 1. Recebe pedidos HTTP para gerir inventario e ativos.
 2. Persiste informacao no banco de dados.
-3. Permite executar scan de rede por inventario do tipo sub-rede.
-4. Guarda/atualiza dispositivos descobertos (IP, hostname, MAC e metadados disponiveis).
-5. Disponibiliza pesquisa e endpoints de consulta para integracao com frontend.
+3. O frontend React comunica com o backend FastAPI via HTTP (token Bearer).
+4. Permite executar scan de rede por inventario do tipo sub-rede.
+5. Guarda/atualiza dispositivos descobertos (IP, hostname, MAC e metadados disponiveis).
+6. Disponibiliza pesquisa e endpoints de consulta para integracao com frontend.
 
 ## Configuracao de Base de Dados (PostgreSQL)
 
@@ -209,7 +296,7 @@ DATABASE_URL=postgresql+psycopg2://utilizador:password@localhost:5432/inventario
 
 ## Estado Atual
 
-Projeto em evolucao, com backend funcional para operacoes principais de inventario e scan, e frontend em fase de melhoria visual/ux.
+Projeto com backend funcional para operacoes principais de inventario e scan, e frontend totalmente migrado para React mantendo compatibilidade com os endpoints existentes.
 
 ## Arquitetura de Deploy (Resumo)
 

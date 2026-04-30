@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Schemas de inventarios, detalhes e respostas de scan.
 from enum import Enum
 from ipaddress import ip_network
@@ -165,3 +167,4 @@ class AtivoInventarioItem(BaseModel):
 class InventarioDetalhesResponse(InventarioResponse):
     computadores: list[ComputadorDetalhadoInventarioResponse]
     dispositivos_descobertos: list[DispositivoDescobertoResponse]
+

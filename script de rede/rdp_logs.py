@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 import json
 import os
 import subprocess
@@ -228,3 +230,4 @@ def formatar_log_seguranca(log):
         # Limita mensagem para o txt nao ficar gigante.
         partes.append(f"Msg: {log['mensagem'][:120].replace('\\n', ' ')}")
     return " | ".join(parte for parte in partes if parte)
+

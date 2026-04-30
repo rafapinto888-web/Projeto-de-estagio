@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 import os
 import subprocess
 
@@ -23,3 +25,4 @@ def sem_janela():
 
     # Devolve kwargs prontos para passar ao subprocess.run.
     return parametros
+

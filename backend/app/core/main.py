@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Arranque da API FastAPI e registo de routers.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -105,3 +107,4 @@ app.include_router(utilizadores_router)
 @app.get("/", tags=["Root"])
 def root():
     return {"mensagem": "API de inventario a funcionar"}
+

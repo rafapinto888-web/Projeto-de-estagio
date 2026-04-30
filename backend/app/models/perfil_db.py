@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Modelo ORM dos perfis de utilizador.
 from __future__ import annotations
 
@@ -16,3 +18,4 @@ class PerfilDB(Base):
     utilizadores: Mapped[list["UtilizadorDB"]] = relationship(
         back_populates="perfil"
     )
+

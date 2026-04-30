@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Servico para recolher logs reais do Windows (seguranca e RDP).
 from __future__ import annotations
 
@@ -101,3 +103,4 @@ $all | ConvertTo-Json -Depth 3
         )
 
     return logs
+

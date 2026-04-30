@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Rotas CRUD dos perfis de utilizador.
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.exc import IntegrityError
@@ -102,3 +104,4 @@ def apagar_perfil(perfil_id: int, db: Session = Depends(get_db)):
             detail="Nao e possivel apagar o perfil porque existem utilizadores associados",
         ) from None
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+

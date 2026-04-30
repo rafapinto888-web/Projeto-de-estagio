@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Configuracao da ligacao SQLAlchemy e sessoes da BD.
 import os
 from collections.abc import Generator
@@ -27,3 +29,4 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+

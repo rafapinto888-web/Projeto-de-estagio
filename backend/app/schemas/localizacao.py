@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Schemas de localizacoes para requests e responses.
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -28,3 +30,4 @@ class LocalizacaoResponse(LocalizacaoBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+

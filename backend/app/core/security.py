@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 import os
 from datetime import UTC, datetime, timedelta
 
@@ -53,3 +55,4 @@ def descodificar_access_token(token: str) -> str | None:
     if not isinstance(subject, str):
         return None
     return subject
+

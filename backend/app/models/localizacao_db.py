@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Modelo ORM das localizacoes fisicas dos equipamentos.
 from __future__ import annotations
 
@@ -25,3 +27,4 @@ class LocalizacaoDB(Base):
     computadores: Mapped[list["ComputadorDB"]] = relationship(
         back_populates="localizacao"
     )
+

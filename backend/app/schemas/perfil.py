@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Schemas de perfis de utilizador.
 from pydantic import BaseModel, ConfigDict
 
@@ -18,3 +20,4 @@ class PerfilResponse(PerfilBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+

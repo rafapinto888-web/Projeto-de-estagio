@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 import subprocess
 import os
 import json
@@ -188,3 +190,4 @@ if ($dados) {
         "sistema_operativo": _limpo(payload.get("sistema_operativo")),
         "mac_address": _limpo(payload.get("mac_address")).replace("-", ":").lower(),
     }
+

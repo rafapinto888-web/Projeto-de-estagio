@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 import ipaddress
 import getpass
 import sys
@@ -121,3 +123,4 @@ with open(caminho_resultado, "w", encoding="utf-8") as ficheiro:
                 ficheiro.write(linha_log + "\n")
 
 print(f"\nResultado guardado em: {caminho_resultado}")
+

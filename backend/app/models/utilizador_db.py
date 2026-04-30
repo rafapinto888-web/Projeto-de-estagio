@@ -1,3 +1,5 @@
+﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+
 # Modelo ORM dos utilizadores da aplicacao.
 from __future__ import annotations
 
@@ -26,3 +28,4 @@ class UtilizadorDB(Base):
     logs_sistema: Mapped[list["LogSistemaDB"]] = relationship(
         back_populates="utilizador"
     )
+
