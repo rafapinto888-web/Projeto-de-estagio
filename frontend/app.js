@@ -10,6 +10,7 @@ import { pesquisaApi } from "./js/api/pesquisaApi.js";
 import { authApi } from "./js/api/authApi.js";
 import { clearSession, isAdmin, isAuthenticated, saveSession } from "./js/core/session.js";
 
+// Referencias de elementos da interface para uso em toda a app.
 const el = {
   appRoot: document.getElementById("appRoot"),
   loginScreen: document.getElementById("loginScreen"),
@@ -144,6 +145,7 @@ const selectedEntity = {
 };
 const uiActivityLog = [];
 
+// Mostra o estado global da app e regista atividade recente no dashboard.
 function setStatus(text, level = "ok") {
   el.globalStatus.className = `status ${level}`;
   el.globalStatus.textContent = text;
@@ -182,6 +184,7 @@ function makeRowActionButton(text, className, onClick) {
   return btn;
 }
 
+// Mostra/limpa mensagem de erro do formulario de login.
 function setLoginError(message = "") {
   if (!message) {
     el.loginError.classList.add("is-hidden");
@@ -197,12 +200,14 @@ function showApp(isVisible) {
   el.loginScreen.classList.toggle("is-hidden", isVisible);
 }
 
+// Atualiza dados do utilizador autenticado no header.
 function setAuthUi() {
   const user = store.currentUser;
   el.authUser.textContent = user ? user.nome : "Sem sessao";
   el.authPerfil.textContent = `Perfil: ${user?.perfil_nome || "-"}`;
 }
 
+// Aplica visibilidade de acoes conforme perfil (admin ou leitura).
 function applyRoleUi() {
   const admin = isAdmin();
   [
@@ -228,6 +233,7 @@ function applyRoleUi() {
   }
 }
 
+// Controla o modal de inventario para criar/editar.
 function openInventarioModal(mode = "create") {
   if (!isAdmin()) return;
   if (mode === "create") {
@@ -264,6 +270,7 @@ function preencherInventarioForm(inv) {
   syncInventarioConditionalUI();
 }
 
+// Ajusta visualmente o campo de rede conforme o tipo de inventario.
 function syncInventarioConditionalUI() {
   const isRede = el.invTipo.value === "sub_rede";
   el.invRede.classList.toggle("is-hidden", !isRede);
@@ -276,6 +283,7 @@ function syncInventarioConditionalUI() {
   }
 }
 
+// Mostra/oculta credenciais remotas usadas no scan.
 function toggleScanCreds() {
   scanCredsVisible = !scanCredsVisible;
   el.scanCredsRow.classList.toggle("is-hidden", !scanCredsVisible);
@@ -288,6 +296,7 @@ function toggleScanCreds() {
   }
 }
 
+// Helpers de apresentacao e navegacao.
 function labelTipoInventario(tipo) {
   if (tipo === "sub_rede") return "rede";
   return tipo || "-";
@@ -342,6 +351,7 @@ function formatDate(v) {
   return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString("pt-PT");
 }
 
+// Render de linhas da tabela de ativos.
 function addAtivoRow(item, { offlineDateMode = "inactiveOnly" } = {}) {
   const tr = document.createElement("tr");
   tr.appendChild(td(item.tipo));
@@ -364,6 +374,7 @@ function addAtivoRow(item, { offlineDateMode = "inactiveOnly" } = {}) {
   el.ativosBody.appendChild(tr);
 }
 
+// Blocos do dashboard.
 function renderDashboardInventarios(inventarios) {
   if (!el.dashInventariosBody) return;
   clear(el.dashInventariosBody);
@@ -409,6 +420,7 @@ function renderDashboardActivity() {
   });
 }
 
+// Recarrega inventarios e sincroniza tabelas/selects relacionados.
 async function refreshInventarios() {
   const admin = isAdmin();
   const inventarios = await inventariosApi.list();
@@ -700,6 +712,7 @@ async function refreshAtivos() {
   ativos.forEach((a) => addAtivoRow(a, { offlineDateMode: "inactiveOnly" }));
 }
 
+// Handlers de inventario.
 async function handleInventarioCreate(ev) {
   ev.preventDefault();
   try {
@@ -787,6 +800,7 @@ async function handleAtivoPesquisar() {
   }
 }
 
+// Construtor do payload de computador (completo ou parcial).
 function buildComputadorPayload(full = true) {
   const base = {
     nome: el.pcNome.value.trim(),
@@ -1050,6 +1064,7 @@ async function handleLocalizacaoDelete() {
   }
 }
 
+// Handler da pesquisa global.
 async function handlePesquisaGlobal() {
   const termo = el.globalTermo.value.trim();
   if (!termo) return setStatus("Indica termo de pesquisa global", "warn");
@@ -1098,6 +1113,7 @@ async function handleLogsInventario() {
   }
 }
 
+// Ciclo de vida da aplicacao e autenticacao.
 async function init() {
   try {
     setStatus("A carregar...", "warn");
