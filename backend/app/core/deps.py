@@ -1,29 +1,31 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.security import descodificar_access_token
 from app.database.connection import get_db
 from app.models.utilizador_db import UtilizadorDB
 
-bearer_scheme = HTTPBearer(auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token", auto_error=False)
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    token: str | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> UtilizadorDB:
-    if credentials is None:
+    if token is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Nao autenticado",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
-    utilizador_id_txt = descodificar_access_token(credentials.credentials)
+    utilizador_id_txt = descodificar_access_token(token)
     if utilizador_id_txt is None or not utilizador_id_txt.isdigit():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token invalido",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     utilizador = (
@@ -36,6 +38,7 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Utilizador do token nao encontrado",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     return utilizador
 

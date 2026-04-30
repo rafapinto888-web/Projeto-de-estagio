@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -11,27 +12,41 @@ from app.schemas.auth import AuthMeResponse, AuthTokenResponse, LoginRequest
 router = APIRouter(prefix="/auth", tags=["Autenticacao"])
 
 
-@router.post("/login", response_model=AuthTokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
-    identificador = payload.identificador.strip()
+def autenticar_utilizador(
+    db: Session, identificador: str, palavra_passe: str
+) -> UtilizadorDB:
+    identificador_limpo = identificador.strip()
     utilizador = (
         db.query(UtilizadorDB)
         .filter(
             or_(
-                UtilizadorDB.username == identificador,
-                UtilizadorDB.email == identificador,
+                UtilizadorDB.username == identificador_limpo,
+                UtilizadorDB.email == identificador_limpo,
             )
         )
         .first()
     )
-    if utilizador is None or not verificar_palavra_passe(
-        payload.palavra_passe, utilizador.palavra_passe_hash
-    ):
+    if utilizador is None or not verificar_palavra_passe(palavra_passe, utilizador.palavra_passe_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciais invalidas",
+            headers={"WWW-Authenticate": "Bearer"},
         )
+    return utilizador
 
+
+@router.post("/login", response_model=AuthTokenResponse)
+def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    utilizador = autenticar_utilizador(db, payload.identificador, payload.palavra_passe)
+    return {"access_token": criar_access_token(str(utilizador.id)), "token_type": "bearer"}
+
+
+@router.post("/token", response_model=AuthTokenResponse)
+def token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
+    utilizador = autenticar_utilizador(db, form_data.username, form_data.password)
     return {"access_token": criar_access_token(str(utilizador.id)), "token_type": "bearer"}
 
 
