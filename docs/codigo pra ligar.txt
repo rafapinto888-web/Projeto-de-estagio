@@ -2,19 +2,8 @@ backend (ligar API)
 cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
 .\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload
 
-frontend (se npm nao existir, instalar Node.js LTS)
-winget install --id OpenJS.NodeJS.LTS --exact --source winget --accept-package-agreements --accept-source-agreements
-
-frontend (primeira vez - instalar dependencias)
+Frontend
 cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
-npm install
-ou
-& "C:\Program Files\nodejs\npm.cmd" install
-
-frontend (ligar app React)
-cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
-npm run dev
-ou
 & "C:\Program Files\nodejs\npm.cmd" run dev
 
 links
