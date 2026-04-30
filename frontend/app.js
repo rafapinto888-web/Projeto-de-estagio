@@ -529,7 +529,6 @@ async function refreshComputadores() {
       );
       actions.appendChild(
         makeRowActionButton("Apagar", "btn-inline btn-inline-danger", async () => {
-          if (!window.confirm(`Apagar computador ${pc.id}?`)) return;
           try {
             await computadoresApi.remove(pc.id);
             await refreshComputadores();
@@ -633,7 +632,6 @@ async function refreshPerfis() {
       );
       actions.appendChild(
         makeRowActionButton("Apagar", "btn-inline btn-inline-danger", async () => {
-          if (!window.confirm(`Apagar perfil ${p.id}?`)) return;
           try {
             await perfisApi.remove(p.id);
             await refreshPerfis();
@@ -679,7 +677,6 @@ async function refreshLocalizacoes() {
       );
       actions.appendChild(
         makeRowActionButton("Apagar", "btn-inline btn-inline-danger", async () => {
-          if (!window.confirm(`Apagar localizacao ${l.id}?`)) return;
           try {
             await localizacoesApi.remove(l.id);
             await refreshLocalizacoes();
@@ -930,7 +927,6 @@ async function handlePcPatch() {
 async function handlePcDelete() {
   const id = selectedEntity.computadorId || toNullableInt(el.pcId.value);
   if (!id) return setStatus("Seleciona um computador na tabela para apagar", "warn");
-  if (!window.confirm(`Apagar computador ${id}?`)) return;
   try {
     await computadoresApi.remove(id);
     await refreshComputadores();
@@ -1014,7 +1010,6 @@ async function handlePerfilUpdate() {
 async function handlePerfilDelete() {
   const id = selectedEntity.perfilId || toNullableInt(el.pfId.value);
   if (!id) return setStatus("Seleciona um perfil na tabela para apagar", "warn");
-  if (!window.confirm(`Apagar perfil ${id}?`)) return;
   try {
     await perfisApi.remove(id);
     await refreshPerfis();
@@ -1050,7 +1045,6 @@ async function handleLocalizacaoUpdate() {
 async function handleLocalizacaoDelete() {
   const id = selectedEntity.localizacaoId || toNullableInt(el.lcId.value);
   if (!id) return setStatus("Seleciona uma localizacao na tabela para apagar", "warn");
-  if (!window.confirm(`Apagar localizacao ${id}?`)) return;
   try {
     await localizacoesApi.remove(id);
     await refreshLocalizacoes();
