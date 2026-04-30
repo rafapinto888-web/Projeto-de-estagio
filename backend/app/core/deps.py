@@ -1,46 +1,71 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.security import descodificar_access_token
+from app.core.security import descodificar_access_token, verificar_palavra_passe
 from app.database.connection import get_db
 from app.models.utilizador_db import UtilizadorDB
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token", auto_error=False)
+basic_scheme = HTTPBasic(auto_error=False)
 
 
 def get_current_user(
-    token: str | None = Depends(oauth2_scheme),
+    request: Request,
+    credentials: HTTPBasicCredentials | None = Depends(basic_scheme),
     db: Session = Depends(get_db),
 ) -> UtilizadorDB:
-    if token is None:
+    authorization = request.headers.get("Authorization", "").strip()
+
+    if authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+        utilizador_id_txt = descodificar_access_token(token)
+        if utilizador_id_txt is None or not utilizador_id_txt.isdigit():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token invalido",
+                headers={"WWW-Authenticate": "Basic"},
+            )
+
+        utilizador_por_token = (
+            db.query(UtilizadorDB)
+            .options(joinedload(UtilizadorDB.perfil))
+            .filter(UtilizadorDB.id == int(utilizador_id_txt))
+            .first()
+        )
+        if utilizador_por_token is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Utilizador do token nao encontrado",
+                headers={"WWW-Authenticate": "Basic"},
+            )
+        return utilizador_por_token
+
+    if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Nao autenticado",
-            headers={"WWW-Authenticate": "Bearer"},
+            headers={"WWW-Authenticate": "Basic"},
         )
 
-    utilizador_id_txt = descodificar_access_token(token)
-    if utilizador_id_txt is None or not utilizador_id_txt.isdigit():
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token invalido",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    utilizador = (
+    identificador = credentials.username.strip()
+    utilizador_por_credenciais = (
         db.query(UtilizadorDB)
         .options(joinedload(UtilizadorDB.perfil))
-        .filter(UtilizadorDB.id == int(utilizador_id_txt))
+        .filter(
+            (UtilizadorDB.username == identificador)
+            | (UtilizadorDB.email == identificador)
+        )
         .first()
     )
-    if utilizador is None:
+    if utilizador_por_credenciais is None or not verificar_palavra_passe(
+        credentials.password, utilizador_por_credenciais.palavra_passe_hash
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Utilizador do token nao encontrado",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Credenciais invalidas",
+            headers={"WWW-Authenticate": "Basic"},
         )
-    return utilizador
+    return utilizador_por_credenciais
 
 
 def require_admin(current_user: UtilizadorDB = Depends(get_current_user)) -> UtilizadorDB:

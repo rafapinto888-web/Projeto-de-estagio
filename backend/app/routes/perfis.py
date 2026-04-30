@@ -39,7 +39,7 @@ def criar_perfil(perfil: PerfilCreate, db: Session = Depends(get_db)):
     if existente is not None:
         raise HTTPException(status_code=409, detail="Nome de perfil ja existe")
 
-    novo_perfil = PerfilDB(nome=perfil.nome, descricao=perfil.descricao)
+    novo_perfil = PerfilDB(nome=perfil.nome, descricao=None)
     db.add(novo_perfil)
     try:
         db.commit()
@@ -72,7 +72,7 @@ def atualizar_perfil(
         raise HTTPException(status_code=409, detail="Nome de perfil ja existe")
 
     perfil.nome = perfil_atualizado.nome
-    perfil.descricao = perfil_atualizado.descricao
+    perfil.descricao = None
     try:
         db.commit()
     except IntegrityError:

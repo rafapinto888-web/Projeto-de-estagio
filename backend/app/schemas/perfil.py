@@ -4,7 +4,6 @@ from pydantic import BaseModel, ConfigDict
 
 class PerfilBase(BaseModel):
     nome: str
-    descricao: str | None = None
 
 
 class PerfilCreate(PerfilBase):
