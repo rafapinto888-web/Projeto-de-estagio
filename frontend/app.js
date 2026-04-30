@@ -102,7 +102,6 @@ const el = {
   perfilForm: document.getElementById("perfilForm"),
   pfId: document.getElementById("pfId"),
   pfNome: document.getElementById("pfNome"),
-  pfDesc: document.getElementById("pfDesc"),
   btnPfUpdate: document.getElementById("btnPfUpdate"),
   btnPfDelete: document.getElementById("btnPfDelete"),
   btnPfCreate: document.getElementById("btnPfCreate"),
@@ -625,7 +624,6 @@ async function refreshPerfis() {
     tr.dataset.clickable = "true";
     tr.appendChild(td(String(p.id)));
     tr.appendChild(td(p.nome));
-    tr.appendChild(td(p.descricao || "-"));
     const tdAcoes = document.createElement("td");
     const actions = document.createElement("div");
     actions.className = "table-actions";
@@ -872,14 +870,12 @@ function clearPerfilForm() {
   el.pfId.value = "";
   selectedEntity.perfilId = null;
   el.pfNome.value = "";
-  el.pfDesc.value = "";
 }
 
 function preencherPerfilForm(p) {
   selectedEntity.perfilId = p.id;
   el.pfId.value = String(p.id);
   el.pfNome.value = p.nome || "";
-  el.pfDesc.value = p.descricao || "";
 }
 
 function clearLocalizacaoForm() {
@@ -995,7 +991,7 @@ async function handleUtilizadorDelete() {
 async function handlePerfilCreate(ev) {
   ev.preventDefault();
   try {
-    await perfisApi.create({ nome: el.pfNome.value.trim(), descricao: el.pfDesc.value.trim() || null });
+    await perfisApi.create({ nome: el.pfNome.value.trim() });
     await refreshPerfis();
     setStatus("Perfil criado", "ok");
   } catch (err) {
@@ -1007,7 +1003,7 @@ async function handlePerfilUpdate() {
   const id = selectedEntity.perfilId || toNullableInt(el.pfId.value);
   if (!id) return setStatus("Seleciona um perfil na tabela para atualizar", "warn");
   try {
-    await perfisApi.update(id, { nome: el.pfNome.value.trim(), descricao: el.pfDesc.value.trim() || null });
+    await perfisApi.update(id, { nome: el.pfNome.value.trim() });
     await refreshPerfis();
     setStatus("Perfil atualizado", "ok");
   } catch (err) {

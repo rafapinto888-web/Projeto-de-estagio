@@ -53,6 +53,21 @@ def garantir_compatibilidade_schema_sqlite() -> None:
             tipo = tipo_sqlite if engine.dialect.name == "sqlite" else tipo_outros
             connection.execute(text(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}"))
 
+        def remover_coluna_se_existir(tabela: str, coluna: str) -> None:
+            try:
+                colunas = {c["name"] for c in inspetor.get_columns(tabela)}
+            except Exception:
+                return
+
+            if coluna not in colunas:
+                return
+
+            # Em alguns ambientes SQLite antigos DROP COLUMN pode não estar disponível.
+            try:
+                connection.execute(text(f"ALTER TABLE {tabela} DROP COLUMN {coluna}"))
+            except Exception:
+                return
+
         # Compatibilidade antiga para SQLite (computadores)
         adicionar_coluna_se_faltar("computadores", "inventario_id", "INTEGER", "INTEGER")
         adicionar_coluna_se_faltar("computadores", "localizacao_id", "INTEGER", "INTEGER")
@@ -69,6 +84,9 @@ def garantir_compatibilidade_schema_sqlite() -> None:
         adicionar_coluna_se_faltar("dispositivos_descobertos", "sistema_operativo", "TEXT", "VARCHAR(120)")
         adicionar_coluna_se_faltar("dispositivos_descobertos", "origem_registo", "TEXT DEFAULT 'scan'", "VARCHAR(30) DEFAULT 'scan'")
         adicionar_coluna_se_faltar("dispositivos_descobertos", "ultima_vez_ativo_em", "TEXT", "TIMESTAMP")
+
+        # Limpeza de schema: coluna descricao foi removida de perfis.
+        remover_coluna_se_existir("perfis", "descricao")
 
 
 # Importa os modelos antes do create_all para registarem as tabelas na metadata.
