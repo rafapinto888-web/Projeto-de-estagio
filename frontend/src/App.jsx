@@ -385,8 +385,19 @@ export default function App() {
                             });
                           }}
                         >
-                          Selecionar
+                          Editar
                         </button>
+                        {isAdmin && (
+                          <button
+                            className="danger table-btn"
+                            onClick={() => {
+                              if (!window.confirm(`Confirmar apagar inventario "${inv.nome}"?`)) return;
+                              withAction(() => api.inventarios.apagar(inv.id, token), "Inventario apagado");
+                            }}
+                          >
+                            Apagar
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -526,17 +537,31 @@ export default function App() {
                       <td>{pc.inventario_nome || pc.inventario_id}</td>
                       <td>{pc.localizacao_nome || "-"}</td>
                       <td>{pc.utilizador_responsavel_nome || "-"}</td>
-                      <td><button className="ghost" onClick={() => setComputadorForm({
-                        id: String(pc.id),
-                        nome: pc.nome || "",
-                        marca: pc.marca || "",
-                        modelo: pc.modelo || "",
-                        numero_serie: pc.numero_serie || "",
-                        estado: pc.estado || "ativo",
-                        inventario_id: String(pc.inventario_id || ""),
-                        localizacao_id: String(pc.localizacao_id || ""),
-                        utilizador_responsavel_id: String(pc.utilizador_responsavel_id || ""),
-                      })}>Editar</button></td>
+                      <td>
+                        {isAdmin ? (
+                          <>
+                            <button className="ghost table-btn" onClick={() => setComputadorForm({
+                              id: String(pc.id),
+                              nome: pc.nome || "",
+                              marca: pc.marca || "",
+                              modelo: pc.modelo || "",
+                              numero_serie: pc.numero_serie || "",
+                              estado: pc.estado || "ativo",
+                              inventario_id: String(pc.inventario_id || ""),
+                              localizacao_id: String(pc.localizacao_id || ""),
+                              utilizador_responsavel_id: String(pc.utilizador_responsavel_id || ""),
+                            })}>Editar</button>
+                            <button
+                              className="danger table-btn"
+                              onClick={() =>
+                                withAction(() => api.computadores.apagar(pc.id, token), "Computador apagado")
+                              }
+                            >
+                              Apagar
+                            </button>
+                          </>
+                        ) : "-"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -583,9 +608,24 @@ export default function App() {
                   {utilizadores.map((u) => (
                     <tr key={u.id}>
                       <td>{u.id}</td><td>{u.nome}</td><td>{u.username}</td><td>{u.email}</td><td>{u.perfil_nome || u.perfil_id}</td>
-                      <td><button className="ghost" onClick={() => setUtilizadorForm({
-                        id: String(u.id), nome: u.nome || "", username: u.username || "", email: u.email || "", perfil_id: String(u.perfil_id || ""), palavra_passe: "",
-                      })}>Editar</button></td>
+                      <td>
+                        {isAdmin ? (
+                          <>
+                            <button className="ghost table-btn" onClick={() => setUtilizadorForm({
+                              id: String(u.id), nome: u.nome || "", username: u.username || "", email: u.email || "", perfil_id: String(u.perfil_id || ""), palavra_passe: "",
+                            })}>Editar</button>
+                            <button
+                              className="danger table-btn"
+                              onClick={() => {
+                                if (!window.confirm(`Confirmar apagar utilizador "${u.username}"?`)) return;
+                                withAction(() => api.utilizadores.apagar(u.id, token), "Utilizador apagado");
+                              }}
+                            >
+                              Apagar
+                            </button>
+                          </>
+                        ) : "-"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -614,7 +654,23 @@ export default function App() {
                 <thead><tr><th>ID</th><th>Nome</th><th>Acoes</th></tr></thead>
                 <tbody>
                   {perfis.map((p) => (
-                    <tr key={p.id}><td>{p.id}</td><td>{p.nome}</td><td><button className="ghost" onClick={() => setPerfilForm({ id: String(p.id), nome: p.nome || "" })}>Editar</button></td></tr>
+                    <tr key={p.id}>
+                      <td>{p.id}</td>
+                      <td>{p.nome}</td>
+                      <td>
+                        {isAdmin ? (
+                          <>
+                            <button className="ghost table-btn" onClick={() => setPerfilForm({ id: String(p.id), nome: p.nome || "" })}>Editar</button>
+                            <button
+                              className="danger table-btn"
+                              onClick={() => withAction(() => api.perfis.apagar(p.id, token), "Perfil apagado")}
+                            >
+                              Apagar
+                            </button>
+                          </>
+                        ) : "-"}
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -649,7 +705,24 @@ export default function App() {
                 <thead><tr><th>ID</th><th>Nome</th><th>Descricao</th><th>Acoes</th></tr></thead>
                 <tbody>
                   {localizacoes.map((l) => (
-                    <tr key={l.id}><td>{l.id}</td><td>{l.nome}</td><td>{l.descricao || "-"}</td><td><button className="ghost" onClick={() => setLocalizacaoForm({ id: String(l.id), nome: l.nome || "", descricao: l.descricao || "" })}>Editar</button></td></tr>
+                    <tr key={l.id}>
+                      <td>{l.id}</td>
+                      <td>{l.nome}</td>
+                      <td>{l.descricao || "-"}</td>
+                      <td>
+                        {isAdmin ? (
+                          <>
+                            <button className="ghost table-btn" onClick={() => setLocalizacaoForm({ id: String(l.id), nome: l.nome || "", descricao: l.descricao || "" })}>Editar</button>
+                            <button
+                              className="danger table-btn"
+                              onClick={() => withAction(() => api.localizacoes.apagar(l.id, token), "Localizacao apagada")}
+                            >
+                              Apagar
+                            </button>
+                          </>
+                        ) : "-"}
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
