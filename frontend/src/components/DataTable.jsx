@@ -12,16 +12,18 @@ export default function DataTable({ columns, rows, renderRow, loading, emptyTitl
   }
 
   return (
-    <table>
-      <thead>
-        <tr>
-          {columns.map((col) => (
-            <th key={col}>{col}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>{rows.map(renderRow)}</tbody>
-    </table>
+    <div className="table-shell">
+      <table>
+        <thead>
+          <tr>
+            {columns.map((col) => (
+              <th key={col}>{col}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{rows.map(renderRow)}</tbody>
+      </table>
+    </div>
   );
 }
 

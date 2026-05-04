@@ -1,9 +1,18 @@
 ﻿/* Comentario geral deste ficheiro: contem partes importantes da interface e comportamento. */
 
-const DEFAULT_API_BASE = "http://127.0.0.1:8000";
+const FALLBACK_API_BASE = "http://127.0.0.1:8000";
+const ENV_BASE =
+  typeof import.meta.env?.VITE_API_BASE === "string" ? import.meta.env.VITE_API_BASE.trim() : "";
+
+function normalizeBase(url) {
+  return url.replace(/\/$/, "");
+}
 
 export function getApiBase() {
-  return localStorage.getItem("api_base") || DEFAULT_API_BASE;
+  if (ENV_BASE) return normalizeBase(ENV_BASE);
+  const saved = localStorage.getItem("api_base");
+  if (saved?.trim()) return normalizeBase(saved);
+  return FALLBACK_API_BASE;
 }
 
 export function setApiBase(value) {

@@ -1,7 +1,7 @@
-﻿/* Comentario geral deste ficheiro: orquestra estado global e navegacao entre paginas. */
+/* Comentario geral deste ficheiro: orquestra estado global e navegacao entre paginas. */
 
 import { useEffect, useMemo, useState } from "react";
-import { api, getApiBase, setApiBase } from "./api";
+import { api } from "./api";
 import SidebarNav from "./components/SidebarNav";
 import StatusAlert from "./components/StatusAlert";
 import Topbar from "./components/Topbar";
@@ -17,13 +17,13 @@ import UtilizadoresPage from "./pages/UtilizadoresPage";
 
 const TABS = [
   { id: "dashboard", label: "Dashboard" },
-  { id: "inventarios", label: "Inventarios" },
+  { id: "inventarios", label: "Inventários" },
   { id: "ativos", label: "Ativos + Scan" },
   { id: "computadores", label: "Computadores" },
   { id: "utilizadores", label: "Utilizadores" },
   { id: "perfis", label: "Perfis" },
-  { id: "localizacoes", label: "Localizacoes" },
-  { id: "pesquisa", label: "Pesquisa Global" },
+  { id: "localizacoes", label: "Localizações" },
+  { id: "pesquisa", label: "Pesquisa global" },
   { id: "logs", label: "Logs" },
 ];
 
@@ -50,7 +50,6 @@ function emptyInventarioForm() {
 }
 
 export default function App() {
-  const [apiBaseInput, setApiBaseInput] = useState(getApiBase());
   const [status, setStatus] = useState({ type: "ok", message: "Pronto" });
   const [activeTab, setActiveTab] = useState("dashboard");
   const [token, setToken] = useState(localStorage.getItem("access_token") || "");
@@ -229,10 +228,23 @@ export default function App() {
     return (
       <main className="auth-screen">
         <form className="auth-card" onSubmit={handleLogin}>
-          <h1>Inventario Informatico</h1>
-          <p>Login para aceder ao painel React.</p>
-          <input name="identificador" placeholder="Username ou email" required />
-          <input name="password" type="password" placeholder="Palavra-passe" required />
+          <div className="brand-mini">
+            <span className="topbar-logo" aria-hidden style={{ width: 40, height: 40 }}>
+              <span className="material-symbols-outlined">inventory_2</span>
+            </span>
+            <div>
+              <h1>Inventario IT</h1>
+              <p>Entrar no painel de gestao.</p>
+            </div>
+          </div>
+          <input name="identificador" placeholder="Username ou email" required autoComplete="username" />
+          <input
+            name="password"
+            type="password"
+            placeholder="Palavra-passe"
+            required
+            autoComplete="current-password"
+          />
           <button type="submit">{actionLoading ? "A entrar..." : "Entrar"}</button>
           <StatusAlert type={status.type} message={status.message} />
         </form>
@@ -241,32 +253,20 @@ export default function App() {
   }
 
   return (
-    <div className="app">
-      <Topbar user={user} isAdmin={isAdmin} onLogout={handleLogout} />
+    <div className="app-shell">
+      <SidebarNav tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
 
-      <section className="api-row">
-        <input value={apiBaseInput} onChange={(e) => setApiBaseInput(e.target.value)} />
-        <button
-          onClick={() => {
-            setApiBase(apiBaseInput.trim());
-            setStatus({ type: "ok", message: "API Base guardada" });
+      <div className="main-column">
+        <Topbar
+          user={user}
+          isAdmin={isAdmin}
+          onLogout={handleLogout}
+          onNavigate={setActiveTab}
+          onSearch={(q) => {
+            setGlobalTermo(q);
+            setActiveTab("pesquisa");
           }}
-        >
-          Guardar API Base
-        </button>
-        <button
-          className="ghost"
-          onClick={async () => {
-            const ok = await api.health().catch(() => false);
-            setStatus({ type: ok ? "ok" : "err", message: ok ? "API online" : "API indisponivel" });
-          }}
-        >
-          Testar API
-        </button>
-      </section>
-
-      <div className="layout">
-        <SidebarNav tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
+        />
 
         <main className="content">
           <StatusAlert type={status.type} message={status.message} />
