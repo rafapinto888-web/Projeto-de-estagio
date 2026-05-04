@@ -64,6 +64,36 @@ function payloadScanDispositivo(form) {
   };
 }
 
+/** Texto pesquisável de um ativo (manual ou scan). */
+function textoAtivoBusca(a) {
+  const partes = [
+    a.nome,
+    a.hostname,
+    a.ip,
+    a.mac_address,
+    a.numero_serie,
+    a.marca,
+    a.modelo,
+    a.sistema_operativo,
+    a.estado,
+    a.localizacao_nome,
+    a.utilizador_responsavel_nome,
+  ];
+  return partes
+    .filter((x) => x != null && String(x).trim() !== "")
+    .join(" ")
+    .toLowerCase();
+}
+
+function inventarioCoincideNome(grupo, qLimpa) {
+  return qLimpa === "" || String(grupo.inventario_nome || "").toLowerCase().includes(qLimpa);
+}
+
+function inventarioTemAtivoCoincidente(grupo, qLimpa) {
+  if (qLimpa === "") return true;
+  return (grupo.ativos || []).some((a) => textoAtivoBusca(a).includes(qLimpa));
+}
+
 export default function ComputadoresPage({
   isAdmin,
   computadorForm,
@@ -88,6 +118,8 @@ export default function ComputadoresPage({
   const [editorMode, setEditorMode] = useState("create");
   const [scanEditorOpen, setScanEditorOpen] = useState(false);
   const [scanForm, setScanForm] = useState(emptyScanForm);
+  const [pesquisaLista, setPesquisaLista] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState("todos"); // todos | manuais | scan
 
   /** Inventários com mais equipamentos primeiro; depois nome A–Z. */
   const gruposOrdenados = useMemo(() => {
@@ -122,6 +154,64 @@ export default function ComputadoresPage({
       inventariosVisiveis: gruposOrdenados.length,
     };
   }, [gruposOrdenados]);
+
+  const qLista = pesquisaLista.trim().toLowerCase();
+
+  const gruposExibicao = useMemo(() => {
+    return gruposOrdenados.filter((g) => {
+      const todosAt = g.ativos || [];
+      const nReg = todosAt.filter((x) => x.tipo === "computador").length;
+      const nScan = todosAt.filter((x) => x.tipo === "dispositivo_descoberto").length;
+      if (filtroTipo === "manuais" && nReg === 0) return false;
+      if (filtroTipo === "scan" && nScan === 0) return false;
+      if (qLista === "") return true;
+      return inventarioCoincideNome(g, qLista) || inventarioTemAtivoCoincidente(g, qLista);
+    });
+  }, [gruposOrdenados, filtroTipo, qLista]);
+
+  const totaisFiltrados = useMemo(() => {
+    let registos = 0;
+    let scan = 0;
+    for (const g of gruposExibicao) {
+      const at = g.ativos || [];
+      let rs = at.filter((x) => x.tipo === "computador");
+      let sc = at.filter((x) => x.tipo === "dispositivo_descoberto");
+      if (qLista && !inventarioCoincideNome(g, qLista)) {
+        rs = rs.filter((a) => textoAtivoBusca(a).includes(qLista));
+        sc = sc.filter((a) => textoAtivoBusca(a).includes(qLista));
+      }
+      if (filtroTipo === "manuais") sc = [];
+      if (filtroTipo === "scan") rs = [];
+      registos += rs.length;
+      scan += sc.length;
+    }
+    return {
+      registos,
+      scan,
+      total: registos + scan,
+      inventarios: gruposExibicao.length,
+    };
+  }, [gruposExibicao, qLista, filtroTipo]);
+
+  const filtroActivo = qLista !== "" || filtroTipo !== "todos";
+
+  function expandirTodosBlocos(abrir) {
+    document.querySelectorAll(".computadores-inv-collapsible").forEach((el) => {
+      el.open = abrir;
+    });
+  }
+
+  function irParaInventario(id) {
+    if (!id) return;
+    const el = document.getElementById(`computadores-inv-${id}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (el && "open" in el) el.open = true;
+  }
+
+  function limparFiltrosLista() {
+    setPesquisaLista("");
+    setFiltroTipo("todos");
+  }
 
   const closeEditor = useCallback(() => {
     setEditorOpen(false);
@@ -222,7 +312,7 @@ export default function ComputadoresPage({
   return (
     <SectionCard
       title="Computadores"
-      subtitle="Por inventário: registos manuais (nome, rede, MAC, marca, modelo, série, SO…) e descobertos pelo scan com os mesmos tipos de detalhe quando existirem."
+      subtitle="Por inventário: pesquisa e filtros em cima; expande cada bloco para ver manuais e scan."
       rightAction={
         isAdmin ? (
           <button type="button" className="btn-chip-primary" onClick={openCreate}>
@@ -240,66 +330,225 @@ export default function ComputadoresPage({
         </div>
       ) : (
         <>
-          <div className="computadores-resumo-bar" aria-label="Resumo global">
-            <div className="computadores-resumo-item">
-              <span className="computadores-resumo-value">{totaisGlobais.total}</span>
-              <span className="computadores-resumo-label">Equipamentos listados</span>
-            </div>
-            <div className="computadores-resumo-item">
-              <span className="computadores-resumo-value">{totaisGlobais.registos}</span>
-              <span className="computadores-resumo-label">Registos manuais</span>
-            </div>
-            <div className="computadores-resumo-item">
-              <span className="computadores-resumo-value">{totaisGlobais.scan}</span>
-              <span className="computadores-resumo-label">Descobertos (scan)</span>
-            </div>
-            <div className="computadores-resumo-item computadores-resumo-item--muted">
-              <span className="computadores-resumo-value">
-                {totaisGlobais.inventariosComDados}/{totaisGlobais.inventariosVisiveis}
-              </span>
-              <span className="computadores-resumo-label">Inventários com dados</span>
+          <div className="computadores-page">
+          <div className="computadores-overview">
+            <section className="computadores-overview-controls" aria-label="Pesquisa e filtros">
+              <div className="computadores-search-row">
+                <div className="computadores-search-field">
+                  <span className="material-symbols-outlined computadores-search-field-icon" aria-hidden>
+                    search
+                  </span>
+                  <input
+                    type="search"
+                    className="computadores-search-input"
+                    placeholder="Pesquisar inventário ou equipamento (IP, hostname, série…)"
+                    value={pesquisaLista}
+                    onChange={(e) => setPesquisaLista(e.target.value)}
+                    autoComplete="off"
+                    aria-label="Pesquisar na lista"
+                  />
+                </div>
+                {pesquisaLista ? (
+                  <button type="button" className="ghost ghost-sm computadores-search-clear" onClick={() => setPesquisaLista("")}>
+                    Limpar
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="computadores-toolbar-merge">
+                <div className="computadores-toolbar-merge-left">
+                  <span className="computadores-toolbar-merge-label">Tipo</span>
+                  <div className="computadores-filter-chips" role="group" aria-label="Tipo de registo">
+                    <button
+                      type="button"
+                      className={`computadores-chip ${filtroTipo === "todos" ? "computadores-chip--active" : ""}`}
+                      onClick={() => setFiltroTipo("todos")}
+                    >
+                      Tudo
+                    </button>
+                    <button
+                      type="button"
+                      title="Apenas registos manuais"
+                      className={`computadores-chip ${filtroTipo === "manuais" ? "computadores-chip--active" : ""}`}
+                      onClick={() => setFiltroTipo("manuais")}
+                    >
+                      Manuais
+                    </button>
+                    <button
+                      type="button"
+                      title="Apenas equipamentos descobertos pelo scan"
+                      className={`computadores-chip ${filtroTipo === "scan" ? "computadores-chip--active" : ""}`}
+                      onClick={() => setFiltroTipo("scan")}
+                    >
+                      Scan
+                    </button>
+                  </div>
+                </div>
+                <div className="computadores-toolbar-merge-right">
+                  <label className="computadores-jump-compact">
+                    <span className="computadores-jump-compact-label">Ir para</span>
+                    <select
+                      className="computadores-toolbar-select"
+                      defaultValue=""
+                      disabled={gruposExibicao.length === 0}
+                      onChange={(e) => {
+                        irParaInventario(e.target.value);
+                        e.target.value = "";
+                      }}
+                    >
+                      <option value="" disabled>
+                        {gruposExibicao.length === 0 ? "Sem resultados" : "Inventário…"}
+                      </option>
+                      {gruposExibicao.map((g) => (
+                        <option key={g.inventario_id} value={g.inventario_id}>
+                          {g.inventario_nome}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="computadores-toolbar-actions">
+                    <button
+                      type="button"
+                      className="ghost ghost-sm"
+                      onClick={() => expandirTodosBlocos(true)}
+                      disabled={gruposExibicao.length === 0}
+                    >
+                      Expandir todos
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost ghost-sm"
+                      onClick={() => expandirTodosBlocos(false)}
+                      disabled={gruposExibicao.length === 0}
+                    >
+                      Recolher todos
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <div className="computadores-stat-strip" aria-label={filtroActivo ? "Resumo filtrado" : "Resumo global"}>
+              <div className="computadores-stat-tile">
+                <span className="material-symbols-outlined computadores-stat-tile-ic" aria-hidden>
+                  devices
+                </span>
+                <div className="computadores-stat-tile-text">
+                  <span className="computadores-stat-tile-value">{filtroActivo ? totaisFiltrados.total : totaisGlobais.total}</span>
+                  <span className="computadores-stat-tile-label">
+                    {filtroActivo ? "Com filtro" : "Total equip."}
+                  </span>
+                </div>
+              </div>
+              <div className="computadores-stat-tile computadores-stat-tile--manual">
+                <span className="material-symbols-outlined computadores-stat-tile-ic" aria-hidden>
+                  inventory_2
+                </span>
+                <div className="computadores-stat-tile-text">
+                  <span className="computadores-stat-tile-value">{filtroActivo ? totaisFiltrados.registos : totaisGlobais.registos}</span>
+                  <span className="computadores-stat-tile-label">Manuais</span>
+                </div>
+              </div>
+              <div className="computadores-stat-tile computadores-stat-tile--scan">
+                <span className="material-symbols-outlined computadores-stat-tile-ic" aria-hidden>
+                  radar
+                </span>
+                <div className="computadores-stat-tile-text">
+                  <span className="computadores-stat-tile-value">{filtroActivo ? totaisFiltrados.scan : totaisGlobais.scan}</span>
+                  <span className="computadores-stat-tile-label">Scan</span>
+                </div>
+              </div>
+              <div className="computadores-stat-tile computadores-stat-tile--muted">
+                <span className="material-symbols-outlined computadores-stat-tile-ic" aria-hidden>
+                  folder_open
+                </span>
+                <div className="computadores-stat-tile-text">
+                  <span className="computadores-stat-tile-value">
+                    {filtroActivo ? totaisFiltrados.inventarios : `${totaisGlobais.inventariosComDados}/${totaisGlobais.inventariosVisiveis}`}
+                  </span>
+                  <span className="computadores-stat-tile-label">
+                    {filtroActivo ? "Inventários" : "Com dados / total"}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="computadores-por-inv-stack">
-            {gruposOrdenados.map((grupo) => {
+            {gruposExibicao.length === 0 ? (
+              <div className="computadores-empty-filtros" role="status">
+                <div className="computadores-empty-filtros-inner">
+                  <span className="material-symbols-outlined computadores-empty-filtros-icon" aria-hidden>
+                    filter_alt_off
+                  </span>
+                  <div>
+                    <h3 className="computadores-empty-filtros-title">Nenhum inventário corresponde aos filtros</h3>
+                    <p className="computadores-empty-filtros-text">
+                      Tenta outro termo de pesquisa ou altera o tipo de registos (tudo, manuais ou scan).
+                    </p>
+                  </div>
+                </div>
+                <button type="button" className="btn-chip-primary" onClick={limparFiltrosLista}>
+                  Repor pesquisa e filtros
+                </button>
+              </div>
+            ) : (
+              gruposExibicao.map((grupo, idxInv) => {
               const todos = grupo.ativos || [];
-              const registos = sortByIdentificacao(todos.filter((a) => a.tipo === "computador"));
-              const scans = sortByIdentificacao(
-                todos.filter((a) => a.tipo === "dispositivo_descoberto"),
-              );
+              const nomeInvMatch = qLista !== "" && inventarioCoincideNome(grupo, qLista);
+              let registos = sortByIdentificacao(todos.filter((a) => a.tipo === "computador"));
+              let scans = sortByIdentificacao(todos.filter((a) => a.tipo === "dispositivo_descoberto"));
+              if (qLista && !nomeInvMatch) {
+                registos = registos.filter((a) => textoAtivoBusca(a).includes(qLista));
+                scans = scans.filter((a) => textoAtivoBusca(a).includes(qLista));
+              }
+              if (filtroTipo === "manuais") scans = [];
+              if (filtroTipo === "scan") registos = [];
               const nReg = registos.length;
               const nScan = scans.length;
               const nTot = nReg + nScan;
+              const tipoInv =
+                grupo.tipo_inventario === "sub_rede" ? "sub_rede" : "normal";
 
               return (
-                <article key={grupo.inventario_id} className="computadores-inv-block">
-                  <header className="computadores-inv-head">
-                    <div className="computadores-inv-head-main">
-                      <h3 className="computadores-inv-title">{grupo.inventario_nome}</h3>
-                      <span className="pill badge-info">{tipoInvLabel(grupo.tipo_inventario)}</span>
-                    </div>
+                <details
+                  key={grupo.inventario_id}
+                  id={`computadores-inv-${grupo.inventario_id}`}
+                  className={`computadores-inv-collapsible computadores-inv-block computadores-inv-block--${tipoInv}`}
+                >
+                  <summary className="computadores-inv-summary">
+                    <span className="computadores-inv-summary-grip" aria-hidden title="Expandir ou recolher">
+                      <span className="material-symbols-outlined">expand_more</span>
+                    </span>
+                    <span className="computadores-inv-summary-main">
+                      <span className="computadores-inv-index">#{idxInv + 1}</span>
+                      <div className="computadores-inv-head-text">
+                        <h3 className="computadores-inv-title">{grupo.inventario_nome}</h3>
+                        <span className="pill badge-info">{tipoInvLabel(grupo.tipo_inventario)}</span>
+                      </div>
+                    </span>
                     <dl className="computadores-inv-kpis">
                       <div className="computadores-inv-kpi">
                         <dt>Total</dt>
                         <dd>{nTot}</dd>
                       </div>
-                      <div className="computadores-inv-kpi">
+                      <div className="computadores-inv-kpi computadores-inv-kpi--manual">
                         <dt>Manuais</dt>
                         <dd>{nReg}</dd>
                       </div>
-                      <div className="computadores-inv-kpi">
+                      <div className="computadores-inv-kpi computadores-inv-kpi--scan">
                         <dt>Scan</dt>
                         <dd>{nScan}</dd>
                       </div>
                     </dl>
-                  </header>
+                  </summary>
 
+                  <div className="computadores-inv-body">
                   {nTot === 0 ? (
                     <p className="cell-muted computadores-inv-empty">Nenhum equipamento neste inventário.</p>
                   ) : (
                     <div className="computadores-inv-sections">
-                      <section className="computadores-subsection">
+                      <section className="computadores-subsection computadores-subsection-card">
                         <h4 className="computadores-subsection-title">
                           <span className="material-symbols-outlined" aria-hidden>
                             inventory_2
@@ -374,7 +623,7 @@ export default function ComputadoresPage({
                         )}
                       </section>
 
-                      <section className="computadores-subsection computadores-subsection--scan">
+                      <section className="computadores-subsection computadores-subsection--scan computadores-subsection-card">
                         <h4 className="computadores-subsection-title">
                           <span className="material-symbols-outlined" aria-hidden>
                             radar
@@ -450,9 +699,12 @@ export default function ComputadoresPage({
                       </section>
                     </div>
                   )}
-                </article>
+                  </div>
+                </details>
               );
-            })}
+              })
+            )}
+          </div>
           </div>
         </>
       )}
