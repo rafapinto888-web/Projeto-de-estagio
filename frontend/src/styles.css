@@ -2011,39 +2011,35 @@ pre {
   background: var(--page-bg);
 }
 
-.computadores-inv-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 1.15rem;
-}
-
-@media (min-width: 1180px) {
-  .computadores-inv-sections {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem 1.25rem;
-    align-items: start;
-  }
-
-  .computadores-subsection--scan {
-    padding-top: 0;
-    border-top: none;
-  }
-}
-
 .computadores-subsection {
   min-width: 0;
 }
 
-.computadores-subsection--scan {
-  padding-top: 0.25rem;
-  border-top: 1px dashed var(--border);
+.computadores-unified-card {
+  margin: 0;
 }
 
-@media (max-width: 1179px) {
-  .computadores-subsection:first-child:not(.computadores-subsection--scan) {
-    padding-top: 0;
-  }
+.computadores-origem {
+  display: inline-block;
+  padding: 0.12rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.computadores-origem--manual {
+  color: var(--accent-hover);
+  background: var(--accent-soft);
+  border: 1px solid rgba(37, 99, 235, 0.22);
+}
+
+.computadores-origem--scan {
+  color: #0e7490;
+  background: rgba(8, 145, 178, 0.1);
+  border: 1px solid rgba(8, 145, 178, 0.28);
 }
 
 .computadores-subsection-card {
@@ -2143,6 +2139,38 @@ pre {
 .computadores-detalhe-table table {
   min-width: 980px;
   font-size: 0.8125rem;
+}
+
+.computadores-detalhe-table--unified table {
+  min-width: 1320px;
+}
+
+.computadores-detalhe-table--unified thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background: var(--surface-muted);
+  box-shadow: 1px 0 0 var(--border);
+}
+
+.computadores-detalhe-table--unified tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: 1px 0 0 var(--border);
+}
+
+.computadores-detalhe-table--unified tbody tr:hover td:first-child {
+  background: var(--accent-soft);
+}
+
+.computadores-detalhe-table--unified tbody tr:nth-child(even) td:first-child {
+  background: rgba(248, 250, 252, 0.95);
+}
+
+.computadores-detalhe-table--unified tbody tr:nth-child(even):hover td:first-child {
+  background: var(--accent-soft);
 }
 
 .computadores-detalhe-table th,

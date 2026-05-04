@@ -27,6 +27,35 @@ function sortByIdentificacao(list) {
   );
 }
 
+/** Junta manuais e descobertos e ordena por identificação. */
+function linhasEquipamentosUnificadas(registos, scans) {
+  return [...registos, ...scans].sort((a, b) =>
+    labelAtivo(a).localeCompare(labelAtivo(b), "pt", { sensitivity: "base" }),
+  );
+}
+
+/**
+ * Origem lógica alinhada ao modelo: tabela computadores vs dispositivos_descobertos.origem_registo.
+ */
+function origemRegistoVisual(a) {
+  if (a.tipo === "computador") return "manual";
+  const raw = String(a.origem_registo ?? "scan")
+    .trim()
+    .toLowerCase();
+  if (raw === "manual" || raw === "registo_manual") return "manual";
+  return "scan";
+}
+
+/** Texto da coluna Origem (Manual / Scan ou valor vindo da BD). */
+function etiquetaOrigemAmigavel(a) {
+  if (a.tipo === "computador") return "Manual";
+  const raw = String(a.origem_registo ?? "scan").trim();
+  const low = raw.toLowerCase();
+  if (low === "manual" || low === "registo_manual") return "Manual";
+  if (low === "scan" || low === "") return "Scan";
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
 function fmtUltimaSinc(d) {
   if (!d) return "—";
   try {
@@ -78,6 +107,7 @@ function textoAtivoBusca(a) {
     a.estado,
     a.localizacao_nome,
     a.utilizador_responsavel_nome,
+    a.origem_registo,
   ];
   return partes
     .filter((x) => x != null && String(x).trim() !== "")
@@ -312,7 +342,7 @@ export default function ComputadoresPage({
   return (
     <SectionCard
       title="Computadores"
-      subtitle="Por inventário: pesquisa e filtros em cima; expande cada bloco para ver manuais e scan."
+      subtitle="Por inventário: uma única lista; a coluna Origem indica se o registo é manual ou do scan."
       rightAction={
         isAdmin ? (
           <button type="button" className="btn-chip-primary" onClick={openCreate}>
@@ -507,6 +537,7 @@ export default function ComputadoresPage({
               const nReg = registos.length;
               const nScan = scans.length;
               const nTot = nReg + nScan;
+              const linhasUnificadas = linhasEquipamentosUnificadas(registos, scans);
               const tipoInv =
                 grupo.tipo_inventario === "sub_rede" ? "sub_rede" : "normal";
 
@@ -547,157 +578,122 @@ export default function ComputadoresPage({
                   {nTot === 0 ? (
                     <p className="cell-muted computadores-inv-empty">Nenhum equipamento neste inventário.</p>
                   ) : (
-                    <div className="computadores-inv-sections">
-                      <section className="computadores-subsection computadores-subsection-card">
-                        <h4 className="computadores-subsection-title">
-                          <span className="material-symbols-outlined" aria-hidden>
-                            inventory_2
-                          </span>
-                          Registos manuais
-                          <span className="computadores-subsection-count">{nReg}</span>
-                        </h4>
-                        {nReg === 0 ? (
-                          <p className="computadores-subsection-empty">Sem registos manuais neste inventário.</p>
-                        ) : (
-                          <div className="table-shell computadores-table-wrap computadores-detalhe-table">
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th>Nome</th>
-                                  <th>Hostname</th>
-                                  <th>IP</th>
-                                  <th>MAC</th>
-                                  <th>Marca</th>
-                                  <th>Modelo</th>
-                                  <th>N.º série</th>
-                                  <th>Sistema</th>
-                                  <th>Estado</th>
-                                  <th>Localiz.</th>
-                                  <th>Resp.</th>
-                                  <th className="th-actions">Ações</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {registos.map((a) => (
-                                  <tr key={`pc-${a.id}`}>
-                                    <td>
-                                      <span className="cell-title">{dash(a.nome)}</span>
-                                    </td>
-                                    <td className="cell-mono">{dash(a.hostname)}</td>
-                                    <td className="cell-mono">{dash(a.ip)}</td>
-                                    <td className="cell-mono">{dash(a.mac_address)}</td>
-                                    <td>{dash(a.marca)}</td>
-                                    <td>{dash(a.modelo)}</td>
-                                    <td className="cell-mono">{dash(a.numero_serie)}</td>
-                                    <td>{dash(a.sistema_operativo)}</td>
-                                    <td>{dash(a.estado)}</td>
-                                    <td>{dash(a.localizacao_nome)}</td>
-                                    <td>{dash(a.utilizador_responsavel_nome)}</td>
-                                    <td>
-                                      {isAdmin ? (
-                                        <>
-                                          <button
-                                            type="button"
-                                            className="ghost table-btn"
-                                            onClick={() => handleRowEdit(a)}
-                                          >
-                                            Editar
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="danger table-btn"
-                                            onClick={() => onDeleteRow?.(a)}
-                                          >
-                                            Apagar
-                                          </button>
-                                        </>
-                                      ) : (
-                                        <span className="cell-muted">—</span>
-                                      )}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </section>
-
-                      <section className="computadores-subsection computadores-subsection--scan computadores-subsection-card">
-                        <h4 className="computadores-subsection-title">
-                          <span className="material-symbols-outlined" aria-hidden>
-                            radar
-                          </span>
-                          Descobertos pelo scan
-                          <span className="computadores-subsection-count">{nScan}</span>
-                        </h4>
-                        {nScan === 0 ? (
-                          <p className="computadores-subsection-empty">
-                            Ainda não há equipamentos descobertos por scan neste inventário.
-                          </p>
-                        ) : (
-                          <div className="table-shell computadores-table-wrap computadores-detalhe-table">
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th>Identif.</th>
-                                  <th>Hostname</th>
-                                  <th>IP</th>
-                                  <th>MAC</th>
-                                  <th>Marca</th>
-                                  <th>Modelo</th>
-                                  <th>N.º série</th>
-                                  <th>Sistema</th>
-                                  <th>Estado</th>
-                                  <th>Última atividade</th>
-                                  <th className="th-actions">Ações</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {scans.map((a) => (
-                                  <tr key={`scan-${a.id}`}>
-                                    <td>
-                                      <span className="cell-title">{labelAtivo(a)}</span>
-                                    </td>
-                                    <td className="cell-mono">{dash(a.hostname)}</td>
-                                    <td className="cell-mono">{dash(a.ip)}</td>
-                                    <td className="cell-mono">{dash(a.mac_address)}</td>
-                                    <td>{dash(a.marca)}</td>
-                                    <td>{dash(a.modelo)}</td>
-                                    <td className="cell-mono">{dash(a.numero_serie)}</td>
-                                    <td>{dash(a.sistema_operativo)}</td>
-                                    <td>{dash(a.estado)}</td>
-                                    <td className="cell-muted cell-nowrap">{fmtUltimaSinc(a.ultima_vez_ativo_em)}</td>
-                                    <td>
-                                      {isAdmin ? (
-                                        <>
-                                          <button
-                                            type="button"
-                                            className="ghost table-btn"
-                                            onClick={() => openScanEdit(a, grupo.inventario_id)}
-                                          >
-                                            Editar
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="danger table-btn"
-                                            onClick={() => handleScanDeleteRow(a, grupo.inventario_id)}
-                                          >
-                                            Apagar
-                                          </button>
-                                        </>
-                                      ) : (
-                                        <span className="cell-muted">—</span>
-                                      )}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </section>
-                    </div>
+                    <section className="computadores-subsection computadores-subsection-card computadores-unified-card">
+                      <h4 className="computadores-subsection-title">
+                        <span className="material-symbols-outlined" aria-hidden>
+                          devices
+                        </span>
+                        Equipamentos
+                        <span className="computadores-subsection-count">{nTot}</span>
+                      </h4>
+                      <div className="table-shell computadores-table-wrap computadores-detalhe-table computadores-detalhe-table--unified">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Origem</th>
+                              <th>Nome / identif.</th>
+                              <th>Hostname</th>
+                              <th>IP</th>
+                              <th>MAC</th>
+                              <th>Marca</th>
+                              <th>Modelo</th>
+                              <th>N.º série</th>
+                              <th>Sistema</th>
+                              <th>Estado</th>
+                              <th>Localiz.</th>
+                              <th>Resp.</th>
+                              <th>Última atividade</th>
+                              <th className="th-actions">Ações</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {linhasUnificadas.map((a) => (
+                              <tr
+                                key={a.tipo === "computador" ? `pc-${a.id}` : `scan-${a.id}`}
+                                className={
+                                  origemRegistoVisual(a) === "manual"
+                                    ? "computadores-row--manual"
+                                    : "computadores-row--scan"
+                                }
+                              >
+                                <td>
+                                  <span
+                                    className={
+                                      origemRegistoVisual(a) === "manual"
+                                        ? "computadores-origem computadores-origem--manual"
+                                        : "computadores-origem computadores-origem--scan"
+                                    }
+                                  >
+                                    {etiquetaOrigemAmigavel(a)}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="cell-title">
+                                    {a.tipo === "computador" ? dash(a.nome) : labelAtivo(a)}
+                                  </span>
+                                </td>
+                                <td className="cell-mono">{dash(a.hostname)}</td>
+                                <td className="cell-mono">{dash(a.ip)}</td>
+                                <td className="cell-mono">{dash(a.mac_address)}</td>
+                                <td>{dash(a.marca)}</td>
+                                <td>{dash(a.modelo)}</td>
+                                <td className="cell-mono">{dash(a.numero_serie)}</td>
+                                <td>{dash(a.sistema_operativo)}</td>
+                                <td>{dash(a.estado)}</td>
+                                <td>{a.tipo === "computador" ? dash(a.localizacao_nome) : "—"}</td>
+                                <td>{a.tipo === "computador" ? dash(a.utilizador_responsavel_nome) : "—"}</td>
+                                <td className="cell-muted cell-nowrap">
+                                  {a.tipo === "dispositivo_descoberto"
+                                    ? fmtUltimaSinc(a.ultima_vez_ativo_em)
+                                    : "—"}
+                                </td>
+                                <td>
+                                  {isAdmin ? (
+                                    a.tipo === "computador" ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          className="ghost table-btn"
+                                          onClick={() => handleRowEdit(a)}
+                                        >
+                                          Editar
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="danger table-btn"
+                                          onClick={() => onDeleteRow?.(a)}
+                                        >
+                                          Apagar
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button
+                                          type="button"
+                                          className="ghost table-btn"
+                                          onClick={() => openScanEdit(a, grupo.inventario_id)}
+                                        >
+                                          Editar
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="danger table-btn"
+                                          onClick={() => handleScanDeleteRow(a, grupo.inventario_id)}
+                                        >
+                                          Apagar
+                                        </button>
+                                      </>
+                                    )
+                                  ) : (
+                                    <span className="cell-muted">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
                   )}
                   </div>
                 </details>

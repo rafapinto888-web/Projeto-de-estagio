@@ -250,6 +250,7 @@ def _ativos_unificados_do_inventario(
             localizacao_nome=c.localizacao_nome,
             utilizador_responsavel_nome=c.utilizador_responsavel_nome,
             ultima_vez_ativo_em=None,
+            origem_registo=None,
         )
         for c in computadores
     )
@@ -270,6 +271,7 @@ def _ativos_unificados_do_inventario(
             localizacao_nome=None,
             utilizador_responsavel_nome=None,
             ultima_vez_ativo_em=d.ultima_vez_ativo_em,
+            origem_registo=d.origem_registo,
         )
         for d in dispositivos
     )

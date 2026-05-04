@@ -171,6 +171,8 @@ class AtivoInventarioItem(BaseModel):
     localizacao_nome: str | None = None
     utilizador_responsavel_nome: str | None = None
     ultima_vez_ativo_em: datetime | None = None
+    # Só preenchido quando tipo == dispositivo_descoberto (coluna origem_registo).
+    origem_registo: str | None = None
 
 
 class InventarioAtivosGrupoResponse(BaseModel):
