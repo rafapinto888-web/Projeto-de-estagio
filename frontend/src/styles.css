@@ -1117,6 +1117,45 @@ tbody tr:hover {
   background: var(--accent-soft);
 }
 
+.perfil-users-cell {
+  max-width: 420px;
+  vertical-align: top;
+}
+
+.perfil-user-count {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin-bottom: 8px;
+}
+
+.perfil-user-count strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.perfil-user-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.perfil-user-list li {
+  line-height: 1.35;
+}
+
+.perfil-user-nome {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.perfil-user-meta {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
 .loading-box,
 .empty-state {
   border: 1px dashed rgba(37, 99, 235, 0.35);

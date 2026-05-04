@@ -1,6 +1,7 @@
 ﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
 
 import base64
+import re
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -12,11 +13,21 @@ from app.models.utilizador_db import UtilizadorDB
 
 basic_scheme = HTTPBasic(auto_error=False)
 
+# Palavras de perfil que concedem visao global (logs, inventarios, computadores).
+_PERFIL_ADMIN_TOKENS = frozenset({"admin", "administrador", "administrator"})
+
+
+def _tokens_do_perfil(perfil_raw: str | None) -> frozenset[str]:
+    if not perfil_raw or not str(perfil_raw).strip():
+        return frozenset()
+    pedacos = re.split(r"[^\wàáâãèéêìíîòóôõùúûçÀÁÂÃÈÉÊÌÍÎÒÓÔÕÙÚÛÇ]+", perfil_raw.lower())
+    return frozenset(p for p in pedacos if p)
+
 
 def is_admin_user(user: UtilizadorDB) -> bool:
-    # Centraliza a regra de permissao para simplificar reutilizacao nas rotas.
-    perfil_nome = (user.perfil.nome if user.perfil else "").strip().lower()
-    return perfil_nome == "admin"
+    """True para perfis como Admin / Administrador (palavra inteira), nao para 'administrativo'."""
+    nome = user.perfil.nome if user.perfil else ""
+    return bool(_tokens_do_perfil(nome) & _PERFIL_ADMIN_TOKENS)
 
 
 def _is_swagger_request(request: Request) -> bool:

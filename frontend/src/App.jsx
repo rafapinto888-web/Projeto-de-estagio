@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
+import { isAdminProfileName } from "./authz";
 import SidebarNav from "./components/SidebarNav";
 import StatusAlert from "./components/StatusAlert";
 import Topbar from "./components/Topbar";
@@ -98,7 +99,7 @@ export default function App() {
   const isAdmin = useMemo(() => {
     const nomePerfil =
       user?.perfil_nome || user?.perfil || user?.perfil_nome_utilizador || user?.role || "";
-    return String(nomePerfil).toLowerCase().includes("admin") || user?.is_admin === true;
+    return isAdminProfileName(nomePerfil) || user?.is_admin === true;
   }, [user]);
 
   async function loadAllData(currentToken) {
@@ -543,6 +544,7 @@ export default function App() {
           {activeTab === "perfis" && (
             <PerfisPage
               isAdmin={isAdmin}
+              utilizadores={utilizadores}
               perfilForm={perfilForm}
               setPerfilForm={setPerfilForm}
               onCreate={() =>

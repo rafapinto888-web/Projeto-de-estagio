@@ -3,12 +3,17 @@
 # Rotas CRUD dos perfis de utilizador.
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.deps import require_admin
 from app.database.connection import get_db
 from app.models.perfil_db import PerfilDB
-from app.schemas.perfil import PerfilCreate, PerfilResponse, PerfilUpdate
+from app.schemas.perfil import (
+    PerfilCreate,
+    PerfilResponse,
+    PerfilUpdate,
+    UtilizadorResumoNoPerfil,
+)
 
 router = APIRouter(prefix="/perfis", tags=["Perfis"])
 
@@ -20,14 +25,53 @@ def obter_perfil_ou_404(db: Session, perfil_id: int) -> PerfilDB:
     return perfil
 
 
+def _ordenar_utilizadores_do_perfil(perfil: PerfilDB) -> list:
+    coleção = getattr(perfil, "utilizadores", None)
+    if not coleção:
+        return []
+    return sorted(
+        list(coleção),
+        key=lambda u: ((u.nome or "").lower(), (u.username or "").lower()),
+    )
+
+
+def perfil_para_resposta(perfil: PerfilDB) -> PerfilResponse:
+    # Constroi o schema explicitamente dentro da sessao (evita listas de utilizadores vazias na resposta JSON).
+    us = _ordenar_utilizadores_do_perfil(perfil)
+    return PerfilResponse(
+        id=perfil.id,
+        nome=perfil.nome,
+        utilizadores=[UtilizadorResumoNoPerfil.model_validate(u) for u in us],
+    )
+
+
+def _carregar_perfil_com_utilizadores(db: Session, perfil_id: int) -> PerfilDB:
+    perfil = (
+        db.query(PerfilDB)
+        .options(selectinload(PerfilDB.utilizadores))
+        .filter(PerfilDB.id == perfil_id)
+        .first()
+    )
+    if perfil is None:
+        raise HTTPException(status_code=404, detail="Perfil nao encontrado")
+    return perfil
+
+
 @router.get("/", response_model=list[PerfilResponse])
 def listar_perfis(db: Session = Depends(get_db)):
-    return db.query(PerfilDB).order_by(PerfilDB.id).all()
+    perfis = (
+        db.query(PerfilDB)
+        .options(selectinload(PerfilDB.utilizadores))
+        .order_by(PerfilDB.id)
+        .all()
+    )
+    return [perfil_para_resposta(p) for p in perfis]
 
 
 @router.get("/{perfil_id}", response_model=PerfilResponse)
 def obter_perfil(perfil_id: int, db: Session = Depends(get_db)):
-    return obter_perfil_ou_404(db, perfil_id)
+    perfil = _carregar_perfil_com_utilizadores(db, perfil_id)
+    return perfil_para_resposta(perfil)
 
 
 @router.post(
@@ -52,7 +96,7 @@ def criar_perfil(perfil: PerfilCreate, db: Session = Depends(get_db)):
             detail="Nome de perfil ja existe",
         ) from None
     db.refresh(novo_perfil)
-    return novo_perfil
+    return perfil_para_resposta(novo_perfil)
 
 
 @router.put(
@@ -83,7 +127,8 @@ def atualizar_perfil(
             detail="Nome de perfil ja existe",
         ) from None
     db.refresh(perfil)
-    return perfil
+    recarregado = _carregar_perfil_com_utilizadores(db, perfil_id)
+    return perfil_para_resposta(recarregado)
 
 
 @router.delete(
@@ -104,4 +149,3 @@ def apagar_perfil(perfil_id: int, db: Session = Depends(get_db)):
             detail="Nao e possivel apagar o perfil porque existem utilizadores associados",
         ) from None
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
