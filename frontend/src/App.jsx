@@ -13,6 +13,7 @@ import InventariosPage from "./pages/InventariosPage";
 import LocalizacoesPage from "./pages/LocalizacoesPage";
 import LogsPage from "./pages/LogsPage";
 import PerfisPage from "./pages/PerfisPage";
+import HistoricoContaPage from "./pages/HistoricoContaPage";
 import PesquisaPage from "./pages/PesquisaPage";
 import UtilizadoresPage from "./pages/UtilizadoresPage";
 
@@ -25,6 +26,7 @@ const TABS = [
   { id: "perfis", label: "Perfis" },
   { id: "localizacoes", label: "Localizações" },
   { id: "pesquisa", label: "Pesquisa global" },
+  { id: "historico-conta", label: "Histórico" },
   { id: "logs", label: "Logs" },
 ];
 
@@ -191,6 +193,20 @@ export default function App() {
         await refreshAtivos(selectedInventarioId, ativoPesquisa);
       }
       setStatus({ type: "ok", message: successMessage });
+      const tk = token || localStorage.getItem("access_token");
+      if (tk && successMessage) {
+        try {
+          await api.auth.registarHistorico(
+            {
+              acao: "painel",
+              descricao: String(successMessage).slice(0, 3900),
+            },
+            tk,
+          );
+        } catch {
+          /* não impedir a operação principal se o audit falhar */
+        }
+      }
       return true;
     } catch (error) {
       setStatus({ type: "err", message: error.message });
@@ -224,6 +240,10 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedInventarioId, token]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeTab]);
 
   const loading = dataLoading || actionLoading;
 
@@ -282,7 +302,12 @@ export default function App() {
               localizacoes={localizacoes}
               loading={loading}
               onNavigate={setActiveTab}
+              onOpenHistorico={() => setActiveTab("historico-conta")}
             />
+          )}
+
+          {activeTab === "historico-conta" && (
+            <HistoricoContaPage token={token} active={activeTab === "historico-conta"} user={user} />
           )}
 
           {activeTab === "inventarios" && (

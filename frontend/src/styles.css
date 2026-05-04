@@ -618,8 +618,67 @@ button.table-btn:last-of-type {
   gap: 16px;
 }
 
-.dashboard-panel {
+.dashboard-inner {
+  display: flex;
+  flex-direction: column;
   gap: 20px;
+}
+
+.card-head--historico {
+  position: relative;
+  z-index: 1;
+}
+
+.dash-historico-btn {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.dash-feed-footnote {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-soft);
+}
+
+.dash-feed-footnote strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.historico-conta-list {
+  padding-top: 4px;
+}
+
+.historico-conta-item .historico-conta-acao {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.historico-conta-desc {
+  margin: 4px 0 2px;
+  font-size: 13px;
+  color: var(--text-soft);
+  line-height: 1.45;
+}
+
+.historico-conta-when {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.quick-tiles {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+.quick-tile--accent {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: var(--accent-soft) !important;
 }
 
 .section-head {

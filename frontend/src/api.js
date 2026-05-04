@@ -47,6 +47,9 @@ export const api = {
       body: JSON.stringify({ identificador, palavra_passe: password }),
     }),
   me: (token) => request("/auth/me", {}, token),
+  historicoMeu: (token) => request("/auth/me/historico", {}, token),
+  registarHistorico: (payload, token) =>
+    request("/auth/me/historico", { method: "POST", body: JSON.stringify(payload) }, token),
   health: () => fetch(getApiBase()).then((r) => r.ok),
 
   inventarios: {

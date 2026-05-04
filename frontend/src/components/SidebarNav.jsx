@@ -9,6 +9,7 @@ const NAV_ICONS = {
   perfis: "badge",
   localizacoes: "pin_drop",
   pesquisa: "manage_search",
+  "historico-conta": "history",
   logs: "receipt_long",
 };
 

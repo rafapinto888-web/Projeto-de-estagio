@@ -1,5 +1,7 @@
 ﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -22,4 +24,26 @@ class AuthMeResponse(BaseModel):
     email: str
     perfil_id: int
     perfil_nome: str | None = None
+
+
+class HistoricoRegistoIn(BaseModel):
+    """Registo de atividade sempre associado ao utilizador autenticado pelo token."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    acao: str = Field(min_length=1, max_length=100, description='Ex.: "painel", "inventarios.criar"')
+    descricao: str | None = Field(default=None, max_length=4000)
+
+
+class HistoricoUtilizadorItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    acao: str
+    descricao: str | None
+    data_evento: datetime
+
+
+class HistoricoUtilizadorLista(BaseModel):
+    itens: list[HistoricoUtilizadorItem]
 
