@@ -10,7 +10,7 @@ Painel web para gestão de inventário de TI: inventários, computadores, locali
 - **Utilizadores e perfis** controlam quem acede e o que pode alterar (operações administrativas condicionadas ao perfil).
 - **Pesquisa global** e **logs** consultam dados agregados ou por filtros.
 
-## Estado atual (realista)
+## Estado atual
 
 | Área | Situação |
 |------|-----------|
