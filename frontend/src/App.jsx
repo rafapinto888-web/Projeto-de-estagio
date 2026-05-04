@@ -324,7 +324,7 @@ export default function App() {
                       {
                         nome: inventarioForm.nome.trim(),
                         tipo_inventario: inventarioForm.tipo_inventario,
-                        ip_rede: inventarioForm.ip_rede.trim() || null,
+                        rede: inventarioForm.ip_rede.trim() || null,
                         descricao: inventarioForm.descricao.trim() || null,
                       },
                       token,
@@ -340,7 +340,7 @@ export default function App() {
                       {
                         nome: inventarioForm.nome.trim(),
                         tipo_inventario: inventarioForm.tipo_inventario,
-                        ip_rede: inventarioForm.ip_rede.trim() || null,
+                        rede: inventarioForm.ip_rede.trim() || null,
                         descricao: inventarioForm.descricao.trim() || null,
                       },
                       token,
@@ -363,7 +363,7 @@ export default function App() {
                   id: String(inv.id),
                   nome: inv.nome || "",
                   tipo_inventario: inv.tipo_inventario || "normal",
-                  ip_rede: inv.ip_rede || "",
+                  ip_rede: inv.rede || inv.ip_rede || "",
                   descricao: inv.descricao || "",
                 });
               }}

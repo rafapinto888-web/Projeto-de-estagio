@@ -1,6 +1,5 @@
 /* Dashboard — KPIs, inventários recentes e atividade recente; Histórico abre a tua conta na aba Histórico. */
 
-import { useMemo } from "react";
 import MiniSparkline from "../components/MiniSparkline";
 import SectionCard from "../components/SectionCard";
 
@@ -31,15 +30,6 @@ export default function DashboardPage({
 
   const recentInventarios = (inventarios || []).slice(0, 5);
   const latestUsers = (utilizadores || []).slice(0, 4);
-
-  const pcsPorInventario = useMemo(() => {
-    const m = {};
-    (computadores || []).forEach((pc) => {
-      const id = pc.inventario_id;
-      if (id != null) m[id] = (m[id] || 0) + 1;
-    });
-    return m;
-  }, [computadores]);
 
   return (
     <SectionCard
@@ -115,7 +105,8 @@ export default function DashboardPage({
                     <tbody>
                       {recentInventarios.map((inv, index) => {
                         const pill = statusPill(inv, index);
-                        const n = pcsPorInventario[inv.id] ?? 0;
+                        const n =
+                          (inv.total_computadores ?? 0) + (inv.total_dispositivos_scan ?? 0);
                         return (
                           <tr key={inv.id}>
                             <td>

@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import String, cast, or_
+from sqlalchemy import String, cast, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, contains_eager, joinedload
 
@@ -29,6 +29,7 @@ from app.schemas.inventario import (
     ComputadorDetalhadoInventarioResponse,
     ComputadorPesquisaInventarioItem,
     DispositivoDescobertoPesquisaInventarioItem,
+    InventarioComContagensResponse,
     InventarioCreate,
     InventarioDetalhesResponse,
     InventarioResponse,
@@ -41,6 +42,46 @@ from app.schemas.inventario import (
 )
 
 router = APIRouter(prefix="/inventarios", tags=["Inventarios"])
+
+
+def _contagens_por_inventario_ids(
+    db: Session, inventario_ids: list[int]
+) -> tuple[dict[int, int], dict[int, int]]:
+    if not inventario_ids:
+        return {}, {}
+    contagem_pc = (
+        db.query(
+            ComputadorDB.inventario_id,
+            func.count(ComputadorDB.id),
+        )
+        .filter(ComputadorDB.inventario_id.in_(inventario_ids))
+        .group_by(ComputadorDB.inventario_id)
+        .all()
+    )
+    cmap = {row[0]: row[1] for row in contagem_pc}
+
+    contagem_scan = (
+        db.query(
+            DispositivoDescobertoDB.inventario_id,
+            func.count(DispositivoDescobertoDB.id),
+        )
+        .filter(DispositivoDescobertoDB.inventario_id.in_(inventario_ids))
+        .group_by(DispositivoDescobertoDB.inventario_id)
+        .all()
+    )
+    dmap = {row[0]: row[1] for row in contagem_scan}
+    return cmap, dmap
+
+
+def _inventario_com_contagens(
+    inv: InventarioDB,
+    cmap: dict[int, int],
+    dmap: dict[int, int],
+) -> InventarioComContagensResponse:
+    base = InventarioResponse.model_validate(inv).model_dump()
+    base["total_computadores"] = cmap.get(inv.id, 0)
+    base["total_dispositivos_scan"] = dmap.get(inv.id, 0)
+    return InventarioComContagensResponse(**base)
 
 
 def obter_inventario_ou_404(db: Session, inventario_id: int) -> InventarioDB:
@@ -183,21 +224,26 @@ def _garantir_acesso_inventario(
     return inventario
 
 
-@router.get("/", response_model=list[InventarioResponse])
+@router.get("/", response_model=list[InventarioComContagensResponse])
 def listar_inventarios(
     db: Session = Depends(get_db),
     current_user: UtilizadorDB = Depends(get_current_user),
 ):
-    return _inventarios_visiveis_query(db, current_user).order_by(InventarioDB.id).all()
+    inventarios = _inventarios_visiveis_query(db, current_user).order_by(InventarioDB.id).all()
+    ids = [i.id for i in inventarios]
+    cmap, dmap = _contagens_por_inventario_ids(db, ids)
+    return [_inventario_com_contagens(inv, cmap, dmap) for inv in inventarios]
 
 
-@router.get("/{inventario_id}", response_model=InventarioResponse)
+@router.get("/{inventario_id}", response_model=InventarioComContagensResponse)
 def obter_inventario(
     inventario_id: int,
     db: Session = Depends(get_db),
     current_user: UtilizadorDB = Depends(get_current_user),
 ):
-    return _garantir_acesso_inventario(db, inventario_id, current_user)
+    inv = _garantir_acesso_inventario(db, inventario_id, current_user)
+    cmap, dmap = _contagens_por_inventario_ids(db, [inv.id])
+    return _inventario_com_contagens(inv, cmap, dmap)
 
 
 @router.post(
@@ -267,14 +313,14 @@ def listar_computadores_do_inventario(
         computadores = [
             c for c in computadores if c.utilizador_responsavel_id == current_user.id
         ]
-    dispositivos = []
-    if is_admin_user(current_user):
-        dispositivos = (
-            db.query(DispositivoDescobertoDB)
-            .filter(DispositivoDescobertoDB.inventario_id == inventario_id)
-            .order_by(DispositivoDescobertoDB.id)
-            .all()
-        )
+
+    # Dispositivos do scan contam como ativos no inventário (visíveis a quem tem acesso ao inventário).
+    dispositivos = (
+        db.query(DispositivoDescobertoDB)
+        .filter(DispositivoDescobertoDB.inventario_id == inventario_id)
+        .order_by(DispositivoDescobertoDB.id)
+        .all()
+    )
 
     ativos: list[AtivoInventarioItem] = []
     ativos.extend(
@@ -362,12 +408,9 @@ def pesquisar_computadores_do_inventario(
 
     computadores = query_computadores.order_by(ComputadorDB.id).all()
 
-    query_dispositivos = (
-        db.query(DispositivoDescobertoDB)
-        .filter(DispositivoDescobertoDB.inventario_id == inventario_id)
+    query_dispositivos = db.query(DispositivoDescobertoDB).filter(
+        DispositivoDescobertoDB.inventario_id == inventario_id
     )
-    if not is_admin_user(current_user):
-        query_dispositivos = query_dispositivos.filter(DispositivoDescobertoDB.id == -1)
     if termo_limpo:
         termo_like = f"%{termo_limpo}%"
         query_dispositivos = query_dispositivos.filter(
@@ -427,8 +470,6 @@ def obter_detalhes_do_inventario(
         .order_by(DispositivoDescobertoDB.id)
         .all()
     )
-    if not is_admin_user(current_user):
-        dispositivos_descobertos = []
     return {
         "id": inventario.id,
         "nome": inventario.nome,

@@ -1,6 +1,11 @@
 /* Gestão de inventários — criar/editar em modal com grelha horizontal. */
 
 import { useCallback, useState } from "react";
+
+function tipoInventarioLabel(t) {
+  if (t === "sub_rede") return "Sub-rede";
+  return "Normal";
+}
 import DataTable from "../components/DataTable";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
@@ -63,18 +68,18 @@ export default function InventariosPage({
       }
     >
       <DataTable
-        columns={["Nome", "Tipo", "IP Rede", "Descrição", "Ações"]}
+        columns={["Nome", "Tipo", "Rede", "Equipamentos", "Descrição", "Ações"]}
         rows={inventarios}
         loading={loading}
         emptyTitle="Nenhum inventário encontrado"
         emptyDescription='Cria inventários através de «Novo inventário».'
         renderRow={(inv) => (
           <tr key={inv.id}>
-            <td>{inv.id}</td>
             <td>{inv.nome}</td>
-            <td>{inv.tipo_inventario}</td>
-            <td>{inv.ip_rede || "-"}</td>
-            <td>{inv.descricao || "-"}</td>
+            <td>{tipoInventarioLabel(inv.tipo_inventario)}</td>
+            <td>{inv.rede || inv.ip_rede || "—"}</td>
+            <td>{(inv.total_computadores ?? 0) + (inv.total_dispositivos_scan ?? 0)}</td>
+            <td>{inv.descricao || "—"}</td>
             <td>
               {isAdmin ? (
                 <>

@@ -69,6 +69,13 @@ class InventarioResponse(InventarioBase):
     id: int
 
 
+class InventarioComContagensResponse(InventarioResponse):
+    """Lista/detalhe de inventário com totais para painel e tabelas."""
+
+    total_computadores: int = 0
+    total_dispositivos_scan: int = 0
+
+
 class ScanRedeRequest(BaseModel):
     rede: str | None = None
     utilizador: str
