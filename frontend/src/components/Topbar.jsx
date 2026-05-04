@@ -55,17 +55,7 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, onNavigate }
         <button
           type="button"
           className="icon-btn"
-          title="Notificações"
-          aria-label="Notificações"
-          onClick={() => onNavigate?.("logs")}
-        >
-          <span className="material-symbols-outlined">notifications</span>
-          <span className="icon-btn-badge">3</span>
-        </button>
-        <button
-          type="button"
-          className="icon-btn"
-          title="Ajuda"
+          title="Ajuda — abre pesquisa global"
           aria-label="Ajuda"
           onClick={() => onNavigate?.("pesquisa")}
         >
