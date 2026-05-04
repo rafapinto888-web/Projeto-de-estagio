@@ -1,40 +1,67 @@
-# Python cache/bytecode
+# --- Python ---
 __pycache__/
 *.py[cod]
+*$py.class
 *.pyo
 *.pyd
-
-# Python packaging/build
+.Python
+*.so
+*.egg
 *.egg-info/
 .eggs/
 build/
 dist/
 pip-wheel-metadata/
+develop-eggs/
+downloads/
+eggs/
+parts/
+sdist/
+var/
+wheels/
+MANIFEST
 
 # Virtualenvs
 venv/
 .venv/
 backend/.venv/
+env/
+ENV/
 
-# Test/coverage/cache
+# Test / typing / lint cache
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
 .coverage
 .coverage.*
 htmlcov/
+*.cover
+*.py,cover
 
-# Logs e ficheiros temporarios
+# --- Node / frontend (Vite + React) ---
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.npm
+*.tsbuildinfo
+
+# Vite cache
+**/node_modules/.vite/
+
+# --- Logs e temporários ---
 *.log
 *.tmp
+*.temp
 *.bak
+*.swp
+*~
 
 # PyInstaller
 *.spec
 *.toc
-*.exe
 
-# Runtime outputs (scripts de rede/scan)
+# Outputs de scripts (rede / scan)
 resultado*.txt
 resultado*.json
 
@@ -43,15 +70,30 @@ resultado*.json
 *.sqlite3
 *.db
 
-# Node/frontend
-node_modules/
-
-# IDE / OS
-.vscode/
+# --- IDE / OS ---
+# Partilhar definições úteis do Cursor/VS Code; ignorar o resto da pasta local
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
+*.sublime-project
+*.sublime-workspace
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# Segredos / ambiente
+# --- Segredos / ambiente ---
 .env
-.env.*
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+# Manter exemplos versionados:
+!.env.example
+!.env.*.example
+
+# Artefactos compilados Windows (ex.: bundles locais)
+*.exe
+
