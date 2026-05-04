@@ -63,7 +63,7 @@ export default function InventariosPage({
       }
     >
       <DataTable
-        columns={["ID", "Nome", "Tipo", "IP Rede", "Descrição", "Ações"]}
+        columns={["Nome", "Tipo", "IP Rede", "Descrição", "Ações"]}
         rows={inventarios}
         loading={loading}
         emptyTitle="Nenhum inventário encontrado"
@@ -100,7 +100,13 @@ export default function InventariosPage({
           wide
           title={editorMode === "create" ? "Novo inventário" : "Editar inventário"}
           subtitle={
-            editorMode === "edit" && inventarioForm?.id ? <>ID #{inventarioForm.id}</> : <>Define nome, tipo e rede associada.</>
+            editorMode === "edit" && inventarioForm?.id ? (
+              <>
+                A alterar <strong>{inventarioForm.nome || "este inventário"}</strong>
+              </>
+            ) : (
+              <>Define nome, tipo e rede associada.</>
+            )
           }
           footer={
             <>

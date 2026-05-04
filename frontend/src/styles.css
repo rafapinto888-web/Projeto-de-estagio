@@ -1096,90 +1096,39 @@ tbody tr:hover {
   background: rgba(239, 246, 255, 0.65);
 }
 
-/* Perfis — cartões em grelha (mais legível que tabela comprimida) */
-.admin-form-well {
-  padding: 18px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 72%);
-}
-
-.admin-form-well .actions {
-  margin-top: 4px;
-}
-
-.perfil-cards {
-  display: grid;
-  gap: 16px;
-}
-
-.perfil-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: #fff;
-  overflow: hidden;
-  box-shadow: var(--shadow-xs);
-}
-
-.perfil-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px 20px;
-  background: linear-gradient(180deg, #fafbfc 0%, #fff 85%);
-  border-bottom: 1px solid var(--border);
-}
-
-.perfil-card-heading {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-
-.perfil-id-pill {
-  flex-shrink: 0;
-  font-size: 12px;
+/* Perfis — tabela coerente com o resto do painel */
+.perfil-table-name {
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--accent);
-  background: var(--accent-soft);
-  padding: 5px 11px;
-  border-radius: 999px;
-  border: 1px solid rgba(37, 99, 235, 0.12);
-}
-
-.perfil-card-name {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text);
-  line-height: 1.35;
 }
 
-.perfil-card-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.perfil-count-pill {
+  display: inline-flex;
   align-items: center;
-}
-
-.perfil-card-body {
-  padding: 18px 20px 20px;
-}
-
-.perfil-members-intro {
-  margin: 0 0 12px;
+  justify-content: center;
+  min-width: 2.25rem;
+  padding: 4px 11px;
+  border-radius: 999px;
   font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
   color: var(--text-soft);
-  font-weight: 500;
 }
 
-.perfil-members-intro strong {
-  color: var(--text);
-  font-weight: 700;
+.perfil-count-pill--fill {
+  background: var(--accent-soft);
+  border-color: rgba(37, 99, 235, 0.22);
+  color: var(--accent-hover);
+}
+
+.perfil-members-scroll {
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  margin: -4px -2px 0;
+  padding: 4px 2px 12px;
 }
 
 .user-chip-grid {

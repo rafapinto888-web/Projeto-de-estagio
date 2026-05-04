@@ -75,14 +75,13 @@ export default function ComputadoresPage({
       }
     >
       <DataTable
-        columns={["ID", "Nome", "Série", "Inventário", "Localização", "Responsável", "Ações"]}
+        columns={["Nome", "Série", "Inventário", "Localização", "Responsável", "Ações"]}
         rows={computadores}
         loading={loading}
         emptyTitle="Sem computadores registados"
         emptyDescription='Adiciona um computador com «Novo computador».'
         renderRow={(pc) => (
           <tr key={pc.id}>
-            <td>{pc.id}</td>
             <td>{pc.nome}</td>
             <td>{pc.numero_serie}</td>
             <td>{pc.inventario_nome || pc.inventario_id}</td>
@@ -114,7 +113,13 @@ export default function ComputadoresPage({
           titleId="modal-computador-title"
           title={editorMode === "create" ? "Novo computador" : "Editar computador"}
           subtitle={
-            editorMode === "edit" && computadorForm?.id ? <>ID #{computadorForm.id}</> : <>Liga o PC a um inventário e opcionalmente a localização e responsável.</>
+            editorMode === "edit" && computadorForm?.id ? (
+              <>
+                A alterar <strong>{computadorForm.nome || "este equipamento"}</strong>
+              </>
+            ) : (
+              <>Liga o PC a um inventário e opcionalmente a localização e responsável.</>
+            )
           }
           footer={
             <>

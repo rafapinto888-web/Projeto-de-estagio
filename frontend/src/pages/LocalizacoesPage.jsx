@@ -63,14 +63,13 @@ export default function LocalizacoesPage({
       }
     >
       <DataTable
-        columns={["ID", "Nome", "Descrição", "Ações"]}
+        columns={["Nome", "Descrição", "Ações"]}
         rows={localizacoes}
         loading={loading}
         emptyTitle="Sem localizações"
         emptyDescription='Adiciona pontos físicos com «Nova localização».'
         renderRow={(l) => (
           <tr key={l.id}>
-            <td>{l.id}</td>
             <td>{l.nome}</td>
             <td>{l.descricao || "-"}</td>
             <td>
@@ -98,7 +97,13 @@ export default function LocalizacoesPage({
           wide
           title={editorMode === "create" ? "Nova localização" : "Editar localização"}
           subtitle={
-            editorMode === "edit" && localizacaoForm?.id ? <>ID #{localizacaoForm.id}</> : <>Nome curto e descrição opcional.</>
+            editorMode === "edit" && localizacaoForm?.id ? (
+              <>
+                A alterar <strong>{localizacaoForm.nome || "esta localização"}</strong>
+              </>
+            ) : (
+              <>Nome curto e descrição opcional.</>
+            )
           }
           footer={
             <>

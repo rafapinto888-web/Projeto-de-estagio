@@ -64,9 +64,9 @@ export default function LogsPage({
       >
         <div className="form-stack form-stack--horizontal">
           <label className="field-label">
-            ID computador
+            Referência do PC (opcional)
             <input
-              placeholder="computador_id"
+              placeholder="Só se souberes o valor técnico do sistema"
               value={logComputadorParams.computador_id}
               onChange={(e) => setLogComputadorParams((p) => ({ ...p, computador_id: e.target.value }))}
             />
@@ -129,17 +129,21 @@ export default function LogsPage({
       >
         <div className="form-stack form-stack--horizontal">
           <label className="field-label">
-            Inventário ID
+            Inventário (opcional)
             <input
-              placeholder={selectedInventarioId ? `Vazio → ${selectedInventarioId}` : "inventario_id"}
+              placeholder={
+                selectedInventarioId
+                  ? "Vazio = inventário já escolhido na área Scan"
+                  : "Referência técnica, se necessário"
+              }
               value={logInventarioParams.inventario_id}
               onChange={(e) => setLogInventarioParams((p) => ({ ...p, inventario_id: e.target.value }))}
             />
           </label>
           <label className="field-label">
-            Dispositivo ID
+            Dispositivo (opcional)
             <input
-              placeholder="dispositivo_id"
+              placeholder="Referência técnica do dispositivo"
               value={logInventarioParams.dispositivo_id}
               onChange={(e) => setLogInventarioParams((p) => ({ ...p, dispositivo_id: e.target.value }))}
             />

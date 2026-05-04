@@ -51,7 +51,7 @@ function emptyInventarioForm() {
 }
 
 export default function App() {
-  const [status, setStatus] = useState({ type: "ok", message: "Pronto" });
+  const [status, setStatus] = useState({ type: "ok", message: "" });
   const [activeTab, setActiveTab] = useState("dashboard");
   const [token, setToken] = useState(localStorage.getItem("access_token") || "");
   const [user, setUser] = useState(null);

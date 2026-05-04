@@ -65,9 +65,9 @@ export default function AtivosPage({
           <select value={selectedInventarioId} onChange={(e) => setSelectedInventarioId(e.target.value)}>
             <option value="">Seleciona inventário</option>
             {inventarios.map((inv) => (
-              <option key={inv.id} value={inv.id}>
-                {inv.id} — {inv.nome}
-              </option>
+            <option key={inv.id} value={inv.id}>
+              {inv.nome}
+            </option>
             ))}
           </select>
         </label>

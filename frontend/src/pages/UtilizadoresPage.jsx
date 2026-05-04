@@ -68,14 +68,13 @@ export default function UtilizadoresPage({
       ) : null}
 
       <DataTable
-        columns={["ID", "Nome", "Username", "Email", "Perfil", "Ações"]}
+        columns={["Nome", "Username", "Email", "Perfil", "Ações"]}
         rows={utilizadores}
         loading={loading}
         emptyTitle="Sem utilizadores disponíveis"
         emptyDescription="Um administrador pode registar novas contas através de «Novo utilizador»."
         renderRow={(u) => (
           <tr key={u.id}>
-            <td>{u.id}</td>
             <td>{u.nome}</td>
             <td>{u.username}</td>
             <td>{u.email}</td>
@@ -107,7 +106,10 @@ export default function UtilizadoresPage({
           title={editorMode === "create" ? "Novo utilizador" : "Editar utilizador"}
           subtitle={
             editorMode === "edit" && utilizadorForm?.id ? (
-              <>ID #{utilizadorForm.id}</>
+              <>
+                A alterar{" "}
+                <strong>{utilizadorForm.nome || utilizadorForm.username || "esta conta"}</strong>
+              </>
             ) : (
               <>Preenche os dados da nova conta.</>
             )

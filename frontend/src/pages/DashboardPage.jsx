@@ -101,7 +101,6 @@ export default function DashboardPage({
                 <table>
                   <thead>
                     <tr>
-                      <th>ID</th>
                       <th>Nome</th>
                       <th>Tipo</th>
                       <th>PCs</th>
@@ -116,13 +115,12 @@ export default function DashboardPage({
                       const n = pcsPorInventario[inv.id] ?? 0;
                       return (
                         <tr key={inv.id}>
-                          <td>{inv.id}</td>
                           <td>
                             <span className="cell-title">{inv.nome}</span>
                             {inv.descricao ? (
                               <span className="cell-muted">{inv.descricao}</span>
                             ) : (
-                              <span className="cell-muted">Inventário #{inv.id}</span>
+                              <span className="cell-muted">Inventário</span>
                             )}
                           </td>
                           <td>{tipoLabel(inv)}</td>
@@ -179,7 +177,7 @@ export default function DashboardPage({
                 <li key={`inv-act-${inv.id}`} className="timeline-item">
                   <span className="timeline-icon info material-symbols-outlined">inventory_2</span>
                   <div>
-                    <strong>Inventário {inv.nome || `#${inv.id}`}</strong>
+                    <strong>Inventário {inv.nome || "sem nome"}</strong>
                     <p>
                       Inventário atualizado · {tipoLabel(inv)} · <time>{String(14 + i).padStart(2, "0")}:30</time>
                     </p>

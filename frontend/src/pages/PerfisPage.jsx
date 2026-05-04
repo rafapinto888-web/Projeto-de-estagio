@@ -1,6 +1,7 @@
-/* Perfis — cartões por cargo; criar/editar em modal horizontal. */
+/* Perfis — lista em tabela como as outras abas; membros em modal dedicado. */
 
 import { useCallback, useState } from "react";
+import DataTable from "../components/DataTable";
 import EmptyState from "../components/EmptyState";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
@@ -43,6 +44,7 @@ export default function PerfisPage({
 }) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState("create");
+  const [membrosModal, setMembrosModal] = useState(null);
 
   const closeEditor = useCallback(() => {
     setEditorOpen(false);
@@ -73,10 +75,12 @@ export default function PerfisPage({
     if (ok) closeEditor();
   }
 
+  const membrosModalLista = membrosModal ? membrosDoPerfil(membrosModal, utilizadores, true) : [];
+
   return (
     <SectionCard
       title="Perfis"
-      subtitle="Define cargos no sistema. Cada perfil agrupa utilizadores que partilham as mesmas permissões."
+      subtitle="Cargos e permissões da aplicação. A lista mostra quantas contas estão atribuídas a cada perfil."
       rightAction={
         isAdmin ? (
           <button type="button" className="btn-chip-primary" onClick={openCreate}>
@@ -86,7 +90,7 @@ export default function PerfisPage({
       }
     >
       {!isAdmin ? (
-        <p className="perfil-muted-line">Apenas administradores criam ou editam perfis.</p>
+        <p className="muted-inline">Apenas administradores podem criar, editar ou apagar perfis.</p>
       ) : null}
 
       {loading ? (
@@ -94,73 +98,112 @@ export default function PerfisPage({
       ) : !perfis?.length ? (
         <EmptyState
           title="Ainda não há perfis"
-          description="Um administrador pode criar o primeiro cargo (por exemplo Administrador ou Operador)."
+          description="Um administrador pode criar o primeiro cargo (por exemplo Administrador ou Operador) com «Novo perfil»."
         />
       ) : (
-        <div className="perfil-cards">
-          {perfis.map((p) => {
+        <DataTable
+          columns={["Nome do cargo", "Contas", "Ações"]}
+          rows={perfis}
+          loading={false}
+          emptyTitle="Ainda não há perfis"
+          emptyDescription="Cria um cargo com «Novo perfil»."
+          renderRow={(p) => {
             const members = membrosDoPerfil(p, utilizadores, isAdmin);
             const count = members.length;
 
             return (
-              <article key={p.id} className="perfil-card">
-                <header className="perfil-card-head">
-                  <div className="perfil-card-heading">
-                    <span className="perfil-id-pill">#{p.id}</span>
-                    <h3 className="perfil-card-name">{p.nome}</h3>
-                  </div>
+              <tr key={p.id}>
+                <td>
+                  <strong className="perfil-table-name">{p.nome}</strong>
+                </td>
+                <td>
+                  <span
+                    className={
+                      count > 0 ? "perfil-count-pill perfil-count-pill--fill" : "perfil-count-pill"
+                    }
+                    title={
+                      isAdmin
+                        ? "Usa «Membros» para ver a lista completa"
+                        : "Número de contas com este perfil na base de dados"
+                    }
+                  >
+                    {count}
+                  </span>
+                </td>
+                <td>
                   {isAdmin ? (
-                    <div className="perfil-card-actions">
+                    <>
+                      <button type="button" className="ghost table-btn" onClick={() => setMembrosModal(p)}>
+                        Membros
+                      </button>
                       <button type="button" className="ghost table-btn" onClick={() => openEdit(p)}>
                         Editar
                       </button>
                       <button type="button" className="danger table-btn" onClick={() => onDeleteRow(p)}>
                         Apagar
                       </button>
-                    </div>
-                  ) : null}
-                </header>
-                <div className="perfil-card-body">
-                  {!isAdmin ? (
-                    <p className="perfil-muted-line">Lista de utilizadores deste cargo visível apenas para administradores.</p>
-                  ) : count === 0 ? (
-                    <p className="perfil-muted-line">Ninguém está associado a este perfil neste momento.</p>
-                  ) : (
-                    <>
-                      <p className="perfil-members-intro">
-                        <strong>{count}</strong>
-                        {count === 1
-                          ? " pessoa usa este cargo — "
-                          : " pessoas usam este cargo — "}
-                        não reflete sessões ligadas ao site, apenas a atribuição na base de dados.
-                      </p>
-                      <div className="user-chip-grid" aria-label={`Utilizadores no perfil ${p.nome}`}>
-                        {members.map((u) => (
-                          <div key={u.id} className="user-chip" title={u.email}>
-                            <span className="user-chip-name">{u.nome}</span>
-                            <span className="user-chip-login">@{u.username}</span>
-                            <span className="user-chip-email">{u.email}</span>
-                          </div>
-                        ))}
-                      </div>
                     </>
+                  ) : (
+                    "—"
                   )}
-                </div>
-              </article>
+                </td>
+              </tr>
             );
-          })}
-        </div>
+          }}
+        />
       )}
+
+      <FormModal
+        open={Boolean(membrosModal) && isAdmin}
+        onClose={() => setMembrosModal(null)}
+        titleId="modal-perfil-membros-title"
+        title={membrosModal ? `Membros — ${membrosModal.nome}` : "Membros"}
+        subtitle={
+          membrosModal ? (
+            <>
+              {membrosModalLista.length === 0
+                ? "Sem contas neste perfil neste momento."
+                : `${membrosModalLista.length} conta(s) com este perfil.`}
+            </>
+          ) : null
+        }
+        footer={
+          <button type="button" onClick={() => setMembrosModal(null)}>
+            Fechar
+          </button>
+        }
+      >
+        <div className="perfil-members-scroll">
+          {membrosModalLista.length === 0 ? (
+            <p className="perfil-muted-line">Nenhum utilizador está associado a este perfil.</p>
+          ) : (
+            <div className="user-chip-grid">
+              {membrosModalLista.map((u) => (
+                <div key={u.id} className="user-chip" title={u.email}>
+                  <span className="user-chip-name">{u.nome}</span>
+                  <span className="user-chip-login">@{u.username}</span>
+                  <span className="user-chip-email">{u.email}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </FormModal>
 
       {isAdmin ? (
         <FormModal
           open={editorOpen}
           onClose={closeEditor}
-          wide
           titleId="modal-perfil-title"
           title={editorMode === "create" ? "Novo perfil" : "Editar perfil"}
           subtitle={
-            editorMode === "edit" && perfilForm?.id ? <>ID #{perfilForm.id}</> : <>Nome do cargo como aparece nas permissões (ex.: Administrador).</>
+            editorMode === "edit" && perfilForm?.id ? (
+              <>
+                A alterar <strong>{perfilForm.nome || "este perfil"}</strong>
+              </>
+            ) : (
+              <>Nome interno do cargo (ex.: Administrador, Operador).</>
+            )
           }
           footer={
             <>
@@ -178,8 +221,8 @@ export default function PerfisPage({
             </>
           }
         >
-          <div className="form-stack form-stack--horizontal">
-            <label className="field-label field-label--full">
+          <div className="form-stack">
+            <label className="field-label">
               Nome do cargo
               <input
                 placeholder="Ex.: Administrador, Operador, Leitura"
