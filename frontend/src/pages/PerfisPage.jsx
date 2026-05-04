@@ -1,16 +1,15 @@
-/* Comentario geral deste ficheiro: pagina CRUD para perfis de utilizador. */
+/* Perfis — cartões por cargo; criar/editar em modal horizontal. */
 
-import DataTable from "../components/DataTable";
+import { useCallback, useState } from "react";
+import EmptyState from "../components/EmptyState";
+import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
 
-/** Utilizadores com este perfil: admin usa lista completa do painel; API em fallback. */
 function membrosDoPerfil(perfil, listaUtilizadores, isAdmin) {
   const id = Number(perfil?.id);
   if (Number.isNaN(id)) return [];
 
-  const fromLista = isAdmin
-    ? (listaUtilizadores || []).filter((u) => Number(u?.perfil_id) === id)
-    : [];
+  const fromLista = isAdmin ? (listaUtilizadores || []).filter((u) => Number(u?.perfil_id) === id) : [];
 
   if (fromLista.length > 0) {
     return [...fromLista].sort((a, b) =>
@@ -42,98 +41,155 @@ export default function PerfisPage({
   onPick,
   onDeleteRow,
 }) {
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorMode, setEditorMode] = useState("create");
+
+  const closeEditor = useCallback(() => {
+    setEditorOpen(false);
+    onCancel?.();
+  }, [onCancel]);
+
+  function openCreate() {
+    setEditorMode("create");
+    onCancel?.();
+    setEditorOpen(true);
+  }
+
+  function openEdit(p) {
+    setEditorMode("edit");
+    onPick(p);
+    setEditorOpen(true);
+  }
+
+  async function handleSave() {
+    let ok = false;
+    if (editorMode === "create") ok = Boolean(await onCreate?.());
+    else ok = Boolean(await onUpdate?.());
+    if (ok) closeEditor();
+  }
+
+  async function handleDeleteInModal() {
+    const ok = Boolean(await onDeleteByForm?.());
+    if (ok) closeEditor();
+  }
+
   return (
     <SectionCard
       title="Perfis"
-      subtitle="Perfis de permissão (cargo). Administradores vêem quantos utilizadores têm cada perfil e quem são."
+      subtitle="Define cargos no sistema. Cada perfil agrupa utilizadores que partilham as mesmas permissões."
+      rightAction={
+        isAdmin ? (
+          <button type="button" className="btn-chip-primary" onClick={openCreate}>
+            Novo perfil
+          </button>
+        ) : null
+      }
     >
-      {isAdmin && (
-        <>
-          <div className="grid grid-inline">
-            <input
-              placeholder="ID (editar/apagar)"
-              value={perfilForm.id}
-              onChange={(e) => setPerfilForm((p) => ({ ...p, id: e.target.value }))}
-            />
-            <input
-              placeholder="Nome do perfil"
-              value={perfilForm.nome}
-              onChange={(e) => setPerfilForm((p) => ({ ...p, nome: e.target.value }))}
-            />
-          </div>
-          <div className="actions">
-            <button type="button" onClick={onCreate}>
-              Criar
-            </button>
-            <button type="button" onClick={onUpdate}>
-              Atualizar
-            </button>
-            <button type="button" className="danger" onClick={onDeleteByForm}>
-              Apagar
-            </button>
-            <button type="button" className="ghost" onClick={onCancel}>
-              Cancelar
-            </button>
-          </div>
-        </>
+      {!isAdmin ? (
+        <p className="perfil-muted-line">Apenas administradores criam ou editam perfis.</p>
+      ) : null}
+
+      {loading ? (
+        <div className="loading-box">A carregar perfis…</div>
+      ) : !perfis?.length ? (
+        <EmptyState
+          title="Ainda não há perfis"
+          description="Um administrador pode criar o primeiro cargo (por exemplo Administrador ou Operador)."
+        />
+      ) : (
+        <div className="perfil-cards">
+          {perfis.map((p) => {
+            const members = membrosDoPerfil(p, utilizadores, isAdmin);
+            const count = members.length;
+
+            return (
+              <article key={p.id} className="perfil-card">
+                <header className="perfil-card-head">
+                  <div className="perfil-card-heading">
+                    <span className="perfil-id-pill">#{p.id}</span>
+                    <h3 className="perfil-card-name">{p.nome}</h3>
+                  </div>
+                  {isAdmin ? (
+                    <div className="perfil-card-actions">
+                      <button type="button" className="ghost table-btn" onClick={() => openEdit(p)}>
+                        Editar
+                      </button>
+                      <button type="button" className="danger table-btn" onClick={() => onDeleteRow(p)}>
+                        Apagar
+                      </button>
+                    </div>
+                  ) : null}
+                </header>
+                <div className="perfil-card-body">
+                  {!isAdmin ? (
+                    <p className="perfil-muted-line">Lista de utilizadores deste cargo visível apenas para administradores.</p>
+                  ) : count === 0 ? (
+                    <p className="perfil-muted-line">Ninguém está associado a este perfil neste momento.</p>
+                  ) : (
+                    <>
+                      <p className="perfil-members-intro">
+                        <strong>{count}</strong>
+                        {count === 1
+                          ? " pessoa usa este cargo — "
+                          : " pessoas usam este cargo — "}
+                        não reflete sessões ligadas ao site, apenas a atribuição na base de dados.
+                      </p>
+                      <div className="user-chip-grid" aria-label={`Utilizadores no perfil ${p.nome}`}>
+                        {members.map((u) => (
+                          <div key={u.id} className="user-chip" title={u.email}>
+                            <span className="user-chip-name">{u.nome}</span>
+                            <span className="user-chip-login">@{u.username}</span>
+                            <span className="user-chip-email">{u.email}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
       )}
 
-      <DataTable
-        columns={["ID", "Nome", "Quem tem este perfil", "Acoes"]}
-        rows={perfis}
-        loading={loading}
-        emptyTitle="Sem perfis criados"
-        emptyDescription="Cria perfis para organizar permissões no sistema."
-        renderRow={(p) => {
-          const members = membrosDoPerfil(p, utilizadores, isAdmin);
-          const count = members.length;
-
-          return (
-            <tr key={p.id}>
-              <td>{p.id}</td>
-              <td>{p.nome}</td>
-              <td className="perfil-users-cell">
-                {!isAdmin ? (
-                  <span className="cell-muted">Apenas administradores vêem a lista completa por perfil.</span>
-                ) : count === 0 ? (
-                  <span className="cell-muted">Ninguém com este perfil (0 utilizadores)</span>
-                ) : (
-                  <>
-                    <div className="perfil-user-count">
-                      <strong>{count}</strong>{" "}
-                      {count === 1 ? "utilizador com este perfil" : "utilizadores com este perfil"}
-                    </div>
-                    <ul className="perfil-user-list">
-                      {members.map((u) => (
-                        <li key={u.id}>
-                          <span className="perfil-user-nome">{u.nome}</span>
-                          <span className="perfil-user-meta">
-                            {u.username} · {u.email}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </td>
-              <td>
-                {isAdmin ? (
-                  <>
-                    <button type="button" className="ghost table-btn" onClick={() => onPick(p)}>
-                      Editar
-                    </button>
-                    <button type="button" className="danger table-btn" onClick={() => onDeleteRow(p)}>
-                      Apagar
-                    </button>
-                  </>
-                ) : (
-                  "-"
-                )}
-              </td>
-            </tr>
-          );
-        }}
-      />
+      {isAdmin ? (
+        <FormModal
+          open={editorOpen}
+          onClose={closeEditor}
+          wide
+          titleId="modal-perfil-title"
+          title={editorMode === "create" ? "Novo perfil" : "Editar perfil"}
+          subtitle={
+            editorMode === "edit" && perfilForm?.id ? <>ID #{perfilForm.id}</> : <>Nome do cargo como aparece nas permissões (ex.: Administrador).</>
+          }
+          footer={
+            <>
+              <button type="button" className="ghost" onClick={closeEditor}>
+                Cancelar
+              </button>
+              {editorMode === "edit" ? (
+                <button type="button" className="danger" onClick={handleDeleteInModal}>
+                  Apagar perfil
+                </button>
+              ) : null}
+              <button type="button" onClick={handleSave}>
+                {editorMode === "create" ? "Criar perfil" : "Guardar alterações"}
+              </button>
+            </>
+          }
+        >
+          <div className="form-stack form-stack--horizontal">
+            <label className="field-label field-label--full">
+              Nome do cargo
+              <input
+                placeholder="Ex.: Administrador, Operador, Leitura"
+                value={perfilForm.nome}
+                onChange={(e) => setPerfilForm((p) => ({ ...p, nome: e.target.value }))}
+              />
+            </label>
+          </div>
+        </FormModal>
+      ) : null}
     </SectionCard>
   );
 }

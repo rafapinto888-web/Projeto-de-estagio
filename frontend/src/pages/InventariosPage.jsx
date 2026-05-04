@@ -1,6 +1,8 @@
-/* Comentario geral deste ficheiro: pagina de gestao de inventarios com CRUD. */
+/* Gestão de inventários — criar/editar em modal com grelha horizontal. */
 
+import { useCallback, useState } from "react";
 import DataTable from "../components/DataTable";
+import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
 
 export default function InventariosPage({
@@ -11,58 +13,61 @@ export default function InventariosPage({
   loading,
   onCreate,
   onUpdate,
-  onDelete,
+  onDeleteByForm,
+  onDeleteRow,
   onSelectInventario,
+  onCancel,
 }) {
-  return (
-    <SectionCard title="Inventarios" subtitle="Gerir inventarios normais e de sub-rede.">
-      {isAdmin && (
-        <>
-          <div className="grid">
-            <input
-              placeholder="ID (editar/apagar)"
-              value={inventarioForm.id}
-              onChange={(e) => setInventarioForm((p) => ({ ...p, id: e.target.value }))}
-            />
-            <input
-              placeholder="Nome"
-              value={inventarioForm.nome}
-              onChange={(e) => setInventarioForm((p) => ({ ...p, nome: e.target.value }))}
-            />
-            <select
-              value={inventarioForm.tipo_inventario}
-              onChange={(e) => setInventarioForm((p) => ({ ...p, tipo_inventario: e.target.value }))}
-            >
-              <option value="normal">normal</option>
-              <option value="sub_rede">sub_rede</option>
-            </select>
-            <input
-              placeholder="IP rede (opcional)"
-              value={inventarioForm.ip_rede}
-              onChange={(e) => setInventarioForm((p) => ({ ...p, ip_rede: e.target.value }))}
-            />
-            <input
-              placeholder="Descricao"
-              value={inventarioForm.descricao}
-              onChange={(e) => setInventarioForm((p) => ({ ...p, descricao: e.target.value }))}
-            />
-          </div>
-          <div className="actions">
-            <button onClick={onCreate}>Criar</button>
-            <button onClick={onUpdate}>Atualizar</button>
-            <button className="danger" onClick={onDelete}>
-              Apagar
-            </button>
-          </div>
-        </>
-      )}
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorMode, setEditorMode] = useState("create");
 
+  const closeEditor = useCallback(() => {
+    setEditorOpen(false);
+    onCancel?.();
+  }, [onCancel]);
+
+  function openCreate() {
+    setEditorMode("create");
+    onCancel?.();
+    setEditorOpen(true);
+  }
+
+  function openEdit(inv) {
+    setEditorMode("edit");
+    onSelectInventario(inv);
+    setEditorOpen(true);
+  }
+
+  async function handleSave() {
+    let ok = false;
+    if (editorMode === "create") ok = Boolean(await onCreate?.());
+    else ok = Boolean(await onUpdate?.());
+    if (ok) closeEditor();
+  }
+
+  async function handleDeleteInModal() {
+    const ok = Boolean(await onDeleteByForm?.());
+    if (ok) closeEditor();
+  }
+
+  return (
+    <SectionCard
+      title="Inventários"
+      subtitle="Gerir inventários normais e de sub-rede. Usa o editor para criar ou alterar."
+      rightAction={
+        isAdmin ? (
+          <button type="button" className="btn-chip-primary" onClick={openCreate}>
+            Novo inventário
+          </button>
+        ) : null
+      }
+    >
       <DataTable
-        columns={["ID", "Nome", "Tipo", "IP Rede", "Descricao", "Acoes"]}
+        columns={["ID", "Nome", "Tipo", "IP Rede", "Descrição", "Ações"]}
         rows={inventarios}
         loading={loading}
-        emptyTitle="Nenhum inventario encontrado"
-        emptyDescription="Quando criares inventarios eles vao aparecer aqui."
+        emptyTitle="Nenhum inventário encontrado"
+        emptyDescription='Cria inventários através de «Novo inventário».'
         renderRow={(inv) => (
           <tr key={inv.id}>
             <td>{inv.id}</td>
@@ -73,10 +78,10 @@ export default function InventariosPage({
             <td>
               {isAdmin ? (
                 <>
-                  <button className="ghost table-btn" onClick={() => onSelectInventario(inv)}>
+                  <button type="button" className="ghost table-btn" onClick={() => openEdit(inv)}>
                     Editar
                   </button>
-                  <button className="danger table-btn" onClick={() => onDelete(inv)}>
+                  <button type="button" className="danger table-btn" onClick={() => onDeleteRow?.(inv)}>
                     Apagar
                   </button>
                 </>
@@ -87,7 +92,70 @@ export default function InventariosPage({
           </tr>
         )}
       />
+
+      {isAdmin ? (
+        <FormModal
+          open={editorOpen}
+          onClose={closeEditor}
+          wide
+          title={editorMode === "create" ? "Novo inventário" : "Editar inventário"}
+          subtitle={
+            editorMode === "edit" && inventarioForm?.id ? <>ID #{inventarioForm.id}</> : <>Define nome, tipo e rede associada.</>
+          }
+          footer={
+            <>
+              <button type="button" className="ghost" onClick={closeEditor}>
+                Cancelar
+              </button>
+              {editorMode === "edit" ? (
+                <button type="button" className="danger" onClick={handleDeleteInModal}>
+                  Apagar inventário
+                </button>
+              ) : null}
+              <button type="button" onClick={handleSave}>
+                {editorMode === "create" ? "Criar inventário" : "Guardar alterações"}
+              </button>
+            </>
+          }
+        >
+          <div className="form-stack form-stack--horizontal">
+            <label className="field-label">
+              Nome
+              <input
+                placeholder="Nome do inventário"
+                value={inventarioForm.nome}
+                onChange={(e) => setInventarioForm((p) => ({ ...p, nome: e.target.value }))}
+              />
+            </label>
+            <label className="field-label">
+              Tipo
+              <select
+                value={inventarioForm.tipo_inventario}
+                onChange={(e) => setInventarioForm((p) => ({ ...p, tipo_inventario: e.target.value }))}
+              >
+                <option value="normal">normal</option>
+                <option value="sub_rede">sub_rede</option>
+              </select>
+            </label>
+            <label className="field-label">
+              IP da rede (opcional)
+              <input
+                placeholder="Ex.: 192.168.1.0/24"
+                value={inventarioForm.ip_rede}
+                onChange={(e) => setInventarioForm((p) => ({ ...p, ip_rede: e.target.value }))}
+              />
+            </label>
+            <label className="field-label field-label--full">
+              Descrição
+              <input
+                placeholder="Notas ou contexto (opcional)"
+                value={inventarioForm.descricao}
+                onChange={(e) => setInventarioForm((p) => ({ ...p, descricao: e.target.value }))}
+              />
+            </label>
+          </div>
+        </FormModal>
+      ) : null}
     </SectionCard>
   );
 }
-

@@ -1,6 +1,8 @@
-/* Comentario geral deste ficheiro: pagina CRUD para localizacoes fisicas. */
+/* Localizações físicas — CRUD em modal com grelha horizontal. */
 
+import { useCallback, useState } from "react";
 import DataTable from "../components/DataTable";
+import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
 
 export default function LocalizacoesPage({
@@ -16,46 +18,56 @@ export default function LocalizacoesPage({
   onPick,
   onDeleteRow,
 }) {
-  return (
-    <SectionCard title="Localizacoes" subtitle="Gestao de salas, racks e outros pontos fisicos.">
-      {isAdmin && (
-        <>
-          <div className="grid">
-            <input
-              placeholder="ID (editar/apagar)"
-              value={localizacaoForm.id}
-              onChange={(e) => setLocalizacaoForm((p) => ({ ...p, id: e.target.value }))}
-            />
-            <input
-              placeholder="Nome"
-              value={localizacaoForm.nome}
-              onChange={(e) => setLocalizacaoForm((p) => ({ ...p, nome: e.target.value }))}
-            />
-            <input
-              placeholder="Descricao (opcional)"
-              value={localizacaoForm.descricao}
-              onChange={(e) => setLocalizacaoForm((p) => ({ ...p, descricao: e.target.value }))}
-            />
-          </div>
-          <div className="actions">
-            <button onClick={onCreate}>Criar</button>
-            <button onClick={onUpdate}>Atualizar</button>
-            <button className="danger" onClick={onDeleteByForm}>
-              Apagar
-            </button>
-            <button className="ghost" onClick={onCancel}>
-              Cancelar
-            </button>
-          </div>
-        </>
-      )}
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorMode, setEditorMode] = useState("create");
 
+  const closeEditor = useCallback(() => {
+    setEditorOpen(false);
+    onCancel?.();
+  }, [onCancel]);
+
+  function openCreate() {
+    setEditorMode("create");
+    onCancel?.();
+    setEditorOpen(true);
+  }
+
+  function openEdit(l) {
+    setEditorMode("edit");
+    onPick(l);
+    setEditorOpen(true);
+  }
+
+  async function handleSave() {
+    let ok = false;
+    if (editorMode === "create") ok = Boolean(await onCreate?.());
+    else ok = Boolean(await onUpdate?.());
+    if (ok) closeEditor();
+  }
+
+  async function handleDeleteInModal() {
+    const ok = Boolean(await onDeleteByForm?.());
+    if (ok) closeEditor();
+  }
+
+  return (
+    <SectionCard
+      title="Localizações"
+      subtitle="Salas, racks e outros pontos físicos. Cria ou edita no editor."
+      rightAction={
+        isAdmin ? (
+          <button type="button" className="btn-chip-primary" onClick={openCreate}>
+            Nova localização
+          </button>
+        ) : null
+      }
+    >
       <DataTable
-        columns={["ID", "Nome", "Descricao", "Acoes"]}
+        columns={["ID", "Nome", "Descrição", "Ações"]}
         rows={localizacoes}
         loading={loading}
-        emptyTitle="Sem localizacoes"
-        emptyDescription="Adiciona localizacoes para melhorar a rastreabilidade dos ativos."
+        emptyTitle="Sem localizações"
+        emptyDescription='Adiciona pontos físicos com «Nova localização».'
         renderRow={(l) => (
           <tr key={l.id}>
             <td>{l.id}</td>
@@ -64,10 +76,10 @@ export default function LocalizacoesPage({
             <td>
               {isAdmin ? (
                 <>
-                  <button className="ghost table-btn" onClick={() => onPick(l)}>
+                  <button type="button" className="ghost table-btn" onClick={() => openEdit(l)}>
                     Editar
                   </button>
-                  <button className="danger table-btn" onClick={() => onDeleteRow(l)}>
+                  <button type="button" className="danger table-btn" onClick={() => onDeleteRow(l)}>
                     Apagar
                   </button>
                 </>
@@ -78,7 +90,52 @@ export default function LocalizacoesPage({
           </tr>
         )}
       />
+
+      {isAdmin ? (
+        <FormModal
+          open={editorOpen}
+          onClose={closeEditor}
+          wide
+          title={editorMode === "create" ? "Nova localização" : "Editar localização"}
+          subtitle={
+            editorMode === "edit" && localizacaoForm?.id ? <>ID #{localizacaoForm.id}</> : <>Nome curto e descrição opcional.</>
+          }
+          footer={
+            <>
+              <button type="button" className="ghost" onClick={closeEditor}>
+                Cancelar
+              </button>
+              {editorMode === "edit" ? (
+                <button type="button" className="danger" onClick={handleDeleteInModal}>
+                  Apagar localização
+                </button>
+              ) : null}
+              <button type="button" onClick={handleSave}>
+                {editorMode === "create" ? "Criar localização" : "Guardar alterações"}
+              </button>
+            </>
+          }
+        >
+          <div className="form-stack form-stack--horizontal">
+            <label className="field-label">
+              Nome
+              <input
+                placeholder="Ex.: Sala reuniões A2"
+                value={localizacaoForm.nome}
+                onChange={(e) => setLocalizacaoForm((p) => ({ ...p, nome: e.target.value }))}
+              />
+            </label>
+            <label className="field-label field-label--full">
+              Descrição (opcional)
+              <input
+                placeholder="Piso, edifício, notas…"
+                value={localizacaoForm.descricao}
+                onChange={(e) => setLocalizacaoForm((p) => ({ ...p, descricao: e.target.value }))}
+              />
+            </label>
+          </div>
+        </FormModal>
+      ) : null}
     </SectionCard>
   );
 }
-

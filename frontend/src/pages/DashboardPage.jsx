@@ -16,13 +16,6 @@ function statusPill(inv, index) {
   return { cls: "badge-done", text: "Concluído" };
 }
 
-function classifyAsset(pc) {
-  const blob = `${pc?.nome || ""} ${pc?.marca || ""} ${pc?.modelo || ""}`.toLowerCase();
-  if (/servidor|server|hyper|vmware|proxmox|esxi/.test(blob)) return "servidor";
-  if (/switch|router|firewall|access point|^ap |\bwifi\b|mpls/.test(blob)) return "rede";
-  return "computador";
-}
-
 export default function DashboardPage({
   inventarios,
   computadores,
@@ -43,36 +36,12 @@ export default function DashboardPage({
     return m;
   }, [computadores]);
 
-  const breakdown = useMemo(() => {
-    let comp = 0;
-    let rede = 0;
-    let srv = 0;
-    (computadores || []).forEach((pc) => {
-      const c = classifyAsset(pc);
-      if (c === "servidor") srv += 1;
-      else if (c === "rede") rede += 1;
-      else comp += 1;
-    });
-    const raw = comp + rede + srv;
-    const t = Math.max(raw, 1);
-    const pC = Math.round((comp / t) * 100);
-    const pR = Math.round((rede / t) * 100);
-    const pS = Math.round((srv / t) * 100);
-    const pO = Math.max(0, 100 - pC - pR - pS);
-    return [
-      { key: "computador", label: "Computadores", pct: pC, color: "#2563eb" },
-      { key: "rede", label: "Equip. de rede", pct: pR, color: "#7c3aed" },
-      { key: "servidor", label: "Servidores", pct: pS, color: "#ea580c" },
-      { key: "outros", label: "Outros", pct: pO, color: "#64748b" },
-    ];
-  }, [computadores]);
-
   return (
     <section className="panel dashboard-panel dashboard-ref">
       <div className="section-head dashboard-ref-head">
         <div>
           <h2>Visão Geral</h2>
-          <p className="section-subtitle">Resumo consolidado dos inventários, ativos e utilização da plataforma.</p>
+          <p className="section-subtitle">Resumo do inventário de PCs e utilização da plataforma.</p>
         </div>
         <div className="section-head-actions">
           <button type="button" className="btn-primary-split" onClick={() => onNavigate("inventarios")}>
@@ -86,14 +55,14 @@ export default function DashboardPage({
       <div className="kpis dash-stat-grid">
         <article className="dash-stat-card">
           <div className="dash-stat-top">
-            <span className="dash-stat-label">Total de ativos</span>
-            <MiniSparkline seed={computadores.length + 11} />
+            <span className="dash-stat-label">Inventários</span>
+            <MiniSparkline seed={inventarios.length + 501} accent="#64748b" />
           </div>
-          <strong className="dash-stat-value">{computadores.length}</strong>
+          <strong className="dash-stat-value">{inventarios.length}</strong>
         </article>
         <article className="dash-stat-card">
           <div className="dash-stat-top">
-            <span className="dash-stat-label">Computadores</span>
+            <span className="dash-stat-label">Computadores (PCs)</span>
             <MiniSparkline seed={computadores.length + 7} accent="#7c3aed" />
           </div>
           <strong className="dash-stat-value">{computadores.length}</strong>
@@ -135,7 +104,7 @@ export default function DashboardPage({
                       <th>ID</th>
                       <th>Nome</th>
                       <th>Tipo</th>
-                      <th>Ativos</th>
+                      <th>PCs</th>
                       <th>Estado</th>
                       <th>Atualizado</th>
                       <th className="th-actions" />
@@ -233,30 +202,7 @@ export default function DashboardPage({
         </article>
       </div>
 
-      <div className="dashboard-bottom-grid">
-        <article className="dashboard-card dash-breakdown-card">
-          <div className="card-head">
-            <h3>Tipos de ativos</h3>
-          </div>
-          <p className="breakdown-hint">Distribuição heurística com base nos nomes e modelos registados.</p>
-          <ul className="breakdown-list">
-            {breakdown.map((row) => (
-              <li key={row.key}>
-                <div className="breakdown-row-head">
-                  <span className="breakdown-label">{row.label}</span>
-                  <span className="breakdown-pct">{row.pct}%</span>
-                </div>
-                <div className="breakdown-bar-track">
-                  <div
-                    className="breakdown-bar-fill"
-                    style={{ width: `${row.pct}%`, backgroundColor: row.color }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </article>
-
+      <div className="dashboard-quick-strip">
         <article className="dashboard-card dash-quick-card">
           <div className="card-head">
             <h3>Ações rápidas</h3>
@@ -268,7 +214,7 @@ export default function DashboardPage({
             </button>
             <button type="button" className="quick-tile" onClick={() => onNavigate("ativos")}>
               <span className="material-symbols-outlined">radar</span>
-              Descobrir ativos
+              Scan
             </button>
             <button type="button" className="quick-tile" onClick={() => onNavigate("computadores")}>
               <span className="material-symbols-outlined">computer</span>

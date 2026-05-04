@@ -19,7 +19,7 @@ import UtilizadoresPage from "./pages/UtilizadoresPage";
 const TABS = [
   { id: "dashboard", label: "Dashboard" },
   { id: "inventarios", label: "Inventários" },
-  { id: "ativos", label: "Ativos + Scan" },
+  { id: "ativos", label: "Scan" },
   { id: "computadores", label: "Computadores" },
   { id: "utilizadores", label: "Utilizadores" },
   { id: "perfis", label: "Perfis" },
@@ -191,8 +191,10 @@ export default function App() {
         await refreshAtivos(selectedInventarioId, ativoPesquisa);
       }
       setStatus({ type: "ok", message: successMessage });
+      return true;
     } catch (error) {
       setStatus({ type: "err", message: error.message });
+      return false;
     } finally {
       setActionLoading(false);
     }
@@ -321,10 +323,14 @@ export default function App() {
                   "Inventario atualizado",
                 )
               }
-              onDelete={(inv) => {
-                const id = inv?.id || inventarioForm.id;
+              onCancel={() => setInventarioForm(emptyInventarioForm())}
+              onDeleteByForm={async () => {
+                if (!window.confirm("Confirmar apagar inventario?")) return false;
+                return withAction(() => api.inventarios.apagar(inventarioForm.id, token), "Inventario apagado");
+              }}
+              onDeleteRow={(inv) => {
                 if (!window.confirm("Confirmar apagar inventario?")) return;
-                withAction(() => api.inventarios.apagar(id, token), "Inventario apagado");
+                withAction(() => api.inventarios.apagar(inv.id, token), "Inventario apagado");
               }}
               onSelectInventario={(inv) => {
                 setSelectedInventarioId(String(inv.id));
@@ -346,16 +352,25 @@ export default function App() {
               setSelectedInventarioId={setSelectedInventarioId}
               ativoPesquisa={ativoPesquisa}
               setAtivoPesquisa={setAtivoPesquisa}
-              onPesquisar={() =>
-                refreshAtivos(selectedInventarioId, ativoPesquisa).catch((err) =>
-                  setStatus({ type: "err", message: err.message }),
-                )
-              }
-              onRecarregar={() =>
-                refreshAtivos(selectedInventarioId).catch((err) =>
-                  setStatus({ type: "err", message: err.message }),
-                )
-              }
+              onPesquisar={async () => {
+                try {
+                  await refreshAtivos(selectedInventarioId, ativoPesquisa);
+                  return true;
+                } catch (err) {
+                  setStatus({ type: "err", message: err.message });
+                  return false;
+                }
+              }}
+              onRecarregarLista={async () => {
+                setAtivoPesquisa("");
+                try {
+                  await refreshAtivos(selectedInventarioId, "");
+                  return true;
+                } catch (err) {
+                  setStatus({ type: "err", message: err.message });
+                  return false;
+                }
+              }}
               isAdmin={isAdmin}
               scanRede={scanRede}
               setScanRede={setScanRede}
@@ -363,7 +378,7 @@ export default function App() {
               setScanUser={setScanUser}
               scanPass={scanPass}
               setScanPass={setScanPass}
-              onScan={() =>
+              onScan={async () =>
                 withAction(
                   async () => {
                     const out = await api.inventarios.scan(
@@ -452,14 +467,10 @@ export default function App() {
                   "Computador atualizado parcial",
                 )
               }
-              onDeleteByForm={() =>
-                window.confirm("Confirmar apagar computador?")
-                  ? withAction(
-                      () => api.computadores.apagar(computadorForm.id, token),
-                      "Computador apagado",
-                    )
-                  : null
-              }
+              onDeleteByForm={async () => {
+                if (!window.confirm("Confirmar apagar computador?")) return false;
+                return withAction(() => api.computadores.apagar(computadorForm.id, token), "Computador apagado");
+              }}
               onCancel={() => setComputadorForm(emptyComputerForm())}
               computadores={computadores}
               loading={loading}
@@ -517,9 +528,12 @@ export default function App() {
                   "Utilizador atualizado",
                 )
               }
-              onDeleteByForm={() => {
-                if (!window.confirm("Confirmar apagar utilizador?")) return;
-                withAction(() => api.utilizadores.apagar(utilizadorForm.id, token), "Utilizador apagado");
+              onDeleteByForm={async () => {
+                if (!window.confirm("Confirmar apagar utilizador?")) return false;
+                return withAction(
+                  () => api.utilizadores.apagar(utilizadorForm.id, token),
+                  "Utilizador apagado",
+                );
               }}
               onCancel={() => setUtilizadorForm(emptyUserForm())}
               utilizadores={utilizadores}
@@ -556,11 +570,10 @@ export default function App() {
                   "Perfil atualizado",
                 )
               }
-              onDeleteByForm={() =>
-                window.confirm("Confirmar apagar perfil?")
-                  ? withAction(() => api.perfis.apagar(perfilForm.id, token), "Perfil apagado")
-                  : null
-              }
+              onDeleteByForm={async () => {
+                if (!window.confirm("Confirmar apagar perfil?")) return false;
+                return withAction(() => api.perfis.apagar(perfilForm.id, token), "Perfil apagado");
+              }}
               onCancel={() => setPerfilForm({ id: "", nome: "" })}
               perfis={perfis}
               loading={loading}
@@ -605,14 +618,10 @@ export default function App() {
                   "Localizacao atualizada",
                 )
               }
-              onDeleteByForm={() =>
-                window.confirm("Confirmar apagar localizacao?")
-                  ? withAction(
-                      () => api.localizacoes.apagar(localizacaoForm.id, token),
-                      "Localizacao apagada",
-                    )
-                  : null
-              }
+              onDeleteByForm={async () => {
+                if (!window.confirm("Confirmar apagar localizacao?")) return false;
+                return withAction(() => api.localizacoes.apagar(localizacaoForm.id, token), "Localizacao apagada");
+              }}
               onCancel={() => setLocalizacaoForm({ id: "", nome: "", descricao: "" })}
               localizacoes={localizacoes}
               loading={loading}
@@ -653,6 +662,7 @@ export default function App() {
 
           {activeTab === "logs" && (
             <LogsPage
+              selectedInventarioId={selectedInventarioId}
               logComputadorParams={logComputadorParams}
               setLogComputadorParams={setLogComputadorParams}
               onLogsComputador={async () => {
@@ -660,8 +670,10 @@ export default function App() {
                 try {
                   const data = await api.logs.porComputador(logComputadorParams, token);
                   setLogsOutput(JSON.stringify(data, null, 2));
+                  return true;
                 } catch (error) {
                   setLogsOutput(JSON.stringify({ erro: error.message }, null, 2));
+                  return false;
                 } finally {
                   setActionLoading(false);
                 }
@@ -676,8 +688,10 @@ export default function App() {
                   delete query.inventario_id;
                   const data = await api.inventarios.logsDispositivos(invId, query, token);
                   setLogsOutput(JSON.stringify(data, null, 2));
+                  return true;
                 } catch (error) {
                   setLogsOutput(JSON.stringify({ erro: error.message }, null, 2));
+                  return false;
                 } finally {
                   setActionLoading(false);
                 }
