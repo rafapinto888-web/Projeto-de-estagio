@@ -166,9 +166,20 @@ class AtivoInventarioItem(BaseModel):
     estado: str | None = None
     marca: str | None = None
     modelo: str | None = None
+    mac_address: str | None = None
+    sistema_operativo: str | None = None
     localizacao_nome: str | None = None
     utilizador_responsavel_nome: str | None = None
     ultima_vez_ativo_em: datetime | None = None
+
+
+class InventarioAtivosGrupoResponse(BaseModel):
+    """Inventário visível com lista unificada de registos manuais e descobertos no scan."""
+
+    inventario_id: int
+    inventario_nome: str
+    tipo_inventario: TipoInventarioEnum
+    ativos: list[AtivoInventarioItem]
 
 
 class InventarioDetalhesResponse(InventarioResponse):

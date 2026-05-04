@@ -22,6 +22,10 @@ class ComputadorBase(BaseSchema):
     inventario_id: int
     localizacao_id: int | None = None
     utilizador_responsavel_id: int | None = None
+    hostname: str | None = None
+    endereco_ip: str | None = None
+    mac_address: str | None = None
+    sistema_operativo: str | None = None
 
 
 class ComputadorCreate(ComputadorBase):
@@ -41,6 +45,10 @@ class ComputadorUpdate(BaseSchema):
     inventario_id: int | None = None
     localizacao_id: int | None = None
     utilizador_responsavel_id: int | None = None
+    hostname: str | None = None
+    endereco_ip: str | None = None
+    mac_address: str | None = None
+    sistema_operativo: str | None = None
 
 
 class ComputadorResponse(ComputadorBase):

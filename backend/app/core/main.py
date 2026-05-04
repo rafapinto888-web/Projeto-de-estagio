@@ -74,6 +74,10 @@ def garantir_compatibilidade_schema_sqlite() -> None:
         adicionar_coluna_se_faltar("computadores", "inventario_id", "INTEGER", "INTEGER")
         adicionar_coluna_se_faltar("computadores", "localizacao_id", "INTEGER", "INTEGER")
         adicionar_coluna_se_faltar("computadores", "utilizador_responsavel_id", "INTEGER", "INTEGER")
+        adicionar_coluna_se_faltar("computadores", "hostname", "TEXT", "VARCHAR(100)")
+        adicionar_coluna_se_faltar("computadores", "endereco_ip", "TEXT", "VARCHAR(45)")
+        adicionar_coluna_se_faltar("computadores", "mac_address", "TEXT", "VARCHAR(17)")
+        adicionar_coluna_se_faltar("computadores", "sistema_operativo", "TEXT", "VARCHAR(120)")
 
         # Campos de tipo/rede para inventarios.
         adicionar_coluna_se_faltar("inventarios", "tipo_inventario", "TEXT DEFAULT 'normal'", "VARCHAR(20) DEFAULT 'normal'")

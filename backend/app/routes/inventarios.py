@@ -4,7 +4,7 @@
 from datetime import datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import String, cast, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, contains_eager, joinedload
@@ -20,6 +20,7 @@ from app.models.utilizador_db import UtilizadorDB
 from app.schemas.dispositivo_descoberto import (
     DispositivoDescobertoResponse,
     DispositivoDescobertoScanResponse,
+    DispositivoDescobertoUpdate,
 )
 from app.services.scan_rede import descobrir_dispositivos_enriquecidos
 from app.services.windows_logs import coletar_logs_windows
@@ -29,6 +30,7 @@ from app.schemas.inventario import (
     ComputadorDetalhadoInventarioResponse,
     ComputadorPesquisaInventarioItem,
     DispositivoDescobertoPesquisaInventarioItem,
+    InventarioAtivosGrupoResponse,
     InventarioComContagensResponse,
     InventarioCreate,
     InventarioDetalhesResponse,
@@ -202,6 +204,78 @@ def _inventarios_visiveis_query(db: Session, current_user: UtilizadorDB):
     )
 
 
+def _ativos_unificados_do_inventario(
+    db: Session,
+    inventario_id: int,
+    current_user: UtilizadorDB,
+) -> list[AtivoInventarioItem]:
+    """Computadores registados + dispositivos do scan para um inventário (regras igual à rota por ID)."""
+    computadores = (
+        db.query(ComputadorDB)
+        .options(
+            joinedload(ComputadorDB.localizacao),
+            joinedload(ComputadorDB.utilizador_responsavel),
+        )
+        .filter(ComputadorDB.inventario_id == inventario_id)
+        .order_by(ComputadorDB.id)
+        .all()
+    )
+    if not is_admin_user(current_user):
+        computadores = [
+            c for c in computadores if c.utilizador_responsavel_id == current_user.id
+        ]
+
+    dispositivos = (
+        db.query(DispositivoDescobertoDB)
+        .filter(DispositivoDescobertoDB.inventario_id == inventario_id)
+        .order_by(DispositivoDescobertoDB.id)
+        .all()
+    )
+
+    ativos: list[AtivoInventarioItem] = []
+    ativos.extend(
+        AtivoInventarioItem(
+            tipo="computador",
+            id=c.id,
+            inventario_id=c.inventario_id,
+            nome=c.nome,
+            ip=c.endereco_ip,
+            hostname=c.hostname,
+            numero_serie=c.numero_serie,
+            estado=c.estado,
+            marca=c.marca,
+            modelo=c.modelo,
+            mac_address=c.mac_address,
+            sistema_operativo=c.sistema_operativo,
+            localizacao_nome=c.localizacao_nome,
+            utilizador_responsavel_nome=c.utilizador_responsavel_nome,
+            ultima_vez_ativo_em=None,
+        )
+        for c in computadores
+    )
+    ativos.extend(
+        AtivoInventarioItem(
+            tipo="dispositivo_descoberto",
+            id=d.id,
+            inventario_id=d.inventario_id,
+            nome=None,
+            hostname=d.hostname,
+            ip=d.ip,
+            numero_serie=d.numero_serie,
+            estado=d.estado,
+            marca=d.marca,
+            modelo=d.modelo,
+            mac_address=d.mac_address,
+            sistema_operativo=d.sistema_operativo,
+            localizacao_nome=None,
+            utilizador_responsavel_nome=None,
+            ultima_vez_ativo_em=d.ultima_vez_ativo_em,
+        )
+        for d in dispositivos
+    )
+    return ativos
+
+
 def _garantir_acesso_inventario(
     db: Session, inventario_id: int, current_user: UtilizadorDB
 ) -> InventarioDB:
@@ -233,6 +307,28 @@ def listar_inventarios(
     ids = [i.id for i in inventarios]
     cmap, dmap = _contagens_por_inventario_ids(db, ids)
     return [_inventario_com_contagens(inv, cmap, dmap) for inv in inventarios]
+
+
+@router.get("/ativos-por-inventario", response_model=list[InventarioAtivosGrupoResponse])
+def listar_ativos_agrupados_por_inventario(
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    # Mesmos inventários que GET /inventarios/; em cada um, PCs registados + descobertos pelo scan.
+    inventarios = (
+        _inventarios_visiveis_query(db, current_user)
+        .order_by(InventarioDB.nome.asc(), InventarioDB.id.asc())
+        .all()
+    )
+    return [
+        InventarioAtivosGrupoResponse(
+            inventario_id=inv.id,
+            inventario_nome=inv.nome,
+            tipo_inventario=TipoInventarioEnum(inv.tipo_inventario),
+            ativos=_ativos_unificados_do_inventario(db, inv.id, current_user),
+        )
+        for inv in inventarios
+    ]
 
 
 @router.get("/{inventario_id}", response_model=InventarioComContagensResponse)
@@ -298,68 +394,7 @@ def listar_computadores_do_inventario(
 ):
     # Devolve lista unificada de computadores manuais e dispositivos do scan.
     _garantir_acesso_inventario(db, inventario_id, current_user)
-
-    computadores = (
-        db.query(ComputadorDB)
-        .options(
-            joinedload(ComputadorDB.localizacao),
-            joinedload(ComputadorDB.utilizador_responsavel),
-        )
-        .filter(ComputadorDB.inventario_id == inventario_id)
-        .order_by(ComputadorDB.id)
-        .all()
-    )
-    if not is_admin_user(current_user):
-        computadores = [
-            c for c in computadores if c.utilizador_responsavel_id == current_user.id
-        ]
-
-    # Dispositivos do scan contam como ativos no inventário (visíveis a quem tem acesso ao inventário).
-    dispositivos = (
-        db.query(DispositivoDescobertoDB)
-        .filter(DispositivoDescobertoDB.inventario_id == inventario_id)
-        .order_by(DispositivoDescobertoDB.id)
-        .all()
-    )
-
-    ativos: list[AtivoInventarioItem] = []
-    ativos.extend(
-        AtivoInventarioItem(
-            tipo="computador",
-            id=c.id,
-            inventario_id=c.inventario_id,
-            nome=c.nome,
-            ip=None,
-            hostname=None,
-            numero_serie=c.numero_serie,
-            estado=c.estado,
-            marca=c.marca,
-            modelo=c.modelo,
-            localizacao_nome=c.localizacao_nome,
-            utilizador_responsavel_nome=c.utilizador_responsavel_nome,
-            ultima_vez_ativo_em=None,
-        )
-        for c in computadores
-    )
-    ativos.extend(
-        AtivoInventarioItem(
-            tipo="dispositivo_descoberto",
-            id=d.id,
-            inventario_id=d.inventario_id,
-            nome=None,
-            hostname=d.hostname,
-            ip=d.ip,
-            numero_serie=d.numero_serie,
-            estado=d.estado,
-            marca=d.marca,
-            modelo=d.modelo,
-            localizacao_nome=None,
-            utilizador_responsavel_nome=None,
-            ultima_vez_ativo_em=d.ultima_vez_ativo_em,
-        )
-        for d in dispositivos
-    )
-    return ativos
+    return _ativos_unificados_do_inventario(db, inventario_id, current_user)
 
 
 @router.get(
@@ -653,6 +688,80 @@ def obter_dispositivo_descoberto(
 ):
     _garantir_acesso_inventario(db, inventario_id, current_user)
     return obter_dispositivo_descoberto_ou_404(db, inventario_id, dispositivo_id)
+
+
+@router.patch(
+    "/{inventario_id}/dispositivos-descobertos/{dispositivo_id}",
+    response_model=DispositivoDescobertoResponse,
+    dependencies=[Depends(require_admin)],
+)
+def atualizar_dispositivo_descoberto(
+    inventario_id: int,
+    dispositivo_id: int,
+    payload: DispositivoDescobertoUpdate,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    _garantir_acesso_inventario(db, inventario_id, current_user)
+    dispositivo = obter_dispositivo_descoberto_ou_404(db, inventario_id, dispositivo_id)
+    dados = payload.model_dump(exclude_unset=True)
+    if not dados:
+        return DispositivoDescobertoResponse.model_validate(dispositivo)
+
+    novo_ip = dados.get("ip")
+    if novo_ip is not None and novo_ip != dispositivo.ip:
+        conflito = (
+            db.query(DispositivoDescobertoDB)
+            .filter(
+                DispositivoDescobertoDB.inventario_id == inventario_id,
+                DispositivoDescobertoDB.ip == novo_ip,
+                DispositivoDescobertoDB.id != dispositivo_id,
+            )
+            .first()
+        )
+        if conflito is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="Ja existe outro dispositivo com este IP neste inventario",
+            )
+
+    for campo, valor in dados.items():
+        setattr(dispositivo, campo, valor)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Nao foi possivel atualizar o dispositivo",
+        ) from None
+    db.refresh(dispositivo)
+    return DispositivoDescobertoResponse.model_validate(dispositivo)
+
+
+@router.delete(
+    "/{inventario_id}/dispositivos-descobertos/{dispositivo_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
+def apagar_dispositivo_descoberto(
+    inventario_id: int,
+    dispositivo_id: int,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    _garantir_acesso_inventario(db, inventario_id, current_user)
+    dispositivo = obter_dispositivo_descoberto_ou_404(db, inventario_id, dispositivo_id)
+    db.delete(dispositivo)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Nao foi possivel apagar o dispositivo",
+        ) from None
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get(

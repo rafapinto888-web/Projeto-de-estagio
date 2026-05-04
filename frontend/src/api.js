@@ -54,6 +54,7 @@ export const api = {
 
   inventarios: {
     listar: (token) => request("/inventarios/", {}, token),
+    ativosPorInventario: (token) => request("/inventarios/ativos-por-inventario", {}, token),
     criar: (payload, token) => request("/inventarios", { method: "POST", body: JSON.stringify(payload) }, token),
     atualizar: (id, payload, token) =>
       request(`/inventarios/${id}`, { method: "PUT", body: JSON.stringify(payload) }, token),
@@ -65,6 +66,14 @@ export const api = {
       request(`/inventarios/${id}/computadores/pesquisar?termo=${encodeURIComponent(termo || "")}`, {}, token),
     logsDispositivos: (id, params, token) =>
       request(`/inventarios/${id}/logs/dispositivos-descobertos?${new URLSearchParams(params).toString()}`, {}, token),
+    atualizarDispositivo: (inventarioId, dispositivoId, payload, token) =>
+      request(
+        `/inventarios/${inventarioId}/dispositivos-descobertos/${dispositivoId}`,
+        { method: "PATCH", body: JSON.stringify(payload) },
+        token,
+      ),
+    apagarDispositivo: (inventarioId, dispositivoId, token) =>
+      request(`/inventarios/${inventarioId}/dispositivos-descobertos/${dispositivoId}`, { method: "DELETE" }, token),
   },
   computadores: {
     listar: (token) => request("/computadores/", {}, token),

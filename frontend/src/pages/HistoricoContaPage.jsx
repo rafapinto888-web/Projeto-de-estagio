@@ -22,6 +22,7 @@ function formatarData(iso) {
 export default function HistoricoContaPage({ token, active, user }) {
   const [itens, setItens] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState(null);
 
   useEffect(() => {
     if (!token || !active) return undefined;
@@ -29,11 +30,15 @@ export default function HistoricoContaPage({ token, active, user }) {
 
     (async () => {
       setLoading(true);
+      setErro(null);
       try {
-        const data = await api.auth.historicoMeu(token);
+        const data = await api.historicoMeu(token);
         if (!cancel) setItens(Array.isArray(data?.itens) ? data.itens : []);
-      } catch {
-        if (!cancel) setItens([]);
+      } catch (e) {
+        if (!cancel) {
+          setItens([]);
+          setErro(e?.message || "Não foi possível carregar o histórico.");
+        }
       } finally {
         if (!cancel) setLoading(false);
       }
@@ -42,7 +47,21 @@ export default function HistoricoContaPage({ token, active, user }) {
     return () => {
       cancel = true;
     };
-  }, [token, active]);
+  }, [token, active, user?.id]);
+
+  function recarregar() {
+    if (!token || !active) return;
+    setLoading(true);
+    setErro(null);
+    api
+      .historicoMeu(token)
+      .then((data) => setItens(Array.isArray(data?.itens) ? data.itens : []))
+      .catch((e) => {
+        setItens([]);
+        setErro(e?.message || "Não foi possível carregar o histórico.");
+      })
+      .finally(() => setLoading(false));
+  }
 
   return (
     <SectionCard
@@ -52,9 +71,19 @@ export default function HistoricoContaPage({ token, active, user }) {
           ? `Todas as atividades registadas para ${user.nome || user.username}. Cada sessão só vê o seu próprio histórico.`
           : "Atividades registadas na tua sessão."
       }
+      rightAction={
+        <button type="button" className="ghost ghost-sm" onClick={recarregar} disabled={loading || !token}>
+          Atualizar
+        </button>
+      }
     >
       {loading ? (
         <div className="loading-box">A carregar histórico…</div>
+      ) : erro ? (
+        <EmptyState
+          title="Erro ao carregar o histórico"
+          description={erro}
+        />
       ) : itens.length === 0 ? (
         <EmptyState
           title="Sem eventos registados"

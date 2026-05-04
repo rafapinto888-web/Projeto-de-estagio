@@ -41,6 +41,29 @@ function emptyComputerForm() {
     inventario_id: "",
     localizacao_id: "",
     utilizador_responsavel_id: "",
+    hostname: "",
+    endereco_ip: "",
+    mac_address: "",
+    sistema_operativo: "",
+  };
+}
+
+function payloadComputadorRegisto(form) {
+  return {
+    nome: form.nome.trim(),
+    marca: form.marca.trim(),
+    modelo: form.modelo.trim(),
+    numero_serie: form.numero_serie.trim(),
+    estado: (form.estado && form.estado.trim()) || "ativo",
+    inventario_id: Number(form.inventario_id),
+    localizacao_id: form.localizacao_id ? Number(form.localizacao_id) : null,
+    utilizador_responsavel_id: form.utilizador_responsavel_id
+      ? Number(form.utilizador_responsavel_id)
+      : null,
+    hostname: form.hostname?.trim() || null,
+    endereco_ip: form.endereco_ip?.trim() || null,
+    mac_address: form.mac_address?.trim() || null,
+    sistema_operativo: form.sistema_operativo?.trim() || null,
   };
 }
 
@@ -62,6 +85,7 @@ export default function App() {
 
   const [inventarios, setInventarios] = useState([]);
   const [computadores, setComputadores] = useState([]);
+  const [ativosPorInventario, setAtivosPorInventario] = useState([]);
   const [utilizadores, setUtilizadores] = useState([]);
   const [perfis, setPerfis] = useState([]);
   const [localizacoes, setLocalizacoes] = useState([]);
@@ -109,16 +133,24 @@ export default function App() {
     if (!tk) return;
     setDataLoading(true);
     try {
-      const [inventariosData, computadoresData, utilizadoresData, perfisData, localizacoesData] =
-        await Promise.all([
-          api.inventarios.listar(tk),
-          api.computadores.listar(tk),
-          api.utilizadores.listar(tk),
-          api.perfis.listar(tk),
-          api.localizacoes.listar(tk),
-        ]);
+      const [
+        inventariosData,
+        computadoresData,
+        utilizadoresData,
+        perfisData,
+        localizacoesData,
+        ativosGruposData,
+      ] = await Promise.all([
+        api.inventarios.listar(tk),
+        api.computadores.listar(tk),
+        api.utilizadores.listar(tk),
+        api.perfis.listar(tk),
+        api.localizacoes.listar(tk),
+        api.inventarios.ativosPorInventario(tk),
+      ]);
       setInventarios(inventariosData || []);
       setComputadores(computadoresData || []);
+      setAtivosPorInventario(ativosGruposData || []);
       setUtilizadores(utilizadoresData || []);
       setPerfis(perfisData || []);
       setLocalizacoes(localizacoesData || []);
@@ -177,6 +209,7 @@ export default function App() {
     setUser(null);
     setInventarios([]);
     setComputadores([]);
+    setAtivosPorInventario([]);
     setUtilizadores([]);
     setPerfis([]);
     setLocalizacoes([]);
@@ -196,7 +229,7 @@ export default function App() {
       const tk = token || localStorage.getItem("access_token");
       if (tk && successMessage) {
         try {
-          await api.auth.registarHistorico(
+          await api.registarHistorico(
             {
               acao: "painel",
               descricao: String(successMessage).slice(0, 3900),
@@ -218,19 +251,34 @@ export default function App() {
 
   useEffect(() => {
     async function bootstrap() {
-      if (!token) return;
+      if (!token) {
+        setUser(null);
+        return;
+      }
       try {
         const me = await api.me(token);
         setUser(me);
         await loadAllData(token);
+        try {
+          await api.registarHistorico(
+            {
+              acao: "painel.acesso",
+              descricao: "Sessão ativa no painel (carregamento da aplicação).",
+            },
+            token,
+          );
+        } catch {
+          /* auditoria opcional; não bloquear o painel */
+        }
       } catch {
         localStorage.removeItem("access_token");
         setToken("");
+        setUser(null);
       }
     }
     bootstrap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (token && selectedInventarioId) {
@@ -438,40 +486,14 @@ export default function App() {
               utilizadores={utilizadores}
               onCreate={() =>
                 withAction(
-                  () =>
-                    api.computadores.criar(
-                      {
-                        ...computadorForm,
-                        inventario_id: Number(computadorForm.inventario_id),
-                        localizacao_id: computadorForm.localizacao_id
-                          ? Number(computadorForm.localizacao_id)
-                          : null,
-                        utilizador_responsavel_id: computadorForm.utilizador_responsavel_id
-                          ? Number(computadorForm.utilizador_responsavel_id)
-                          : null,
-                      },
-                      token,
-                    ),
+                  () => api.computadores.criar(payloadComputadorRegisto(computadorForm), token),
                   "Computador criado",
                 )
               }
               onUpdate={() =>
                 withAction(
                   () =>
-                    api.computadores.atualizar(
-                      computadorForm.id,
-                      {
-                        ...computadorForm,
-                        inventario_id: Number(computadorForm.inventario_id),
-                        localizacao_id: computadorForm.localizacao_id
-                          ? Number(computadorForm.localizacao_id)
-                          : null,
-                        utilizador_responsavel_id: computadorForm.utilizador_responsavel_id
-                          ? Number(computadorForm.utilizador_responsavel_id)
-                          : null,
-                      },
-                      token,
-                    ),
+                    api.computadores.atualizar(computadorForm.id, payloadComputadorRegisto(computadorForm), token),
                   "Computador atualizado",
                 )
               }
@@ -481,11 +503,15 @@ export default function App() {
                     api.computadores.patch(
                       computadorForm.id,
                       {
-                        nome: computadorForm.nome || undefined,
-                        marca: computadorForm.marca || undefined,
-                        modelo: computadorForm.modelo || undefined,
-                        numero_serie: computadorForm.numero_serie || undefined,
-                        estado: computadorForm.estado || undefined,
+                        nome: computadorForm.nome?.trim() || undefined,
+                        marca: computadorForm.marca?.trim() || undefined,
+                        modelo: computadorForm.modelo?.trim() || undefined,
+                        numero_serie: computadorForm.numero_serie?.trim() || undefined,
+                        estado: computadorForm.estado?.trim() || undefined,
+                        hostname: computadorForm.hostname?.trim() || undefined,
+                        endereco_ip: computadorForm.endereco_ip?.trim() || undefined,
+                        mac_address: computadorForm.mac_address?.trim() || undefined,
+                        sistema_operativo: computadorForm.sistema_operativo?.trim() || undefined,
                       },
                       token,
                     ),
@@ -498,6 +524,7 @@ export default function App() {
               }}
               onCancel={() => setComputadorForm(emptyComputerForm())}
               computadores={computadores}
+              ativosPorInventario={ativosPorInventario}
               loading={loading}
               onPick={(pc) =>
                 setComputadorForm({
@@ -508,8 +535,12 @@ export default function App() {
                   numero_serie: pc.numero_serie || "",
                   estado: pc.estado || "ativo",
                   inventario_id: String(pc.inventario_id || ""),
-                  localizacao_id: String(pc.localizacao_id || ""),
-                  utilizador_responsavel_id: String(pc.utilizador_responsavel_id || ""),
+                  localizacao_id: String(pc.localizacao_id ?? ""),
+                  utilizador_responsavel_id: String(pc.utilizador_responsavel_id ?? ""),
+                  hostname: pc.hostname ?? "",
+                  endereco_ip: pc.endereco_ip ?? "",
+                  mac_address: pc.mac_address ?? "",
+                  sistema_operativo: pc.sistema_operativo ?? "",
                 })
               }
               onDeleteRow={(pc) =>
@@ -517,6 +548,8 @@ export default function App() {
                   ? withAction(() => api.computadores.apagar(pc.id, token), "Computador apagado")
                   : null
               }
+              token={token}
+              withPanelAction={withAction}
             />
           )}
 

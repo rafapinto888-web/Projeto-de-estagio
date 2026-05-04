@@ -76,20 +76,22 @@ export default function AtivosPage({
       {scanInfo ? <p className="section-subtitle">{scanInfo}</p> : null}
 
       <DataTable
-        columns={["Tipo", "Nome/Hostname", "IP", "Série", "Estado", "Marca", "Modelo"]}
+        columns={["Tipo", "Nome / host", "IP", "MAC", "Série", "Marca", "Modelo", "SO", "Estado"]}
         rows={ativos}
         loading={loading}
         emptyTitle="Sem ativos para mostrar"
         emptyDescription="Seleciona um inventário e usa «Pesquisar na lista» ou recarrega a lista completa no modal."
         renderRow={(a, idx) => (
           <tr key={`${a.id || a.ip || idx}`}>
-            <td>{a.tipo || (a.numero_serie ? "computador" : "descoberto")}</td>
-            <td>{a.nome || a.hostname || "-"}</td>
-            <td>{a.ip || "-"}</td>
-            <td>{a.numero_serie || "-"}</td>
-            <td>{a.estado || "-"}</td>
-            <td>{a.marca || "-"}</td>
-            <td>{a.modelo || "-"}</td>
+            <td>{a.tipo === "computador" ? "Registo" : a.tipo === "dispositivo_descoberto" ? "Scan" : (a.numero_serie ? "Registo" : "Scan")}</td>
+            <td>{a.nome || a.hostname || "—"}</td>
+            <td className="cell-mono">{a.ip || "—"}</td>
+            <td className="cell-mono">{a.mac_address || "—"}</td>
+            <td className="cell-mono">{a.numero_serie || "—"}</td>
+            <td>{a.marca || "—"}</td>
+            <td>{a.modelo || "—"}</td>
+            <td>{a.sistema_operativo || "—"}</td>
+            <td>{a.estado || "—"}</td>
           </tr>
         )}
       />

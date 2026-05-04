@@ -29,6 +29,11 @@ class ComputadorDB(Base):
     utilizador_responsavel_id: Mapped[int | None] = mapped_column(
         ForeignKey("utilizadores.id"), nullable=True, index=True
     )
+    # Identificação e rede (opcional no registo manual).
+    hostname: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    endereco_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    mac_address: Mapped[str | None] = mapped_column(String(17), nullable=True)
+    sistema_operativo: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     inventario: Mapped["InventarioDB"] = relationship(back_populates="computadores")
     localizacao: Mapped["LocalizacaoDB | None"] = relationship(
