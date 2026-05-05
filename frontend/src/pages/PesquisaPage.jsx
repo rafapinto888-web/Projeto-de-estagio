@@ -17,8 +17,6 @@ const CAMPOS_PRIORITARIOS = [
   "email",
 ];
 
-const EXEMPLOS = ["10.65.0.49", "DESKTOP", "biometrics", "teste", "inventário"];
-
 function tituloSecao(chave) {
   return String(chave || "")
     .replaceAll("_", " ")
@@ -78,18 +76,25 @@ function previewCampos(item) {
 export default function PesquisaPage({ globalTermo, setGlobalTermo, onPesquisar, globalOutput, loading }) {
   const termoLimpo = globalTermo.trim();
   const [mostrarRaw, setMostrarRaw] = useState(false);
+  const [filtroSecao, setFiltroSecao] = useState("todas");
   const parsedOutput = useMemo(() => parseOutput(globalOutput), [globalOutput]);
   const secoes = useMemo(() => toSections(parsedOutput), [parsedOutput]);
+  const secoesFiltradas = useMemo(() => {
+    if (filtroSecao === "todas") return secoes;
+    return secoes.filter(({ key }) => key === filtroSecao);
+  }, [secoes, filtroSecao]);
   const resumo = useMemo(() => resumoResultados(parsedOutput, globalOutput), [parsedOutput, globalOutput]);
+  const resultadosFlat = useMemo(() => {
+    return secoesFiltradas.flatMap(({ key, value }) => {
+      const lista = Array.isArray(value) ? value : [value];
+      return lista.map((item, idx) => ({ key: `${key}-${idx}`, secao: key, item }));
+    });
+  }, [secoesFiltradas]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!termoLimpo || loading) return;
     await onPesquisar?.();
-  }
-
-  function aplicarExemplo(ex) {
-    setGlobalTermo(ex);
   }
 
   const semResultado =
@@ -127,36 +132,36 @@ export default function PesquisaPage({ globalTermo, setGlobalTermo, onPesquisar,
             </button>
           </div>
         </form>
-
-        <div className="pesquisa-global-suggest">
-          <span className="pesquisa-global-suggest-label">Exemplos rápidos:</span>
-          <div className="pesquisa-global-suggest-chips">
-            {EXEMPLOS.map((ex) => (
-              <button
-                key={ex}
-                type="button"
-                className="ghost ghost-sm pesquisa-global-chip"
-                onClick={() => aplicarExemplo(ex)}
-                disabled={loading}
-              >
-                {ex}
-              </button>
-            ))}
-          </div>
+        <div className="pesquisa-global-toolbar">
+          <label className="pesquisa-global-filter">
+            Tipo
+            <select
+              value={filtroSecao}
+              onChange={(e) => setFiltroSecao(e.target.value)}
+              disabled={!secoes.length || loading}
+            >
+              <option value="todas">Todos os tipos</option>
+              {secoes.map(({ key }) => (
+                <option key={key} value={key}>
+                  {tituloSecao(key)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="ghost ghost-sm"
+            onClick={() => setMostrarRaw((v) => !v)}
+            disabled={!parsedOutput}
+          >
+            {mostrarRaw ? "Vista legível" : "Ver JSON bruto"}
+          </button>
         </div>
       </div>
 
       <div className="pesquisa-global-meta">
         <span className="pill badge-info">Resultado</span>
         <span>{resumo}</span>
-        <button
-          type="button"
-          className="ghost ghost-sm"
-          onClick={() => setMostrarRaw((v) => !v)}
-          disabled={!parsedOutput}
-        >
-          {mostrarRaw ? "Vista legível" : "Ver JSON bruto"}
-        </button>
       </div>
 
       {loading ? (
@@ -174,46 +179,43 @@ export default function PesquisaPage({ globalTermo, setGlobalTermo, onPesquisar,
       ) : !parsedOutput || mostrarRaw ? (
         <pre className="pesquisa-global-output">{globalOutput || "Sem dados para mostrar."}</pre>
       ) : (
-        <div className="pesquisa-global-sections">
-          {secoes.map(({ key, value }) => {
-            const lista = Array.isArray(value) ? value : [value];
-            const vazia = !value || (Array.isArray(value) && value.length === 0);
-            return (
-              <section key={key} className="pesquisa-global-card">
-                <header className="pesquisa-global-card-head">
-                  <h3>{tituloSecao(key)}</h3>
-                  <span className="pill badge-info">
-                    {Array.isArray(value) ? `${value.length} resultado(s)` : "1 resultado"}
-                  </span>
-                </header>
-                {vazia ? (
-                  <p className="pesquisa-global-empty">Sem resultados nesta secção.</p>
-                ) : (
-                  <ul className="pesquisa-global-list">
-                    {lista.map((item, idx) => {
-                      const campos = previewCampos(item);
-                      return (
-                        <li key={`${key}-${idx}`} className="pesquisa-global-item">
-                          {campos.length === 0 ? (
-                            <pre>{JSON.stringify(item, null, 2)}</pre>
-                          ) : (
-                            <div className="pesquisa-global-kv-grid">
-                              {campos.map(({ k, v }) => (
-                                <div key={`${key}-${idx}-${k}`} className="pesquisa-global-kv">
-                                  <dt>{tituloSecao(k)}</dt>
-                                  <dd>{valorHumano(v)}</dd>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </section>
-            );
-          })}
+        <div className="table-shell table-shell--responsive pesquisa-global-table-shell">
+          <table className="pesquisa-global-table">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Nome / descrição</th>
+                <th>Detalhes</th>
+                <th>Localização</th>
+                <th>Utilizador</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resultadosFlat.map((row) => {
+                const campos = previewCampos(row.item);
+                const nome =
+                  row.item?.nome || row.item?.hostname || row.item?.email || row.item?.descricao || "—";
+                const detalhe = campos
+                  .filter(({ k }) => !["nome", "hostname", "email", "descricao"].includes(k))
+                  .slice(0, 2)
+                  .map(({ k, v }) => `${tituloSecao(k)}: ${valorHumano(v)}`)
+                  .join(" · ");
+                return (
+                  <tr key={row.key}>
+                    <td>
+                      <span className="pill badge-info">{tituloSecao(row.secao)}</span>
+                    </td>
+                    <td>{nome}</td>
+                    <td>{detalhe || "—"}</td>
+                    <td>{valorHumano(row.item?.localizacao_nome || row.item?.localizacao)}</td>
+                    <td>{valorHumano(row.item?.utilizador_nome || row.item?.username || row.item?.email)}</td>
+                    <td>{valorHumano(row.item?.estado)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </SectionCard>

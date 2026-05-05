@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
 
 # Rotas CRUD dos perfis de utilizador.
 from fastapi import APIRouter, Depends, HTTPException, Response, status

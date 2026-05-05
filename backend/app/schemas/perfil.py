@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
 
 # Schemas de perfis de utilizador.
 from pydantic import BaseModel, ConfigDict, Field, computed_field

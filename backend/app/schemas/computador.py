@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
 
 # Schemas de criacao, atualizacao e resposta de computadores.
 from pydantic import BaseModel, ConfigDict

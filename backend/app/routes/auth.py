@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_
