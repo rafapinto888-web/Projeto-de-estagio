@@ -8,7 +8,6 @@ import {
   Chip,
   CircularProgress,
   Divider,
-  Grid,
   LinearProgress,
   List,
   ListItem,
@@ -88,7 +87,6 @@ export default function DashboardPage({
   );
   const totalScan = (inventarios || []).reduce((acc, inv) => acc + (inv.total_dispositivos_scan ?? 0), 0);
   const totalAtivos = (computadores || []).length + totalScan;
-  const totalInventarios = inventarios.length;
 
   const estadoContagens = useMemo(() => {
     const map = new Map();
@@ -185,6 +183,16 @@ export default function DashboardPage({
     p: { xs: 1.5, md: 2 },
     height: "100%",
   };
+  const painelMedioSx = {
+    ...painelSx,
+    minHeight: { xs: 260, lg: 345 },
+  };
+  const listaScrollSx = {
+    maxHeight: { xs: 225, lg: 265 },
+    overflowY: "auto",
+    pr: 0.5,
+  };
+  void localizacoes;
 
   return (
     <SectionCard
@@ -202,17 +210,28 @@ export default function DashboardPage({
       }
     >
       <Stack spacing={2.5}>
-        <Grid container spacing={2}>
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, minmax(0, 1fr))",
+              md: "repeat(3, minmax(0, 1fr))",
+              xl: "repeat(6, minmax(0, 1fr))",
+            },
+          }}
+        >
           {cardsResumo.map((c) => (
-            <Grid item xs={12} sm={6} md={4} lg={4} xl={2} key={c.key}>
+            <Box key={c.key}>
               <Paper
                 variant="outlined"
                 sx={{
                   p: { xs: 1.5, md: 2 },
-                  minHeight: { xs: 102, md: 112 },
+                  minHeight: { xs: 106, md: 118 },
                 }}
               >
-                <Stack spacing={1}>
+                <Stack spacing={1} sx={{ height: "100%", justifyContent: "space-between" }}>
                   <Stack direction="row" spacing={1.2} alignItems="center" justifyContent="space-between">
                     <Stack direction="row" spacing={1.1} alignItems="center">
                       <Avatar
@@ -239,13 +258,22 @@ export default function DashboardPage({
                   </Box>
                 </Stack>
               </Paper>
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
 
-        <Grid container spacing={2}>
-          <Grid item xs={12} lg={4}>
-            <Paper variant="outlined" sx={painelSx}>
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            gridTemplateColumns: {
+              xs: "1fr",
+              lg: "repeat(3, minmax(0, 1fr))",
+            },
+          }}
+        >
+          <Box>
+            <Paper variant="outlined" sx={painelMedioSx}>
               <Typography fontWeight={800} fontSize={17} mb={1.25}>
                 Ativos por estado
               </Typography>
@@ -315,10 +343,10 @@ export default function DashboardPage({
                 </Stack>
               </Stack>
             </Paper>
-          </Grid>
+          </Box>
 
-          <Grid item xs={12} md={6} lg={4}>
-            <Paper variant="outlined" sx={painelSx}>
+          <Box>
+            <Paper variant="outlined" sx={painelMedioSx}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.25}>
                 <Typography fontWeight={800} fontSize={17}>
                   Inventários mais recentes
@@ -338,24 +366,26 @@ export default function DashboardPage({
                   Não existem inventários para mostrar.
                 </Typography>
               ) : (
-                <List disablePadding>
-                  {recentInventarios.map((inv) => (
-                    <ListItem key={inv.id} divider disableGutters>
-                      <ListItemText
-                        primary={inv.nome}
-                        secondary={`${tipoLabel(inv)} · ${(inv.total_computadores ?? 0) + (inv.total_dispositivos_scan ?? 0)} ativos`}
-                        primaryTypographyProps={{ fontSize: 14, fontWeight: 700 }}
-                        secondaryTypographyProps={{ fontSize: 12 }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
+                <Box sx={listaScrollSx}>
+                  <List disablePadding>
+                    {recentInventarios.map((inv) => (
+                      <ListItem key={inv.id} divider disableGutters>
+                        <ListItemText
+                          primary={inv.nome}
+                          secondary={`${tipoLabel(inv)} · ${(inv.total_computadores ?? 0) + (inv.total_dispositivos_scan ?? 0)} ativos`}
+                          primaryTypographyProps={{ fontSize: 14, fontWeight: 700 }}
+                          secondaryTypographyProps={{ fontSize: 12 }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
               )}
             </Paper>
-          </Grid>
+          </Box>
 
-          <Grid item xs={12} md={6} lg={4}>
-            <Paper variant="outlined" sx={painelSx}>
+          <Box>
+            <Paper variant="outlined" sx={painelMedioSx}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.25}>
                 <Typography fontWeight={800} fontSize={17}>
                   Atividade recente (Scan)
@@ -375,31 +405,42 @@ export default function DashboardPage({
                   Sem atividade recente.
                 </Typography>
               ) : (
-                <List disablePadding>
-                  {atividadeRede.map((ev) => (
-                    <ListItem
-                      key={ev.id}
-                      disableGutters
-                      divider
-                      secondaryAction={<Typography variant="caption">{ev.hora}</Typography>}
-                    >
-                      <ListItemText
-                        primary={ev.titulo}
-                        secondary={ev.detalhe}
-                        primaryTypographyProps={{ fontSize: 14, fontWeight: 700 }}
-                        secondaryTypographyProps={{ fontSize: 12 }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
+                <Box sx={listaScrollSx}>
+                  <List disablePadding>
+                    {atividadeRede.map((ev) => (
+                      <ListItem
+                        key={ev.id}
+                        disableGutters
+                        divider
+                        secondaryAction={<Typography variant="caption">{ev.hora}</Typography>}
+                      >
+                        <ListItemText
+                          primary={ev.titulo}
+                          secondary={ev.detalhe}
+                          primaryTypographyProps={{ fontSize: 14, fontWeight: 700 }}
+                          secondaryTypographyProps={{ fontSize: 12 }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
               )}
             </Paper>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
 
-        <Grid container spacing={2}>
-          <Grid item xs={12} lg={8}>
-            <Paper variant="outlined" sx={painelSx}>
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            gridTemplateColumns: {
+              xs: "1fr",
+              lg: "minmax(0, 2fr) minmax(0, 1fr)",
+            },
+          }}
+        >
+          <Box>
+            <Paper variant="outlined" sx={{ ...painelSx, minHeight: { xs: 250, lg: 315 } }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.25}>
                 <Typography fontWeight={800} fontSize={17}>
                   Computadores recentes
@@ -435,49 +476,51 @@ export default function DashboardPage({
                 Ver todos os computadores
               </Button>
             </Paper>
-          </Grid>
-          <Grid item xs={12} lg={4}>
-            <Paper variant="outlined" sx={painelSx}>
+          </Box>
+          <Box>
+            <Paper variant="outlined" sx={{ ...painelSx, minHeight: { xs: 250, lg: 315 } }}>
               <Typography fontWeight={800} fontSize={17} mb={1.25}>
                 Logs e alertas recentes
               </Typography>
               <Divider sx={{ mb: 1.25 }} />
-              <List disablePadding>
-                {atividadeHistorico.map((alerta, idx) => (
-                  <ListItem
-                    key={alerta.id}
-                    divider={idx < atividadeHistorico.length - 1}
-                    disableGutters
-                    secondaryAction={<Typography variant="caption">{alerta.hora}</Typography>}
-                  >
-                    <ListItemIcon sx={{ minWidth: 28 }}>
-                      <span
-                        className="material-symbols-outlined"
-                        style={{
-                          fontSize: 18,
-                          color: alerta.tone === "warning" ? "#f59e0b" : alerta.tone === "success" ? "#22c55e" : "#3b82f6",
-                        }}
-                      >
-                        {alerta.icon}
-                      </span>
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={alerta.titulo}
-                      secondary={alerta.detalhe}
-                      primaryTypographyProps={{ fontSize: 13, fontWeight: 700 }}
-                      secondaryTypographyProps={{ fontSize: 12 }}
-                    />
-                  </ListItem>
-                ))}
-              </List>
+              <Box sx={{ ...listaScrollSx, maxHeight: { xs: 210, lg: 235 } }}>
+                <List disablePadding>
+                  {atividadeHistorico.map((alerta, idx) => (
+                    <ListItem
+                      key={alerta.id}
+                      divider={idx < atividadeHistorico.length - 1}
+                      disableGutters
+                      secondaryAction={<Typography variant="caption">{alerta.hora}</Typography>}
+                    >
+                      <ListItemIcon sx={{ minWidth: 28 }}>
+                        <span
+                          className="material-symbols-outlined"
+                          style={{
+                            fontSize: 18,
+                            color: alerta.tone === "warning" ? "#f59e0b" : alerta.tone === "success" ? "#22c55e" : "#3b82f6",
+                          }}
+                        >
+                          {alerta.icon}
+                        </span>
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={alerta.titulo}
+                        secondary={alerta.detalhe}
+                        primaryTypographyProps={{ fontSize: 13, fontWeight: 700 }}
+                        secondaryTypographyProps={{ fontSize: 12 }}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
               <Button variant="text" size="small" sx={{ mt: 1 }} onClick={() => onNavigate("logs")}>
                 Ver todos os logs
               </Button>
             </Paper>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
 
-        <Paper variant="outlined" sx={painelSx}>
+        <Paper variant="outlined" sx={{ ...painelSx, minHeight: { xs: 230, lg: 260 } }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.25}>
             <Typography fontWeight={800} fontSize={17}>
               Utilizadores recentes
@@ -487,23 +530,25 @@ export default function DashboardPage({
             </Button>
           </Stack>
           <Divider sx={{ mb: 1 }} />
-          <List disablePadding>
-            {latestUsers.map((u) => (
-              <ListItem key={u.id} divider disableGutters>
-                <ListItemIcon sx={{ minWidth: 28 }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                    person
-                  </span>
-                </ListItemIcon>
-                <ListItemText
-                  primary={u.nome || u.username}
-                  secondary={u.email || u.username || "Sem email"}
-                  primaryTypographyProps={{ fontSize: 14, fontWeight: 700 }}
-                  secondaryTypographyProps={{ fontSize: 12 }}
-                />
-              </ListItem>
-            ))}
-          </List>
+          <Box sx={{ ...listaScrollSx, maxHeight: { xs: 165, lg: 175 } }}>
+            <List disablePadding>
+              {latestUsers.map((u) => (
+                <ListItem key={u.id} divider disableGutters>
+                  <ListItemIcon sx={{ minWidth: 28 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                      person
+                    </span>
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={u.nome || u.username}
+                    secondary={u.email || u.username || "Sem email"}
+                    primaryTypographyProps={{ fontSize: 14, fontWeight: 700 }}
+                    secondaryTypographyProps={{ fontSize: 12 }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Box>
         </Paper>
       </Stack>
     </SectionCard>
