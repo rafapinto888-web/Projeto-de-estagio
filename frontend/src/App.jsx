@@ -105,7 +105,7 @@ export default function App() {
   const [ativoPesquisa, setAtivoPesquisa] = useState("");
 
   const [globalTermo, setGlobalTermo] = useState("");
-  const [globalOutput, setGlobalOutput] = useState("Escreve um termo para pesquisar.");
+  const [globalOutput, setGlobalOutput] = useState("");
   const [logsOutput, setLogsOutput] = useState("Seleciona filtros para consultar logs.");
 
   const [logComputadorParams, setLogComputadorParams] = useState({
@@ -714,7 +714,7 @@ export default function App() {
                 }
               }}
               globalOutput={globalOutput}
-              loading={loading}
+              loading={actionLoading}
             />
           )}
 
