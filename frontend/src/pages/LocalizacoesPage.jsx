@@ -57,7 +57,7 @@ export default function LocalizacoesPage({
       subtitle="Salas, racks e outros pontos físicos. Cria ou edita no editor."
       rightAction={
         isAdmin ? (
-          <Button type="button" onClick={openCreate}>
+          <Button type="button" variant="outlined" onClick={openCreate}>
             Nova localização
           </Button>
         ) : null

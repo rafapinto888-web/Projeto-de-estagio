@@ -331,10 +331,18 @@ export default function App() {
   }
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default", p: 1.5, gap: 1.5 }}>
+    <Box
+      sx={{
+        display: "flex",
+        minHeight: "100vh",
+        bgcolor: "background.default",
+        p: { xs: 1, md: 1.5 },
+        gap: { xs: 1, md: 1.5 },
+      }}
+    >
       <SidebarNav tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
 
-      <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 0.5 }}>
         <Topbar
           user={user}
           isAdmin={isAdmin}
@@ -347,7 +355,7 @@ export default function App() {
           }}
         />
 
-        <main className="content" style={{ marginTop: 0 }}>
+        <main className="content" style={{ marginTop: 0, width: "100%" }}>
           <StatusAlert type={status.type} message={status.message} />
 
           {activeTab === "dashboard" && (

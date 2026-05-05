@@ -3573,3 +3573,50 @@ th {
     align-items: flex-start;
   }
 }
+
+/* Upgrade visual global (stack atual, sem alterar lógica) */
+.content {
+  max-width: 1520px;
+  margin: 0 auto;
+}
+
+.section-head-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.section-head-actions > * {
+  margin: 0 !important;
+}
+
+.loading-box,
+.logs-output {
+  border-radius: 12px;
+  border: 1px solid #dbe5f2;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.loading-box {
+  padding: 14px 16px;
+  color: #334155;
+  font-size: 14px;
+}
+
+.logs-output {
+  margin: 0;
+  padding: 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #0f172a;
+  max-height: 520px;
+  overflow: auto;
+}
+
+.activity-timeline {
+  border: 1px solid #dbe5f2;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 6px;
+}

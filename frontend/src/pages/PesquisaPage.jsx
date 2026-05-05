@@ -305,6 +305,7 @@ export default function PesquisaPage({
   }, [rowsFiltradas]);
 
   const semResultado = !loading && rowsBase.length === 0;
+  const totalResultados = rowsOrdenadas.length;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -314,10 +315,27 @@ export default function PesquisaPage({
   }
 
   return (
-    <SectionCard title="Pesquisa Global" subtitle="Encontra rapidamente ativos, inventários e utilizadores em todo o sistema.">
-      <Stack spacing={1.5}>
+    <SectionCard
+      title="Pesquisa Global"
+      subtitle="Encontra rapidamente ativos, inventários e utilizadores em todo o sistema."
+      rightAction={
+        <Chip
+          size="small"
+          color="primary"
+          variant="outlined"
+          label={`${totalResultados} resultado(s)`}
+          sx={{ bgcolor: "#f8fbff" }}
+        />
+      }
+    >
+      <Stack spacing={1.75}>
         <Stack direction={{ xs: "column", lg: "row" }} spacing={1.25}>
-          <Paper component="form" onSubmit={handleSubmit} variant="outlined" sx={{ flex: 1, p: 1 }}>
+          <Paper
+            component="form"
+            onSubmit={handleSubmit}
+            variant="outlined"
+            sx={{ flex: 1, p: 1.1, bgcolor: "#ffffff", borderColor: "#dbe5f2" }}
+          >
             <Stack direction="row" spacing={1} alignItems="center">
               <TextField
                 fullWidth
@@ -344,7 +362,10 @@ export default function PesquisaPage({
             </Stack>
           </Paper>
 
-          <Paper variant="outlined" sx={{ p: 1.25, minWidth: { lg: 320 } }}>
+          <Paper
+            variant="outlined"
+            sx={{ p: 1.25, minWidth: { lg: 320 }, bgcolor: "#f8fbff", borderColor: "#dbe5f2" }}
+          >
             <Stack direction="row" spacing={1}>
               <span className="material-symbols-outlined" style={{ fontSize: 18, color: "#2563eb", marginTop: 2 }}>
                 tips_and_updates
@@ -361,7 +382,7 @@ export default function PesquisaPage({
           </Paper>
         </Stack>
 
-        <Paper variant="outlined" sx={{ p: 1.25 }}>
+        <Paper variant="outlined" sx={{ p: 1.25, bgcolor: "#fcfdff", borderColor: "#dbe5f2" }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "flex-end" }}>
             <FormControl size="small" sx={{ minWidth: 160, flex: 1 }}>
               <Typography fontSize={11} color="text.secondary" mb={0.4}>
@@ -452,12 +473,12 @@ export default function PesquisaPage({
             <Box
               sx={{
                 display: "grid",
-                gap: 1,
+                gap: 1.2,
                 gridTemplateColumns: { xs: "1fr", sm: "repeat(2,minmax(0,1fr))", lg: "repeat(4,minmax(0,1fr))" },
               }}
             >
               {cardsResumo.map((c) => (
-                <Card key={c.secao} variant="outlined" sx={{ p: 1.25 }}>
+                <Card key={c.secao} variant="outlined" sx={{ p: 1.25, borderColor: "#dbe5f2", bgcolor: "#ffffff" }}>
                   <Stack direction="row" spacing={1.1}>
                     <span className="material-symbols-outlined" style={{ color: "#2563eb", fontSize: 18 }}>
                       {secaoVisual(c.secao).icon}
@@ -501,7 +522,7 @@ export default function PesquisaPage({
               <pre className="pesq-ref-raw">{globalOutput || "Sem dados para mostrar."}</pre>
             ) : aba === "resultados" ? (
               <>
-                <Typography fontSize={11} color="text.secondary">
+                <Typography fontSize={11} color="text.secondary" sx={{ px: 0.25 }}>
                   {rowsOrdenadas.length} resultado(s) encontrado(s)
                 </Typography>
                 <TableContainer component={Paper} variant="outlined">

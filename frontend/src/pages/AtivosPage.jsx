@@ -48,16 +48,16 @@ export default function AtivosPage({
       title="Scan"
       subtitle="Escolhe o inventário para ver ativos. Pesquisa na lista ou (admin) executa descoberta na rede a partir dos modais."
       rightAction={
-        <div className="section-head-actions">
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           <Button type="button" onClick={() => setModal("pesquisa")}>
             Pesquisar na lista
           </Button>
           {isAdmin ? (
-            <Button type="button" onClick={() => setModal("scan")}>
+            <Button type="button" variant="outlined" onClick={() => setModal("scan")}>
               Scan de rede
             </Button>
           ) : null}
-        </div>
+        </Stack>
       }
     >
       <Stack spacing={1.1}>
@@ -78,7 +78,7 @@ export default function AtivosPage({
         </TextField>
 
         {scanInfo ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ px: 0.5 }}>
             {scanInfo}
           </Typography>
         ) : null}

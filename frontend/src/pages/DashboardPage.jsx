@@ -66,7 +66,7 @@ export default function DashboardPage({
   computadores,
   ativosPorInventario = [],
   utilizadores,
-  localizacoes,
+  localizacoes: _localizacoes,
   historicoConta = [],
   loading,
   onNavigate,
@@ -192,7 +192,6 @@ export default function DashboardPage({
     overflowY: "auto",
     pr: 0.5,
   };
-  void localizacoes;
 
   return (
     <SectionCard
@@ -229,6 +228,7 @@ export default function DashboardPage({
                 sx={{
                   p: { xs: 1.5, md: 2 },
                   minHeight: { xs: 106, md: 118 },
+                  background: "linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)",
                 }}
               >
                 <Stack spacing={1} sx={{ height: "100%", justifyContent: "space-between" }}>
@@ -253,7 +253,7 @@ export default function DashboardPage({
                       {c.value}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.2 }}>
-                      Atualizado com dados reais
+                      Registos reais
                     </Typography>
                   </Box>
                 </Stack>
@@ -342,6 +342,9 @@ export default function DashboardPage({
                   })}
                 </Stack>
               </Stack>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+                Inclui computadores registados e dispositivos encontrados em scan.
+              </Typography>
             </Paper>
           </Box>
 
@@ -388,7 +391,7 @@ export default function DashboardPage({
             <Paper variant="outlined" sx={painelMedioSx}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.25}>
                 <Typography fontWeight={800} fontSize={17}>
-                  Atividade recente (Scan)
+                  Atividade recente
                 </Typography>
                 <Button variant="text" size="small" onClick={abrirMeuHistorico}>
                   Histórico

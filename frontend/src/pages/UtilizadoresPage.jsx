@@ -58,7 +58,7 @@ export default function UtilizadoresPage({
       subtitle="Contas de acesso e respetivos perfis. Para criar ou alterar dados usa o editor."
       rightAction={
         isAdmin ? (
-          <Button type="button" onClick={openCreate}>
+          <Button type="button" variant="outlined" onClick={openCreate}>
             Novo utilizador
           </Button>
         ) : null

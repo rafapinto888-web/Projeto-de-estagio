@@ -1,5 +1,5 @@
 /* Navegação lateral com componentes MUI. */
-import { Box, Chip, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Stack, Typography } from "@mui/material";
+import { Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Stack, Typography } from "@mui/material";
 
 const NAV_ICONS = {
   dashboard: "dashboard",
@@ -27,31 +27,34 @@ export default function SidebarNav({ tabs, activeTab, onSelect }) {
     <Drawer
       variant="permanent"
       sx={{
-        width: 280,
+        width: { xs: 252, xl: 272 },
         flexShrink: 0,
         "& .MuiDrawer-paper": {
           position: "relative",
-          width: 280,
+          width: { xs: 252, xl: 272 },
           boxSizing: "border-box",
-          borderRight: "1px solid #e2e8f0",
-          p: 2,
-          backgroundColor: "#fff",
-          borderRadius: "12px",
+          border: "1px solid #dbe5f2",
+          p: 1.75,
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,251,255,0.96) 100%)",
+          borderRadius: "16px",
           height: "100%",
+          boxShadow: "0 10px 34px rgba(15,23,42,0.05)",
         },
       }}
     >
-      <Stack spacing={2} sx={{ height: "100%" }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 1 }}>
+      <Stack spacing={1.75} sx={{ height: "100%" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.4, px: 0.75, py: 0.5 }}>
           <Box
             sx={{
-              width: 38,
-              height: 38,
+              width: 40,
+              height: 40,
               borderRadius: 2,
               display: "grid",
               placeItems: "center",
               color: "primary.main",
               bgcolor: "#eaf2ff",
+              border: "1px solid #dbeafe",
             }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
@@ -59,7 +62,7 @@ export default function SidebarNav({ tabs, activeTab, onSelect }) {
             </span>
           </Box>
           <Box>
-            <Typography fontWeight={700} fontSize={14}>
+            <Typography fontWeight={800} fontSize={14}>
               Sistema de Inventário
             </Typography>
             <Typography variant="caption" color="text.secondary">
@@ -68,7 +71,7 @@ export default function SidebarNav({ tabs, activeTab, onSelect }) {
           </Box>
         </Box>
 
-        <List sx={{ py: 0 }}>
+        <List sx={{ py: 0, px: 0.5 }}>
           {tabs.map((tab) => (
             <ListItemButton
               key={tab.id}
@@ -76,32 +79,27 @@ export default function SidebarNav({ tabs, activeTab, onSelect }) {
               onClick={() => onSelect(tab.id)}
               sx={{
                 mb: 0.5,
-                borderRadius: 2,
+                borderRadius: 2.5,
+                minHeight: 40,
+                color: "#334155",
+                "&:hover": {
+                  bgcolor: "#f1f6ff",
+                },
                 "&.Mui-selected": {
-                  bgcolor: "#eff6ff",
+                  bgcolor: "#eaf1ff",
                   color: "primary.main",
+                  border: "1px solid #dbeafe",
+                },
+                "& .MuiListItemIcon-root": {
+                  minWidth: 34,
                 },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 34, color: "inherit" }}>{iconForTab(tab.id)}</ListItemIcon>
+              <ListItemIcon sx={{ color: "inherit" }}>{iconForTab(tab.id)}</ListItemIcon>
               <ListItemText primary={tab.label} primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }} />
             </ListItemButton>
           ))}
         </List>
-
-        <Box sx={{ mt: "auto", p: 1, border: "1px solid #e2e8f0", borderRadius: 2 }}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Chip size="small" color="success" label="Online" />
-            <Box>
-              <Typography fontSize={12} fontWeight={700}>
-                Sistema operacional
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Ligação estável ao servidor.
-              </Typography>
-            </Box>
-          </Stack>
-        </Box>
       </Stack>
     </Drawer>
   );

@@ -6,8 +6,10 @@ export default function EmptyState({ title, description }) {
     <Paper
       variant="outlined"
       sx={{
-        p: 2,
-        bgcolor: "#f8fafc",
+        p: 2.2,
+        bgcolor: "#f8fbff",
+        borderColor: "#dbe5f2",
+        borderStyle: "dashed",
       }}
     >
       <Stack direction="row" spacing={1.25} alignItems="flex-start">

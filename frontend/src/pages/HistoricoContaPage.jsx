@@ -1,7 +1,7 @@
 /* Histórico pessoal — entradas gravadas na API por utilizador autenticado (logs_sistema). */
 
 import { useEffect, useState } from "react";
-import { Button } from "@mui/material";
+import { Button, Paper } from "@mui/material";
 import { api } from "../api";
 import EmptyState from "../components/EmptyState";
 import SectionCard from "../components/SectionCard";
@@ -91,22 +91,24 @@ export default function HistoricoContaPage({ token, active, user }) {
           description="Após iniciar sessão ou concluir operações no painel, as entradas aparecem aqui. O histórico técnico da rede (segurança/RDP) está na aba Logs."
         />
       ) : (
-        <ul className="activity-timeline historico-conta-list">
-          {itens.map((ev) => (
-            <li key={ev.id} className="timeline-item historico-conta-item">
-              <span className="timeline-icon info material-symbols-outlined" aria-hidden>
-                history
-              </span>
-              <div>
-                <strong className="historico-conta-acao">{ev.acao}</strong>
-                <p className="historico-conta-desc">{ev.descricao || "—"}</p>
-                <p className="historico-conta-when">
-                  <time dateTime={ev.data_evento}>{formatarData(ev.data_evento)}</time>
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <Paper variant="outlined" sx={{ borderColor: "#dbe5f2", p: 0.75 }}>
+          <ul className="activity-timeline historico-conta-list">
+            {itens.map((ev) => (
+              <li key={ev.id} className="timeline-item historico-conta-item">
+                <span className="timeline-icon info material-symbols-outlined" aria-hidden>
+                  history
+                </span>
+                <div>
+                  <strong className="historico-conta-acao">{ev.acao}</strong>
+                  <p className="historico-conta-desc">{ev.descricao || "—"}</p>
+                  <p className="historico-conta-when">
+                    <time dateTime={ev.data_evento}>{formatarData(ev.data_evento)}</time>
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Paper>
       )}
     </SectionCard>
   );

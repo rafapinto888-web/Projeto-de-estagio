@@ -84,7 +84,7 @@ export default function PerfisPage({
       subtitle="Cargos e permissões da aplicação. A lista mostra quantas contas estão atribuídas a cada perfil."
       rightAction={
         isAdmin ? (
-          <Button type="button" onClick={openCreate}>
+          <Button type="button" variant="outlined" onClick={openCreate}>
             Novo perfil
           </Button>
         ) : null

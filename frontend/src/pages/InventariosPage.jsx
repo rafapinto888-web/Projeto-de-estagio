@@ -62,7 +62,7 @@ export default function InventariosPage({
       subtitle="Gerir inventários normais e de sub-rede. Usa o editor para criar ou alterar."
       rightAction={
         isAdmin ? (
-          <Button type="button" onClick={openCreate}>
+          <Button type="button" variant="outlined" onClick={openCreate}>
             Novo inventário
           </Button>
         ) : null

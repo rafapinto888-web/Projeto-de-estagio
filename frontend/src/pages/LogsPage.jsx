@@ -1,7 +1,7 @@
 /* Consulta de logs — filtros em modais horizontais; resultado mantém-se na página. */
 
 import { useState } from "react";
-import { Button, MenuItem, Stack, TextField } from "@mui/material";
+import { Button, MenuItem, Paper, Stack, TextField } from "@mui/material";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
 
@@ -33,17 +33,23 @@ export default function LogsPage({
       title="Logs"
       subtitle="Consulta de logs de segurança e RDP. Abre um dos editores para definir filtros e executar."
       rightAction={
-        <div className="section-head-actions">
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           <Button type="button" onClick={() => setModal("computador")}>
             Por computador
           </Button>
-          <Button type="button" onClick={() => setModal("inventario")}>
+          <Button type="button" variant="outlined" onClick={() => setModal("inventario")}>
             Por inventário
           </Button>
-        </div>
+        </Stack>
       }
     >
-      {loading ? <div className="loading-box">A consultar logs…</div> : <pre className="logs-output">{logsOutput}</pre>}
+      {loading ? (
+        <div className="loading-box">A consultar logs…</div>
+      ) : (
+        <Paper variant="outlined" sx={{ borderColor: "#dbe5f2", bgcolor: "#fff" }}>
+          <pre className="logs-output">{logsOutput}</pre>
+        </Paper>
+      )}
 
       <FormModal
         open={modal === "computador"}

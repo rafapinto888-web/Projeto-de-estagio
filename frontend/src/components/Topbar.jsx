@@ -36,23 +36,34 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, onNavigate }
       color="inherit"
       elevation={0}
       sx={{
-        border: "1px solid #e2e8f0",
-        borderRadius: 3,
+        border: "1px solid #dbe5f2",
+        borderRadius: 4,
         mb: 2,
+        background: "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,251,255,0.98) 100%)",
+        boxShadow: "0 8px 24px rgba(15,23,42,0.04)",
       }}
     >
-      <Toolbar sx={{ gap: 2, justifyContent: "space-between", minHeight: "68px !important" }}>
+      <Toolbar
+        sx={{
+          gap: 1.5,
+          justifyContent: "space-between",
+          minHeight: "70px !important",
+          px: { xs: 1.2, md: 1.8 },
+        }}
+      >
         <Paper
           variant="outlined"
           sx={{
             display: "flex",
             alignItems: "center",
             px: 1.25,
-            py: 0.5,
-            borderRadius: 2.5,
+            py: 0.6,
+            borderRadius: 3,
             flex: 1,
             minWidth: 0,
             maxWidth: 780,
+            bgcolor: "#ffffff",
+            borderColor: "#dbe5f2",
           }}
         >
           <span className="material-symbols-outlined" style={{ color: "#64748b", marginRight: 8, fontSize: 18 }}>
@@ -73,19 +84,22 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, onNavigate }
           </Typography>
         </Paper>
 
-        <Stack direction="row" spacing={1.2} alignItems="center">
+        <Stack direction="row" spacing={0.6} alignItems="center">
           <IconButton
             title="Ajuda — abre pesquisa global"
             aria-label="Ajuda"
             onClick={() => onNavigate?.("pesquisa")}
+            sx={{ border: "1px solid #dbe5f2", bgcolor: "#fff" }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
               help
             </span>
           </IconButton>
 
-          <Stack direction="row" spacing={1.2} alignItems="center">
-            <Avatar sx={{ width: 34, height: 34, bgcolor: "primary.main", fontSize: 13 }}>{initials(user)}</Avatar>
+          <Stack direction="row" spacing={1.2} alignItems="center" sx={{ px: 0.6 }}>
+            <Avatar sx={{ width: 34, height: 34, bgcolor: "primary.main", fontSize: 13, fontWeight: 700 }}>
+              {initials(user)}
+            </Avatar>
             <Box sx={{ lineHeight: 1.2 }}>
               <Typography fontSize={13} fontWeight={700}>
                 {user?.nome || user?.username || "Utilizador"}
@@ -97,7 +111,7 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, onNavigate }
           </Stack>
 
           <Button
-            variant="text"
+            variant="outlined"
             size="small"
             onClick={onLogout}
             startIcon={

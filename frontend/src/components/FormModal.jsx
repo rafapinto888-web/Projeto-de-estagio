@@ -10,6 +10,13 @@ export default function FormModal({ open, onClose, title, subtitle, wide, titleI
       fullWidth
       maxWidth={wide ? "lg" : "md"}
       aria-labelledby={titleId}
+      PaperProps={{
+        sx: {
+          borderRadius: 2.5,
+          border: "1px solid #dbe5f2",
+          boxShadow: "0 18px 48px rgba(15, 23, 42, 0.12)",
+        },
+      }}
     >
       <DialogTitle id={titleId} sx={{ pr: 6 }}>
         {title}
@@ -28,8 +35,10 @@ export default function FormModal({ open, onClose, title, subtitle, wide, titleI
           </Typography>
         ) : null}
       </DialogTitle>
-      <DialogContent dividers>{children}</DialogContent>
-      {footer ? <DialogActions sx={{ px: 3, py: 2 }}>{footer}</DialogActions> : null}
+      <DialogContent dividers sx={{ borderColor: "#e2e8f0", p: 2.2 }}>
+        {children}
+      </DialogContent>
+      {footer ? <DialogActions sx={{ px: 2.2, py: 1.6 }}>{footer}</DialogActions> : null}
     </Dialog>
   );
 }

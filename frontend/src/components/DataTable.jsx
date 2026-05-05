@@ -14,7 +14,7 @@ export default function DataTable({
 }) {
   if (loading) {
     return (
-      <Paper variant="outlined" sx={{ p: 2.5, display: "flex", alignItems: "center", gap: 1.2 }}>
+      <Paper variant="outlined" sx={{ p: 2.25, display: "flex", alignItems: "center", gap: 1.2 }}>
         <CircularProgress size={18} />
         <Typography fontSize={14}>A carregar dados...</Typography>
       </Paper>
@@ -26,18 +26,35 @@ export default function DataTable({
   }
 
   return (
-    <TableContainer component={Paper} variant="outlined" className={tableClassName}>
+    <TableContainer
+      component={Paper}
+      variant="outlined"
+      className={tableClassName}
+      sx={{
+        borderRadius: 2,
+        borderColor: "#dbe5f2",
+        bgcolor: "#fff",
+      }}
+    >
       <Table size="small">
         <TableHead>
           <TableRow>
             {columns.map((col) => (
-              <TableCell key={col} sx={{ fontWeight: 700 }}>
+              <TableCell key={col} sx={{ fontWeight: 700, fontSize: 12, color: "#334155" }}>
                 {col}
               </TableCell>
             ))}
           </TableRow>
         </TableHead>
-        <TableBody>{rows.map((row, idx) => renderRow(row, idx, columns))}</TableBody>
+        <TableBody
+          sx={{
+            "& .MuiTableRow-root:hover": {
+              backgroundColor: "#f8fbff",
+            },
+          }}
+        >
+          {rows.map((row, idx) => renderRow(row, idx, columns))}
+        </TableBody>
       </Table>
     </TableContainer>
   );

@@ -346,7 +346,7 @@ export default function ComputadoresPage({
       subtitle="Por inventário: uma única lista; a coluna Origem indica se o registo é manual ou do scan."
       rightAction={
         isAdmin ? (
-          <Button type="button" onClick={openCreate}>
+          <Button type="button" variant="outlined" onClick={openCreate}>
             Novo computador
           </Button>
         ) : null
