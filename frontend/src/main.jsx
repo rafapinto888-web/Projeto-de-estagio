@@ -1,4 +1,4 @@
-﻿/* Comentario geral deste ficheiro: contem partes importantes da interface e comportamento. */
+/* Comentario geral deste ficheiro: contem partes importantes da interface e comportamento. */
 
 import React from "react";
 import ReactDOM from "react-dom/client";

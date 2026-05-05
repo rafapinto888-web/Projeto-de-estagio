@@ -200,7 +200,7 @@ export default function DashboardPage({
       rightAction={
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           <Button variant="outlined" size="small" onClick={() => onNavigate("inventarios")}>
-            Ver inventários
+          Ver inventários
           </Button>
           <Button variant="outlined" size="small" startIcon={<span className="material-symbols-outlined">today</span>}>
             Hoje: {dataHoje}
@@ -221,7 +221,7 @@ export default function DashboardPage({
             },
           }}
         >
-          {cardsResumo.map((c) => (
+          {cardsResumo.map((c, idx) => (
             <Box key={c.key}>
               <Paper
                 variant="outlined"
@@ -229,6 +229,8 @@ export default function DashboardPage({
                   p: { xs: 1.5, md: 2 },
                   minHeight: { xs: 106, md: 118 },
                   background: "linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)",
+                  borderTop: `4px solid ${["#2563eb", "#6d28d9", "#0ea5e9", "#16a34a", "#d97706", "#1d4ed8"][idx % 6]}`,
+                  boxShadow: "0 10px 22px rgba(15,23,42,0.08)",
                 }}
               >
                 <Stack spacing={1} sx={{ height: "100%", justifyContent: "space-between" }}>
@@ -236,11 +238,17 @@ export default function DashboardPage({
                     <Stack direction="row" spacing={1.1} alignItems="center">
                       <Avatar
                         variant="rounded"
-                        sx={{ bgcolor: "#eff6ff", color: "primary.main", width: 30, height: 30 }}
+                        sx={{
+                          bgcolor: "#eaf2ff",
+                          color: "primary.main",
+                          width: 32,
+                          height: 32,
+                          border: "1px solid #dbeafe",
+                        }}
                       >
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                          {c.icon}
-                        </span>
+                {c.icon}
+              </span>
                       </Avatar>
                       <Typography variant="caption" color="text.secondary">
                         {c.label}
@@ -274,7 +282,7 @@ export default function DashboardPage({
         >
           <Box>
             <Paper variant="outlined" sx={painelMedioSx}>
-              <Typography fontWeight={800} fontSize={17} mb={1.25}>
+              <Typography fontWeight={800} fontSize={17} mb={1.25} color="#0f172a">
                 Ativos por estado
               </Typography>
               <Divider sx={{ mb: 1.25 }} />
@@ -317,7 +325,7 @@ export default function DashboardPage({
                 <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
                   {estadoContagens.totais.slice(0, 4).map((item, idx) => {
                     const percent = estadoContagens.total ? Math.round((item.total / estadoContagens.total) * 100) : 0;
-                    return (
+                  return (
                       <Box key={item.estado}>
                         <Stack direction="row" justifyContent="space-between" mb={0.35}>
                           <Typography fontSize={12}>{item.estado}</Typography>
@@ -338,8 +346,8 @@ export default function DashboardPage({
                           }}
                         />
                       </Box>
-                    );
-                  })}
+                  );
+                })}
                 </Stack>
               </Stack>
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
@@ -394,11 +402,11 @@ export default function DashboardPage({
                   Atividade recente
                 </Typography>
                 <Button variant="text" size="small" onClick={abrirMeuHistorico}>
-                  Histórico
+                Histórico
                 </Button>
               </Stack>
               <Divider sx={{ mb: 1 }} />
-              {loading ? (
+            {loading ? (
                 <Stack direction="row" spacing={1} alignItems="center">
                   <CircularProgress size={16} />
                   <Typography variant="body2">A carregar…</Typography>
@@ -410,7 +418,7 @@ export default function DashboardPage({
               ) : (
                 <Box sx={listaScrollSx}>
                   <List disablePadding>
-                    {atividadeRede.map((ev) => (
+                {atividadeRede.map((ev) => (
                       <ListItem
                         key={ev.id}
                         disableGutters
@@ -449,7 +457,7 @@ export default function DashboardPage({
                   Computadores recentes
                 </Typography>
                 <Button variant="text" size="small" onClick={() => onNavigate("computadores")}>
-                  Ver todos
+                Ver todos
                 </Button>
               </Stack>
               <Divider sx={{ mb: 1 }} />
@@ -539,8 +547,8 @@ export default function DashboardPage({
                 <ListItem key={u.id} divider disableGutters>
                   <ListItemIcon sx={{ minWidth: 28 }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                      person
-                    </span>
+                    person
+                  </span>
                   </ListItemIcon>
                   <ListItemText
                     primary={u.nome || u.username}

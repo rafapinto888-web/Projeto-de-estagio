@@ -1,7 +1,8 @@
 /* Comentario geral deste ficheiro: orquestra estado global e navegacao entre paginas. */
 
 import { useEffect, useMemo, useState } from "react";
-import { Box } from "@mui/material";
+import { Box, useMediaQuery } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { api } from "./api";
 import { isAdminProfileName } from "./authz";
 import SidebarNav from "./components/SidebarNav";
@@ -77,8 +78,11 @@ function emptyInventarioForm() {
 }
 
 export default function App() {
+  const theme = useTheme();
+  const isMobileNav = useMediaQuery(theme.breakpoints.down("lg"));
   const [status, setStatus] = useState({ type: "ok", message: "" });
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [token, setToken] = useState(localStorage.getItem("access_token") || "");
   const [user, setUser] = useState(null);
   const [dataLoading, setDataLoading] = useState(false);
@@ -302,6 +306,11 @@ export default function App() {
 
   const loading = dataLoading || actionLoading;
 
+  function handleSelectTab(tabId) {
+    setActiveTab(tabId);
+    if (isMobileNav) setMobileNavOpen(false);
+  }
+
   if (!token) {
     return (
       <main className="auth-screen">
@@ -340,17 +349,26 @@ export default function App() {
         gap: { xs: 1, md: 1.5 },
       }}
     >
-      <SidebarNav tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
+      <SidebarNav
+        tabs={TABS}
+        activeTab={activeTab}
+        onSelect={handleSelectTab}
+        mobile={isMobileNav}
+        open={isMobileNav ? mobileNavOpen : true}
+        onClose={() => setMobileNavOpen(false)}
+      />
 
       <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 0.5 }}>
         <Topbar
           user={user}
           isAdmin={isAdmin}
           onLogout={handleLogout}
-          onNavigate={setActiveTab}
+          onNavigate={handleSelectTab}
+          showNavToggle={isMobileNav}
+          onToggleNav={() => setMobileNavOpen(true)}
           onSearch={(q) => {
             setGlobalTermo(q);
-            setActiveTab("pesquisa");
+            handleSelectTab("pesquisa");
             setGlobalSearchRequestId((n) => n + 1);
           }}
         />
@@ -367,8 +385,8 @@ export default function App() {
               localizacoes={localizacoes}
               historicoConta={historicoConta}
               loading={loading}
-              onNavigate={setActiveTab}
-              onOpenHistorico={() => setActiveTab("historico-conta")}
+              onNavigate={handleSelectTab}
+              onOpenHistorico={() => handleSelectTab("historico-conta")}
             />
           )}
 
