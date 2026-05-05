@@ -77,6 +77,9 @@ export default function PesquisaPage({ globalTermo, setGlobalTermo, onPesquisar,
   const termoLimpo = globalTermo.trim();
   const [mostrarRaw, setMostrarRaw] = useState(false);
   const [filtroSecao, setFiltroSecao] = useState("todas");
+  const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [filtroLocalizacao, setFiltroLocalizacao] = useState("todas");
+  const [abaResultados, setAbaResultados] = useState("lista");
   const parsedOutput = useMemo(() => parseOutput(globalOutput), [globalOutput]);
   const secoes = useMemo(() => toSections(parsedOutput), [parsedOutput]);
   const secoesFiltradas = useMemo(() => {
@@ -90,6 +93,42 @@ export default function PesquisaPage({ globalTermo, setGlobalTermo, onPesquisar,
       return lista.map((item, idx) => ({ key: `${key}-${idx}`, secao: key, item }));
     });
   }, [secoesFiltradas]);
+
+  const localizacoesDisponiveis = useMemo(() => {
+    const set = new Set();
+    resultadosFlat.forEach((r) => {
+      const loc = r.item?.localizacao_nome || r.item?.localizacao;
+      if (loc && String(loc).trim()) set.add(String(loc).trim());
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt"));
+  }, [resultadosFlat]);
+
+  const estadosDisponiveis = useMemo(() => {
+    const set = new Set();
+    resultadosFlat.forEach((r) => {
+      const est = r.item?.estado;
+      if (est && String(est).trim()) set.add(String(est).trim());
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt"));
+  }, [resultadosFlat]);
+
+  const resultadosVisiveis = useMemo(() => {
+    return resultadosFlat.filter((row) => {
+      const est = String(row.item?.estado || "").trim();
+      const loc = String(row.item?.localizacao_nome || row.item?.localizacao || "").trim();
+      if (filtroEstado !== "todos" && est !== filtroEstado) return false;
+      if (filtroLocalizacao !== "todas" && loc !== filtroLocalizacao) return false;
+      return true;
+    });
+  }, [resultadosFlat, filtroEstado, filtroLocalizacao]);
+
+  const cardsResumo = useMemo(() => {
+    const porTipo = new Map();
+    resultadosVisiveis.forEach((r) => {
+      porTipo.set(r.secao, (porTipo.get(r.secao) || 0) + 1);
+    });
+    return Array.from(porTipo.entries()).map(([secao, total]) => ({ secao, total }));
+  }, [resultadosVisiveis]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -157,11 +196,44 @@ export default function PesquisaPage({ globalTermo, setGlobalTermo, onPesquisar,
             {mostrarRaw ? "Vista legível" : "Ver JSON bruto"}
           </button>
         </div>
+        <div className="pesquisa-global-toolbar pesquisa-global-toolbar--filters">
+          <label className="pesquisa-global-filter">
+            Localização
+            <select
+              value={filtroLocalizacao}
+              onChange={(e) => setFiltroLocalizacao(e.target.value)}
+              disabled={!localizacoesDisponiveis.length || loading}
+            >
+              <option value="todas">Todas as localizações</option>
+              {localizacoesDisponiveis.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="pesquisa-global-filter">
+            Estado
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              disabled={!estadosDisponiveis.length || loading}
+            >
+              <option value="todos">Todos os estados</option>
+              {estadosDisponiveis.map((est) => (
+                <option key={est} value={est}>
+                  {est}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="pesquisa-global-meta">
         <span className="pill badge-info">Resultado</span>
         <span>{resumo}</span>
+        {!loading && resultadosVisiveis.length ? <span>{resultadosVisiveis.length} resultado(s) visível(eis)</span> : null}
       </div>
 
       {loading ? (
@@ -179,43 +251,86 @@ export default function PesquisaPage({ globalTermo, setGlobalTermo, onPesquisar,
       ) : !parsedOutput || mostrarRaw ? (
         <pre className="pesquisa-global-output">{globalOutput || "Sem dados para mostrar."}</pre>
       ) : (
-        <div className="table-shell table-shell--responsive pesquisa-global-table-shell">
-          <table className="pesquisa-global-table">
-            <thead>
-              <tr>
-                <th>Tipo</th>
-                <th>Nome / descrição</th>
-                <th>Detalhes</th>
-                <th>Localização</th>
-                <th>Utilizador</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {resultadosFlat.map((row) => {
-                const campos = previewCampos(row.item);
-                const nome =
-                  row.item?.nome || row.item?.hostname || row.item?.email || row.item?.descricao || "—";
-                const detalhe = campos
-                  .filter(({ k }) => !["nome", "hostname", "email", "descricao"].includes(k))
-                  .slice(0, 2)
-                  .map(({ k, v }) => `${tituloSecao(k)}: ${valorHumano(v)}`)
-                  .join(" · ");
-                return (
-                  <tr key={row.key}>
-                    <td>
-                      <span className="pill badge-info">{tituloSecao(row.secao)}</span>
-                    </td>
-                    <td>{nome}</td>
-                    <td>{detalhe || "—"}</td>
-                    <td>{valorHumano(row.item?.localizacao_nome || row.item?.localizacao)}</td>
-                    <td>{valorHumano(row.item?.utilizador_nome || row.item?.username || row.item?.email)}</td>
-                    <td>{valorHumano(row.item?.estado)}</td>
+        <div className="pesquisa-global-results">
+          <div className="pesquisa-global-summary-cards">
+            {cardsResumo.length === 0 ? (
+              <div className="pesquisa-global-summary-empty">Sem resultados para os filtros escolhidos.</div>
+            ) : (
+              cardsResumo.map((c) => (
+                <article key={c.secao} className="pesquisa-global-summary-card">
+                  <strong>{c.total}</strong>
+                  <p>{tituloSecao(c.secao)}</p>
+                </article>
+              ))
+            )}
+          </div>
+
+          <div className="pesquisa-global-tabs">
+            <button
+              type="button"
+              className={abaResultados === "lista" ? "pesquisa-global-tab active" : "pesquisa-global-tab"}
+              onClick={() => setAbaResultados("lista")}
+            >
+              Resultados
+            </button>
+            <button
+              type="button"
+              className={abaResultados === "tipo" ? "pesquisa-global-tab active" : "pesquisa-global-tab"}
+              onClick={() => setAbaResultados("tipo")}
+            >
+              Agrupado por tipo
+            </button>
+          </div>
+
+          {abaResultados === "lista" ? (
+            <div className="table-shell table-shell--responsive pesquisa-global-table-shell">
+              <table className="pesquisa-global-table">
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Nome / descrição</th>
+                    <th>Detalhes</th>
+                    <th>Localização</th>
+                    <th>Utilizador</th>
+                    <th>Estado</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {resultadosVisiveis.map((row) => {
+                    const campos = previewCampos(row.item);
+                    const nome =
+                      row.item?.nome || row.item?.hostname || row.item?.email || row.item?.descricao || "—";
+                    const detalhe = campos
+                      .filter(({ k }) => !["nome", "hostname", "email", "descricao"].includes(k))
+                      .slice(0, 2)
+                      .map(({ k, v }) => `${tituloSecao(k)}: ${valorHumano(v)}`)
+                      .join(" · ");
+                    return (
+                      <tr key={row.key}>
+                        <td>
+                          <span className="pill badge-info">{tituloSecao(row.secao)}</span>
+                        </td>
+                        <td>{nome}</td>
+                        <td>{detalhe || "—"}</td>
+                        <td>{valorHumano(row.item?.localizacao_nome || row.item?.localizacao)}</td>
+                        <td>{valorHumano(row.item?.utilizador_nome || row.item?.username || row.item?.email)}</td>
+                        <td>{valorHumano(row.item?.estado)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <ul className="pesquisa-global-grouped-list">
+              {cardsResumo.map((c) => (
+                <li key={`group-${c.secao}`}>
+                  <strong>{tituloSecao(c.secao)}</strong>
+                  <span>{c.total} resultado(s)</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </SectionCard>

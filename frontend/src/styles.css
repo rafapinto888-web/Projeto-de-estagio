@@ -3001,6 +3001,11 @@ th {
   gap: 8px;
 }
 
+.pesquisa-global-toolbar--filters {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
 .pesquisa-global-filter {
   gap: 8px;
 }
@@ -3012,6 +3017,90 @@ th {
 .pesquisa-global-table th,
 .pesquisa-global-table td {
   padding: 9px 10px;
+}
+
+.pesquisa-global-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pesquisa-global-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pesquisa-global-summary-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+}
+
+.pesquisa-global-summary-card strong {
+  display: block;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.pesquisa-global-summary-card p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.pesquisa-global-summary-empty {
+  grid-column: 1 / -1;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 10px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.pesquisa-global-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.pesquisa-global-tab {
+  border: none !important;
+  background: transparent !important;
+  color: #64748b !important;
+  font-size: 12px !important;
+  padding: 8px 10px !important;
+  border-radius: 8px 8px 0 0 !important;
+  box-shadow: none !important;
+}
+
+.pesquisa-global-tab.active {
+  color: #2563eb !important;
+  background: #eff6ff !important;
+}
+
+.pesquisa-global-grouped-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.pesquisa-global-grouped-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 13px;
+}
+
+.pesquisa-global-grouped-list li:last-child {
+  border-bottom: none;
 }
 
 @media (max-width: 1180px) {
@@ -3034,10 +3123,18 @@ th {
     flex-direction: column;
     align-items: stretch;
   }
+
+  .pesquisa-global-summary-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 520px) {
   .dashboard-pro-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .pesquisa-global-summary-cards {
     grid-template-columns: 1fr;
   }
 }
