@@ -42,7 +42,7 @@ export default function LogsPage({
         </div>
       }
     >
-      {loading ? <div className="loading-box">A consultar logs…</div> : <pre>{logsOutput}</pre>}
+      {loading ? <div className="loading-box">A consultar logs…</div> : <pre className="logs-output">{logsOutput}</pre>}
 
       <FormModal
         open={modal === "computador"}

@@ -14,6 +14,15 @@ export default function FormModal({ open, onClose, title, subtitle, wide, titleI
     return () => window.removeEventListener("keydown", esc);
   }, [open, close]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   if (!open) return null;
 
   return (

@@ -103,6 +103,7 @@ export default function PerfisPage({
       ) : (
         <DataTable
           columns={["Nome do cargo", "Contas", "Ações"]}
+          tableClassName="table-shell--responsive"
           rows={perfis}
           loading={false}
           emptyTitle="Ainda não há perfis"

@@ -69,6 +69,7 @@ export default function InventariosPage({
     >
       <DataTable
         columns={["Nome", "Tipo", "Rede", "Equipamentos", "Descrição", "Ações"]}
+        tableClassName="table-shell--responsive"
         rows={inventarios}
         loading={loading}
         emptyTitle="Nenhum inventário encontrado"

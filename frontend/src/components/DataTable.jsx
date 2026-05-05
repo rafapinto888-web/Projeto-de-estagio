@@ -2,7 +2,15 @@
 
 import EmptyState from "./EmptyState";
 
-export default function DataTable({ columns, rows, renderRow, loading, emptyTitle, emptyDescription }) {
+export default function DataTable({
+  columns,
+  rows,
+  renderRow,
+  loading,
+  emptyTitle,
+  emptyDescription,
+  tableClassName = "",
+}) {
   if (loading) {
     return <div className="loading-box">A carregar dados...</div>;
   }
@@ -12,7 +20,7 @@ export default function DataTable({ columns, rows, renderRow, loading, emptyTitl
   }
 
   return (
-    <div className="table-shell">
+    <div className={`table-shell ${tableClassName}`.trim()}>
       <table>
         <thead>
           <tr>
@@ -21,7 +29,7 @@ export default function DataTable({ columns, rows, renderRow, loading, emptyTitl
             ))}
           </tr>
         </thead>
-        <tbody>{rows.map(renderRow)}</tbody>
+        <tbody>{rows.map((row, idx) => renderRow(row, idx, columns))}</tbody>
       </table>
     </div>
   );

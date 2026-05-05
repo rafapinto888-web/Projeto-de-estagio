@@ -69,6 +69,7 @@ export default function UtilizadoresPage({
 
       <DataTable
         columns={["Nome", "Username", "Email", "Perfil", "Ações"]}
+        tableClassName="table-shell--responsive"
         rows={utilizadores}
         loading={loading}
         emptyTitle="Sem utilizadores disponíveis"

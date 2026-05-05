@@ -77,6 +77,7 @@ export default function AtivosPage({
 
       <DataTable
         columns={["Tipo", "Nome / host", "IP", "MAC", "Série", "Marca", "Modelo", "SO", "Estado"]}
+        tableClassName="table-shell--responsive"
         rows={ativos}
         loading={loading}
         emptyTitle="Sem ativos para mostrar"

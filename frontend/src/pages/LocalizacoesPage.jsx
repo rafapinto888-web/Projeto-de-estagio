@@ -64,6 +64,7 @@ export default function LocalizacoesPage({
     >
       <DataTable
         columns={["Nome", "Descrição", "Ações"]}
+        tableClassName="table-shell--responsive"
         rows={localizacoes}
         loading={loading}
         emptyTitle="Sem localizações"
