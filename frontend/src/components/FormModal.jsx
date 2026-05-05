@@ -1,59 +1,35 @@
 /* Modal reutilizável para formulários CRUD (overlay, Escape, foco semântico). */
 
-import { useCallback, useEffect } from "react";
+import { Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Typography } from "@mui/material";
 
 export default function FormModal({ open, onClose, title, subtitle, wide, titleId = "form-modal-title", children, footer }) {
-  const close = useCallback(() => onClose?.(), [onClose]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    function esc(e) {
-      if (e.key === "Escape") close();
-    }
-    window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
-  }, [open, close]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  if (!open) return null;
-
   return (
-    <div
-      className="modal-overlay"
-      role="presentation"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) close();
-      }}
+    <Dialog
+      open={Boolean(open)}
+      onClose={onClose}
+      fullWidth
+      maxWidth={wide ? "lg" : "md"}
+      aria-labelledby={titleId}
     >
-      <div
-        className={`modal-sheet${wide ? " modal-sheet--wide" : ""}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="modal-head">
-          <div>
-            <h2 id={titleId} className="modal-title">
-              {title}
-            </h2>
-            {subtitle ? <div className="modal-sub">{subtitle}</div> : null}
-          </div>
-          <button type="button" className="modal-close ghost table-btn" onClick={close} aria-label="Fechar">
-            ✕
-          </button>
-        </header>
-        <div className="modal-body">{children}</div>
-        {footer ? <footer className="modal-footer">{footer}</footer> : null}
-      </div>
-    </div>
+      <DialogTitle id={titleId} sx={{ pr: 6 }}>
+        {title}
+        <IconButton
+          aria-label="Fechar"
+          onClick={onClose}
+          sx={{ position: "absolute", right: 12, top: 12 }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+            close
+          </span>
+        </IconButton>
+        {subtitle ? (
+          <Typography component="div" variant="body2" color="text.secondary" mt={0.75}>
+            {subtitle}
+          </Typography>
+        ) : null}
+      </DialogTitle>
+      <DialogContent dividers>{children}</DialogContent>
+      {footer ? <DialogActions sx={{ px: 3, py: 2 }}>{footer}</DialogActions> : null}
+    </Dialog>
   );
 }

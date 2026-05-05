@@ -1,6 +1,7 @@
 /* CRUD de computadores + vista agregada com equipamentos descobertos por inventário (scan). */
 
 import { useCallback, useMemo, useState } from "react";
+import { Button } from "@mui/material";
 import { api } from "../api";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
@@ -345,9 +346,9 @@ export default function ComputadoresPage({
       subtitle="Por inventário: uma única lista; a coluna Origem indica se o registo é manual ou do scan."
       rightAction={
         isAdmin ? (
-          <button type="button" className="btn-chip-primary" onClick={openCreate}>
+          <Button type="button" onClick={openCreate}>
             Novo computador
-          </button>
+          </Button>
         ) : null
       }
     >
@@ -731,25 +732,25 @@ export default function ComputadoresPage({
           }
           footer={
             <>
-              <button type="button" className="ghost" onClick={closeEditor}>
+              <Button type="button" variant="outlined" onClick={closeEditor}>
                 Cancelar
-              </button>
+              </Button>
               {editorMode === "edit" ? (
                 <>
-                  <button type="button" className="danger" onClick={handleDeleteInModal}>
+                  <Button type="button" color="error" variant="outlined" onClick={handleDeleteInModal}>
                     Apagar
-                  </button>
-                  <button type="button" className="ghost" onClick={handleUpdatePatch}>
+                  </Button>
+                  <Button type="button" variant="outlined" onClick={handleUpdatePatch}>
                     Guardar apenas alterações (PATCH)
-                  </button>
-                  <button type="button" onClick={handleUpdatePut}>
+                  </Button>
+                  <Button type="button" onClick={handleUpdatePut}>
                     Substituir registo (PUT)
-                  </button>
+                  </Button>
                 </>
               ) : (
-                <button type="button" onClick={handleCreate}>
+                <Button type="button" onClick={handleCreate}>
                   Criar computador
-                </button>
+                </Button>
               )}
             </>
           }
@@ -889,12 +890,12 @@ export default function ComputadoresPage({
           }
           footer={
             <>
-              <button type="button" className="ghost" onClick={closeScanEditor}>
+              <Button type="button" variant="outlined" onClick={closeScanEditor}>
                 Cancelar
-              </button>
-              <button type="button" onClick={() => void handleScanSave()}>
+              </Button>
+              <Button type="button" onClick={() => void handleScanSave()}>
                 Guardar alterações
-              </button>
+              </Button>
             </>
           }
         >

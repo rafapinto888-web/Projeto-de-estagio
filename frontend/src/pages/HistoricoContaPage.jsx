@@ -1,6 +1,7 @@
 /* Histórico pessoal — entradas gravadas na API por utilizador autenticado (logs_sistema). */
 
 import { useEffect, useState } from "react";
+import { Button } from "@mui/material";
 import { api } from "../api";
 import EmptyState from "../components/EmptyState";
 import SectionCard from "../components/SectionCard";
@@ -72,9 +73,9 @@ export default function HistoricoContaPage({ token, active, user }) {
           : "Atividades registadas na tua sessão."
       }
       rightAction={
-        <button type="button" className="ghost ghost-sm" onClick={recarregar} disabled={loading || !token}>
+        <Button type="button" variant="outlined" size="small" onClick={recarregar} disabled={loading || !token}>
           Atualizar
-        </button>
+        </Button>
       }
     >
       {loading ? (

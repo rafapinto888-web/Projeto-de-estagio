@@ -1,5 +1,24 @@
 /* Dashboard — visão executiva no estilo painel operacional. */
 
+import {
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Grid,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography,
+} from "@mui/material";
 import SectionCard from "../components/SectionCard";
 
 function tipoLabel(inv) {
@@ -53,187 +72,196 @@ export default function DashboardPage({
       title="Dashboard"
       subtitle="Visão rápida do inventário e operação atual."
       rightAction={
-        <button type="button" className="ghost ghost-sm" onClick={() => onNavigate("inventarios")}>
+        <Button variant="outlined" size="small" onClick={() => onNavigate("inventarios")}>
           Ver inventários
-        </button>
+        </Button>
       }
     >
-      <div className="dashboard-pro">
-        <div className="dashboard-pro-stats">
+      <Stack spacing={2}>
+        <Grid container spacing={1.5}>
           {cardsResumo.map((c) => (
-            <article key={c.key} className="dashboard-pro-stat-card">
-              <span className="material-symbols-outlined" aria-hidden>
-                {c.icon}
-              </span>
-              <div>
-                <strong>{c.value}</strong>
-                <p>{c.label}</p>
-              </div>
-            </article>
+            <Grid item xs={12} sm={6} md={4} lg={2} key={c.key}>
+              <Paper variant="outlined" sx={{ p: 1.5 }}>
+                <Stack direction="row" spacing={1.2} alignItems="center">
+                  <Box sx={{ color: "primary.main", display: "grid", placeItems: "center" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                      {c.icon}
+                    </span>
+                  </Box>
+                  <Box>
+                    <Typography fontWeight={800} fontSize={22} lineHeight={1}>
+                      {c.value}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {c.label}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+            </Grid>
           ))}
-        </div>
+        </Grid>
 
-        <div className="dashboard-pro-grid">
-          <article className="dashboard-card">
-            <div className="card-head dashboard-pro-head">
-              <h3>Inventários recentes</h3>
-              <button type="button" className="ghost ghost-sm" onClick={() => onNavigate("inventarios")}>
-                Ver todos
-              </button>
-            </div>
-            {loading ? (
-              <div className="loading-box">A carregar inventários…</div>
-            ) : recentInventarios.length === 0 ? (
-              <div className="empty-state">
-                <h3>Sem inventários</h3>
-                <p>Cria o primeiro inventário para ver o estado aqui.</p>
-              </div>
-            ) : (
-              <ul className="dashboard-pro-list">
-                {recentInventarios.map((inv, index) => {
-                  const pill = statusPill(inv, index);
-                  return (
-                    <li key={inv.id} className="dashboard-pro-item">
-                      <div>
-                        <strong>{inv.nome}</strong>
-                        <p>{tipoLabel(inv)} · {(inv.total_computadores ?? 0) + (inv.total_dispositivos_scan ?? 0)} ativos</p>
-                      </div>
-                      <span className={`pill ${pill.cls}`}>{pill.text}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </article>
+        <Grid container spacing={1.5}>
+          <Grid item xs={12} md={6}>
+            <Paper variant="outlined" sx={{ p: 1.5, height: "100%" }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                <Typography fontWeight={700}>Inventários recentes</Typography>
+                <Button variant="text" size="small" onClick={() => onNavigate("inventarios")}>
+                  Ver todos
+                </Button>
+              </Stack>
+              {loading ? (
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <CircularProgress size={16} />
+                  <Typography variant="body2">A carregar inventários…</Typography>
+                </Stack>
+              ) : (
+                <List dense disablePadding>
+                  {recentInventarios.map((inv, index) => {
+                    const pill = statusPill(inv, index);
+                    return (
+                      <ListItem key={inv.id} divider disableGutters secondaryAction={<Chip label={pill.text} size="small" />}>
+                        <ListItemText
+                          primary={inv.nome}
+                          secondary={`${tipoLabel(inv)} · ${(inv.total_computadores ?? 0) + (inv.total_dispositivos_scan ?? 0)} ativos`}
+                        />
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              )}
+            </Paper>
+          </Grid>
 
-          <article className="dashboard-card">
-            <div className="card-head dashboard-pro-head">
-              <h3>Atividade recente (Scan)</h3>
-              <button
-                type="button"
-                className="ghost ghost-sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  abrirMeuHistorico();
-                }}
-              >
-                Histórico
-              </button>
-            </div>
-            {loading ? (
-              <div className="loading-box">A carregar…</div>
-            ) : (
-              <ul className="dashboard-pro-activity">
-                {atividadeRede.length === 0 ? (
-                  <li className="dashboard-pro-activity-item">
-                    <div>
-                      <strong>Sem eventos recentes</strong>
-                      <p>Os eventos aparecem quando houver scans e atualizações.</p>
-                    </div>
-                  </li>
-                ) : null}
-                {atividadeRede.map((ev) => (
-                  <li key={ev.id} className="dashboard-pro-activity-item">
-                    <div>
-                      <strong>{ev.titulo}</strong>
-                      <p>{ev.detalhe}</p>
-                    </div>
-                    <div className="dashboard-pro-activity-meta">
-                      <span className="pill badge-info">{ev.estado}</span>
-                      <time>{ev.hora}</time>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </article>
-        </div>
+          <Grid item xs={12} md={6}>
+            <Paper variant="outlined" sx={{ p: 1.5, height: "100%" }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                <Typography fontWeight={700}>Atividade recente (Scan)</Typography>
+                <Button variant="text" size="small" onClick={abrirMeuHistorico}>
+                  Histórico
+                </Button>
+              </Stack>
+              {loading ? (
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <CircularProgress size={16} />
+                  <Typography variant="body2">A carregar…</Typography>
+                </Stack>
+              ) : (
+                <List dense disablePadding>
+                  {atividadeRede.map((ev) => (
+                    <ListItem
+                      key={ev.id}
+                      disableGutters
+                      divider
+                      secondaryAction={<Typography variant="caption">{ev.hora}</Typography>}
+                    >
+                      <ListItemText primary={ev.titulo} secondary={`${ev.detalhe} · ${ev.estado}`} />
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+            </Paper>
+          </Grid>
+        </Grid>
 
-        <div className="dashboard-pro-grid dashboard-pro-grid--bottom">
-          <article className="dashboard-card">
-            <div className="card-head dashboard-pro-head">
-              <h3>Computadores recentes</h3>
-              <button type="button" className="ghost ghost-sm" onClick={() => onNavigate("computadores")}>
-                Ver todos
-              </button>
-            </div>
-            {loading ? (
-              <div className="loading-box">A carregar computadores…</div>
-            ) : (
-              <div className="table-shell table-shell--responsive">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Nome</th>
-                      <th>IP</th>
-                      <th>Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentComputadores.map((pc) => (
-                      <tr key={pc.id}>
-                        <td>{pc.nome || pc.hostname || "—"}</td>
-                        <td className="cell-mono">{pc.endereco_ip || pc.ip || "—"}</td>
-                        <td>{pc.estado || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </article>
+        <Grid container spacing={1.5}>
+          <Grid item xs={12} md={7}>
+            <Paper variant="outlined" sx={{ p: 1.5 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                <Typography fontWeight={700}>Computadores recentes</Typography>
+                <Button variant="text" size="small" onClick={() => onNavigate("computadores")}>
+                  Ver todos
+                </Button>
+              </Stack>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Nome</TableCell>
+                    <TableCell>IP</TableCell>
+                    <TableCell>Estado</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {recentComputadores.map((pc) => (
+                    <TableRow key={pc.id}>
+                      <TableCell>{pc.nome || pc.hostname || "—"}</TableCell>
+                      <TableCell sx={{ fontFamily: "monospace" }}>{pc.endereco_ip || pc.ip || "—"}</TableCell>
+                      <TableCell>{pc.estado || "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={5}>
+            <Paper variant="outlined" sx={{ p: 1.5 }}>
+              <Typography fontWeight={700} mb={1}>
+                Ações rápidas
+              </Typography>
+              <Grid container spacing={1}>
+                <Grid item xs={6}>
+                  <Button
+                    fullWidth
+                    onClick={() => onNavigate("inventarios")}
+                    startIcon={<span className="material-symbols-outlined">inventory_2</span>}
+                  >
+                    Inventários
+                  </Button>
+                </Grid>
+                <Grid item xs={6}>
+                  <Button
+                    fullWidth
+                    onClick={() => onNavigate("ativos")}
+                    startIcon={<span className="material-symbols-outlined">radar</span>}
+                  >
+                    Scan
+                  </Button>
+                </Grid>
+                <Grid item xs={6}>
+                  <Button
+                    fullWidth
+                    onClick={() => onNavigate("pesquisa")}
+                    startIcon={<span className="material-symbols-outlined">search</span>}
+                  >
+                    Pesquisa
+                  </Button>
+                </Grid>
+                <Grid item xs={6}>
+                  <Button
+                    fullWidth
+                    onClick={() => onNavigate("logs")}
+                    startIcon={<span className="material-symbols-outlined">receipt_long</span>}
+                  >
+                    Logs
+                  </Button>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Grid>
+        </Grid>
 
-          <article className="dashboard-card">
-            <div className="card-head dashboard-pro-head">
-              <h3>Ações rápidas</h3>
-            </div>
-            <div className="quick-tiles">
-              <button type="button" className="quick-tile" onClick={() => onNavigate("inventarios")}>
-                <span className="material-symbols-outlined">inventory_2</span>
-                Inventários
-              </button>
-              <button type="button" className="quick-tile" onClick={() => onNavigate("ativos")}>
-                <span className="material-symbols-outlined">radar</span>
-                Scan
-              </button>
-              <button type="button" className="quick-tile" onClick={() => onNavigate("pesquisa")}>
-                <span className="material-symbols-outlined">search</span>
-                Pesquisa global
-              </button>
-              <button type="button" className="quick-tile" onClick={() => onNavigate("logs")}>
-                <span className="material-symbols-outlined">receipt_long</span>
-                Logs
-              </button>
-            </div>
-          </article>
-        </div>
-
-        <article className="dashboard-card dashboard-pro-users">
-          <div className="card-head dashboard-pro-head">
-            <h3>Utilizadores recentes</h3>
-            <button type="button" className="ghost ghost-sm" onClick={() => onNavigate("utilizadores")}>
+        <Paper variant="outlined" sx={{ p: 1.5 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+            <Typography fontWeight={700}>Utilizadores recentes</Typography>
+            <Button variant="text" size="small" onClick={() => onNavigate("utilizadores")}>
               Ver todos
-            </button>
-          </div>
-          {loading ? (
-            <div className="loading-box">A carregar utilizadores…</div>
-          ) : (
-            <ul className="dashboard-pro-user-list">
-              {latestUsers.map((u) => (
-                <li key={u.id}>
-                  <span className="material-symbols-outlined" aria-hidden>
+            </Button>
+          </Stack>
+          <List dense disablePadding>
+            {latestUsers.map((u) => (
+              <ListItem key={u.id} divider disableGutters>
+                <ListItemIcon sx={{ minWidth: 28 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                     person
                   </span>
-                  <div>
-                    <strong>{u.nome || u.username}</strong>
-                    <p>{u.email || u.username || "Sem email"}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-      </div>
+                </ListItemIcon>
+                <ListItemText primary={u.nome || u.username} secondary={u.email || u.username || "Sem email"} />
+              </ListItem>
+            ))}
+          </List>
+        </Paper>
+      </Stack>
     </SectionCard>
   );
 }

@@ -1,6 +1,7 @@
 /* Consulta de logs — filtros em modais horizontais; resultado mantém-se na página. */
 
 import { useState } from "react";
+import { Button } from "@mui/material";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
 
@@ -33,12 +34,12 @@ export default function LogsPage({
       subtitle="Consulta de logs de segurança e RDP. Abre um dos editores para definir filtros e executar."
       rightAction={
         <div className="section-head-actions">
-          <button type="button" className="btn-chip-primary" onClick={() => setModal("computador")}>
+          <Button type="button" onClick={() => setModal("computador")}>
             Por computador
-          </button>
-          <button type="button" className="btn-chip-primary" onClick={() => setModal("inventario")}>
+          </Button>
+          <Button type="button" onClick={() => setModal("inventario")}>
             Por inventário
-          </button>
+          </Button>
         </div>
       }
     >
@@ -53,12 +54,12 @@ export default function LogsPage({
         subtitle={<>Filtra pelo dispositivo e tipo de evento.</>}
         footer={
           <>
-            <button type="button" className="ghost" onClick={() => setModal(null)}>
+            <Button type="button" variant="outlined" onClick={() => setModal(null)}>
               Cancelar
-            </button>
-            <button type="button" onClick={handleComputadorConsultar}>
+            </Button>
+            <Button type="button" onClick={handleComputadorConsultar}>
               Consultar
-            </button>
+            </Button>
           </>
         }
       >
@@ -118,12 +119,12 @@ export default function LogsPage({
         subtitle={<>Por omissão usa o inventário selecionado na área Scan, se deixares o campo vazio.</>}
         footer={
           <>
-            <button type="button" className="ghost" onClick={() => setModal(null)}>
+            <Button type="button" variant="outlined" onClick={() => setModal(null)}>
               Cancelar
-            </button>
-            <button type="button" onClick={handleInventarioConsultar}>
+            </Button>
+            <Button type="button" onClick={handleInventarioConsultar}>
               Consultar
-            </button>
+            </Button>
           </>
         }
       >

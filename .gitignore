@@ -48,6 +48,7 @@ frontend/dist/
 
 # Vite cache
 **/node_modules/.vite/
+frontend/.vite/
 
 # --- Logs e temporários ---
 *.log
@@ -72,6 +73,7 @@ resultado*.json
 
 # --- IDE / OS ---
 # Partilhar definições úteis do Cursor/VS Code; ignorar o resto da pasta local
+.cursor/
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json

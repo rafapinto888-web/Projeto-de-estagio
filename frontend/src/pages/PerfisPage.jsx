@@ -1,6 +1,7 @@
 /* Perfis — lista em tabela como as outras abas; membros em modal dedicado. */
 
 import { useCallback, useState } from "react";
+import { Button, TableCell, TableRow, Typography } from "@mui/material";
 import DataTable from "../components/DataTable";
 import EmptyState from "../components/EmptyState";
 import FormModal from "../components/FormModal";
@@ -83,14 +84,16 @@ export default function PerfisPage({
       subtitle="Cargos e permissões da aplicação. A lista mostra quantas contas estão atribuídas a cada perfil."
       rightAction={
         isAdmin ? (
-          <button type="button" className="btn-chip-primary" onClick={openCreate}>
+          <Button type="button" onClick={openCreate}>
             Novo perfil
-          </button>
+          </Button>
         ) : null
       }
     >
       {!isAdmin ? (
-        <p className="muted-inline">Apenas administradores podem criar, editar ou apagar perfis.</p>
+        <Typography variant="body2" color="text.secondary" mb={1.2}>
+          Apenas administradores podem criar, editar ou apagar perfis.
+        </Typography>
       ) : null}
 
       {loading ? (
@@ -113,11 +116,11 @@ export default function PerfisPage({
             const count = members.length;
 
             return (
-              <tr key={p.id}>
-                <td>
+              <TableRow key={p.id}>
+                <TableCell>
                   <strong className="perfil-table-name">{p.nome}</strong>
-                </td>
-                <td>
+                </TableCell>
+                <TableCell>
                   <span
                     className={
                       count > 0 ? "perfil-count-pill perfil-count-pill--fill" : "perfil-count-pill"
@@ -130,25 +133,25 @@ export default function PerfisPage({
                   >
                     {count}
                   </span>
-                </td>
-                <td>
+                </TableCell>
+                <TableCell>
                   {isAdmin ? (
                     <>
-                      <button type="button" className="ghost table-btn" onClick={() => setMembrosModal(p)}>
+                      <Button type="button" variant="text" size="small" onClick={() => setMembrosModal(p)}>
                         Membros
-                      </button>
-                      <button type="button" className="ghost table-btn" onClick={() => openEdit(p)}>
+                      </Button>
+                      <Button type="button" variant="text" size="small" onClick={() => openEdit(p)}>
                         Editar
-                      </button>
-                      <button type="button" className="danger table-btn" onClick={() => onDeleteRow(p)}>
+                      </Button>
+                      <Button type="button" color="error" variant="text" size="small" onClick={() => onDeleteRow(p)}>
                         Apagar
-                      </button>
+                      </Button>
                     </>
                   ) : (
                     "—"
                   )}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             );
           }}
         />
@@ -169,9 +172,9 @@ export default function PerfisPage({
           ) : null
         }
         footer={
-          <button type="button" onClick={() => setMembrosModal(null)}>
+          <Button type="button" onClick={() => setMembrosModal(null)}>
             Fechar
-          </button>
+          </Button>
         }
       >
         <div className="perfil-members-scroll">
@@ -208,17 +211,17 @@ export default function PerfisPage({
           }
           footer={
             <>
-              <button type="button" className="ghost" onClick={closeEditor}>
+              <Button type="button" variant="outlined" onClick={closeEditor}>
                 Cancelar
-              </button>
+              </Button>
               {editorMode === "edit" ? (
-                <button type="button" className="danger" onClick={handleDeleteInModal}>
+                <Button type="button" color="error" variant="outlined" onClick={handleDeleteInModal}>
                   Apagar perfil
-                </button>
+                </Button>
               ) : null}
-              <button type="button" onClick={handleSave}>
+              <Button type="button" onClick={handleSave}>
                 {editorMode === "create" ? "Criar perfil" : "Guardar alterações"}
-              </button>
+              </Button>
             </>
           }
         >

@@ -1,6 +1,6 @@
-# Sistema de inventário informático
+# Sistema de inventario informatico
 
-Painel web para gestão de inventário de TI: inventários, computadores, localizações, utilizadores com perfis, descoberta na rede (scan) e consulta de logs. Projeto **full stack** com FastAPI e React, concebido para uso interno / demonstração em contexto de estágio.
+Painel web para gestao de inventario de TI: inventarios, computadores, localizacoes, utilizadores com perfis, descoberta na rede (scan) e consulta de logs. Projeto **full stack** com FastAPI e React, concebido para uso interno / demonstracao em contexto de estagio.
 
 ## Visão geral
 
@@ -23,11 +23,19 @@ Painel web para gestão de inventário de TI: inventários, computadores, locali
 
 **Limitações esperáveis**: dependência de Postgres acessível, credenciais e `DATABASE_URL` corretos, e permissões rede/WMI para scans — falhas são tratidas no cliente com mensagens de erro da API.
 
-## Stack tecnológica
+## Stack tecnologico
 
 - **Backend**: Python 3.11+, FastAPI, Uvicorn, SQLAlchemy, Pydantic, PostgreSQL (`psycopg2-binary`), JWT, hashing de passwords.
-- **Frontend**: React 18, Vite 5.
+- **Frontend**: React 18, Vite 5, Material UI (MUI) e Emotion.
 - **API**: OpenAPI/Swagger em `/docs`.
+
+## Bibliotecas do frontend (guia rapido de estudo)
+
+- `react` e `react-dom`: base da interface (componentes, estado, renderizacao no browser).
+- `vite`: bundler/dev server rapido para desenvolvimento e build.
+- `@mui/material`: biblioteca de componentes UI (AppBar, Drawer, Dialog, Table, Alert, etc.) usada no remake visual.
+- `@emotion/react` e `@emotion/styled`: motor de estilos CSS-in-JS usado internamente pelo MUI para tema e personalizacao.
+- `@mui/icons-material`: pacote de icones Material para complementar interfaces MUI quando necessario.
 
 ## Estrutura do repositório
 
@@ -47,6 +55,7 @@ frontend/
     api.js         # cliente HTTP para a API
     authz.js       # heurísticas perfil administrador
     App.jsx        # estado global e navegação por abas
+    theme.js       # tema MUI global (paleta, tipografia, componentes)
     styles.css     # tema e layout
 README.md
 ```
@@ -123,10 +132,17 @@ npm run dev
 - API base: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 - Frontend Vite: [http://127.0.0.1:5173](http://127.0.0.1:5173) (ou porta indicada no terminal)
 
-## Dependências principais
+## Dependencias principais
 
 - Backend: ver `backend/requirements.txt` (FastAPI, Uvicorn, SQLAlchemy, psycopg2-binary, PyJWT, httpx, hashing de passwords, etc.).
-- Frontend: ver `frontend/package.json` (React, react-dom, Vite).
+- Frontend: ver `frontend/package.json` (React, Vite, MUI, Emotion).
+
+## Notas de arquitetura frontend (apos remake)
+
+- O shell principal (`Sidebar` + `Topbar`) e componentes base estao em MUI.
+- O tema global fica centralizado em `frontend/src/theme.js`.
+- A navegacao continua por `activeTab` em `frontend/src/App.jsx` (sem React Router nesta fase).
+- O consumo de dados reais continua centralizado em `frontend/src/api.js` sem alteracoes de contrato backend.
 
 ## Troubleshooting rápido
 

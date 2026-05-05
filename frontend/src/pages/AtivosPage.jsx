@@ -1,6 +1,7 @@
 /* Scan — lista de ativos por inventário; pesquisa e scan de rede em modais. */
 
 import { useState } from "react";
+import { Button, TableCell, TableRow } from "@mui/material";
 import DataTable from "../components/DataTable";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
@@ -48,13 +49,13 @@ export default function AtivosPage({
       subtitle="Escolhe o inventário para ver ativos. Pesquisa na lista ou (admin) executa descoberta na rede a partir dos modais."
       rightAction={
         <div className="section-head-actions">
-          <button type="button" className="btn-chip-primary" onClick={() => setModal("pesquisa")}>
+          <Button type="button" onClick={() => setModal("pesquisa")}>
             Pesquisar na lista
-          </button>
+          </Button>
           {isAdmin ? (
-            <button type="button" className="btn-chip-primary" onClick={() => setModal("scan")}>
+            <Button type="button" onClick={() => setModal("scan")}>
               Scan de rede
-            </button>
+            </Button>
           ) : null}
         </div>
       }
@@ -83,17 +84,17 @@ export default function AtivosPage({
         emptyTitle="Sem ativos para mostrar"
         emptyDescription="Seleciona um inventário e usa «Pesquisar na lista» ou recarrega a lista completa no modal."
         renderRow={(a, idx) => (
-          <tr key={`${a.id || a.ip || idx}`}>
-            <td>{a.tipo === "computador" ? "Registo" : a.tipo === "dispositivo_descoberto" ? "Scan" : (a.numero_serie ? "Registo" : "Scan")}</td>
-            <td>{a.nome || a.hostname || "—"}</td>
-            <td className="cell-mono">{a.ip || "—"}</td>
-            <td className="cell-mono">{a.mac_address || "—"}</td>
-            <td className="cell-mono">{a.numero_serie || "—"}</td>
-            <td>{a.marca || "—"}</td>
-            <td>{a.modelo || "—"}</td>
-            <td>{a.sistema_operativo || "—"}</td>
-            <td>{a.estado || "—"}</td>
-          </tr>
+          <TableRow key={`${a.id || a.ip || idx}`}>
+            <TableCell>{a.tipo === "computador" ? "Registo" : a.tipo === "dispositivo_descoberto" ? "Scan" : (a.numero_serie ? "Registo" : "Scan")}</TableCell>
+            <TableCell>{a.nome || a.hostname || "—"}</TableCell>
+            <TableCell sx={{ fontFamily: "monospace" }}>{a.ip || "—"}</TableCell>
+            <TableCell sx={{ fontFamily: "monospace" }}>{a.mac_address || "—"}</TableCell>
+            <TableCell sx={{ fontFamily: "monospace" }}>{a.numero_serie || "—"}</TableCell>
+            <TableCell>{a.marca || "—"}</TableCell>
+            <TableCell>{a.modelo || "—"}</TableCell>
+            <TableCell>{a.sistema_operativo || "—"}</TableCell>
+            <TableCell>{a.estado || "—"}</TableCell>
+          </TableRow>
         )}
       />
 
@@ -106,15 +107,15 @@ export default function AtivosPage({
         subtitle={<>Filtra os ativos do inventário selecionado. «Recarregar lista» limpa o filtro e volta a carregar tudo.</>}
         footer={
           <>
-            <button type="button" className="ghost" onClick={() => setModal(null)}>
+              <Button type="button" variant="outlined" onClick={() => setModal(null)}>
               Cancelar
-            </button>
-            <button type="button" className="ghost" onClick={handleRecarregarLista}>
+              </Button>
+            <Button type="button" variant="outlined" onClick={handleRecarregarLista}>
               Recarregar lista
-            </button>
-            <button type="button" onClick={handlePesquisar}>
+            </Button>
+            <Button type="button" onClick={handlePesquisar}>
               Pesquisar
-            </button>
+            </Button>
           </>
         }
       >
@@ -140,12 +141,12 @@ export default function AtivosPage({
           subtitle={<>Credenciais para WMI/descoberta no inventário selecionado. A rede é opcional.</>}
           footer={
             <>
-              <button type="button" className="ghost" onClick={() => setModal(null)}>
+              <Button type="button" variant="outlined" onClick={() => setModal(null)}>
                 Cancelar
-              </button>
-              <button type="button" onClick={handleScan}>
+              </Button>
+              <Button type="button" onClick={handleScan}>
                 Executar scan
-              </button>
+              </Button>
             </>
           }
         >

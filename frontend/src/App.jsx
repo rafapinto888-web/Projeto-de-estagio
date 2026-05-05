@@ -1,6 +1,7 @@
 /* Comentario geral deste ficheiro: orquestra estado global e navegacao entre paginas. */
 
 import { useEffect, useMemo, useState } from "react";
+import { Box } from "@mui/material";
 import { api } from "./api";
 import { isAdminProfileName } from "./authz";
 import SidebarNav from "./components/SidebarNav";
@@ -106,6 +107,7 @@ export default function App() {
 
   const [globalTermo, setGlobalTermo] = useState("");
   const [globalOutput, setGlobalOutput] = useState("");
+  const [globalSearchRequestId, setGlobalSearchRequestId] = useState(0);
   const [logsOutput, setLogsOutput] = useState("Seleciona filtros para consultar logs.");
 
   const [logComputadorParams, setLogComputadorParams] = useState({
@@ -324,10 +326,10 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default", p: 1.5, gap: 1.5 }}>
       <SidebarNav tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
 
-      <div className="main-column">
+      <Box sx={{ flex: 1, minWidth: 0 }}>
         <Topbar
           user={user}
           isAdmin={isAdmin}
@@ -336,10 +338,11 @@ export default function App() {
           onSearch={(q) => {
             setGlobalTermo(q);
             setActiveTab("pesquisa");
+            setGlobalSearchRequestId((n) => n + 1);
           }}
         />
 
-        <main className="content">
+        <main className="content" style={{ marginTop: 0 }}>
           <StatusAlert type={status.type} message={status.message} />
 
           {activeTab === "dashboard" && (
@@ -715,6 +718,7 @@ export default function App() {
               }}
               globalOutput={globalOutput}
               loading={actionLoading}
+              searchRequestId={globalSearchRequestId}
             />
           )}
 
@@ -759,8 +763,8 @@ export default function App() {
             />
           )}
         </main>
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 

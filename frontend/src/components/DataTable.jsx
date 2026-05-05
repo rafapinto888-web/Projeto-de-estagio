@@ -1,5 +1,6 @@
 /* Comentario geral deste ficheiro: tabela padronizada com estado vazio e loading. */
 
+import { CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from "@mui/material";
 import EmptyState from "./EmptyState";
 
 export default function DataTable({
@@ -12,7 +13,12 @@ export default function DataTable({
   tableClassName = "",
 }) {
   if (loading) {
-    return <div className="loading-box">A carregar dados...</div>;
+    return (
+      <Paper variant="outlined" sx={{ p: 2.5, display: "flex", alignItems: "center", gap: 1.2 }}>
+        <CircularProgress size={18} />
+        <Typography fontSize={14}>A carregar dados...</Typography>
+      </Paper>
+    );
   }
 
   if (!rows?.length) {
@@ -20,18 +26,20 @@ export default function DataTable({
   }
 
   return (
-    <div className={`table-shell ${tableClassName}`.trim()}>
-      <table>
-        <thead>
-          <tr>
+    <TableContainer component={Paper} variant="outlined" className={tableClassName}>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
             {columns.map((col) => (
-              <th key={col}>{col}</th>
+              <TableCell key={col} sx={{ fontWeight: 700 }}>
+                {col}
+              </TableCell>
             ))}
-          </tr>
-        </thead>
-        <tbody>{rows.map((row, idx) => renderRow(row, idx, columns))}</tbody>
-      </table>
-    </div>
+          </TableRow>
+        </TableHead>
+        <TableBody>{rows.map((row, idx) => renderRow(row, idx, columns))}</TableBody>
+      </Table>
+    </TableContainer>
   );
 }
 

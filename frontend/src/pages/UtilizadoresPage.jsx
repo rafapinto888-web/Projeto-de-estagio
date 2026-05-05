@@ -1,6 +1,7 @@
 /* Gestão de utilizadores — criar/editar dentro de modal (componente FormModal). */
 
 import { useCallback, useState } from "react";
+import { Button, TableCell, TableRow, Typography } from "@mui/material";
 import DataTable from "../components/DataTable";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
@@ -57,14 +58,16 @@ export default function UtilizadoresPage({
       subtitle="Contas de acesso e respetivos perfis. Para criar ou alterar dados usa o editor."
       rightAction={
         isAdmin ? (
-          <button type="button" className="btn-chip-primary" onClick={openCreate}>
+          <Button type="button" onClick={openCreate}>
             Novo utilizador
-          </button>
+          </Button>
         ) : null
       }
     >
       {!isAdmin ? (
-        <p className="muted-inline">Contas só podem ser geridas por um administrador.</p>
+        <Typography variant="body2" color="text.secondary" mb={1.2}>
+          Contas só podem ser geridas por um administrador.
+        </Typography>
       ) : null}
 
       <DataTable
@@ -75,26 +78,26 @@ export default function UtilizadoresPage({
         emptyTitle="Sem utilizadores disponíveis"
         emptyDescription="Um administrador pode registar novas contas através de «Novo utilizador»."
         renderRow={(u) => (
-          <tr key={u.id}>
-            <td>{u.nome}</td>
-            <td>{u.username}</td>
-            <td>{u.email}</td>
-            <td>{u.perfil_nome || u.perfil_id}</td>
-            <td>
+          <TableRow key={u.id}>
+            <TableCell>{u.nome}</TableCell>
+            <TableCell>{u.username}</TableCell>
+            <TableCell>{u.email}</TableCell>
+            <TableCell>{u.perfil_nome || u.perfil_id}</TableCell>
+            <TableCell>
               {isAdmin ? (
                 <>
-                  <button type="button" className="ghost table-btn" onClick={() => openEdit(u)}>
+                  <Button type="button" variant="text" size="small" onClick={() => openEdit(u)}>
                     Editar
-                  </button>
-                  <button type="button" className="danger table-btn" onClick={() => onDeleteRow(u)}>
+                  </Button>
+                  <Button type="button" color="error" variant="text" size="small" onClick={() => onDeleteRow(u)}>
                     Apagar
-                  </button>
+                  </Button>
                 </>
               ) : (
                 "-"
               )}
-            </td>
-          </tr>
+            </TableCell>
+          </TableRow>
         )}
       />
 
@@ -117,17 +120,17 @@ export default function UtilizadoresPage({
           }
           footer={
             <>
-              <button type="button" className="ghost" onClick={closeEditor}>
+              <Button type="button" variant="outlined" onClick={closeEditor}>
                 Cancelar
-              </button>
+              </Button>
               {editorMode === "edit" ? (
-                <button type="button" className="danger" onClick={handleDeleteInModal}>
+                <Button type="button" color="error" variant="outlined" onClick={handleDeleteInModal}>
                   Apagar conta
-                </button>
+                </Button>
               ) : null}
-              <button type="button" onClick={handleSave}>
+              <Button type="button" onClick={handleSave}>
                 {editorMode === "create" ? "Criar utilizador" : "Guardar alterações"}
-              </button>
+              </Button>
             </>
           }
         >

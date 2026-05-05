@@ -1,6 +1,7 @@
 /* Localizações físicas — CRUD em modal com grelha horizontal. */
 
 import { useCallback, useState } from "react";
+import { Button, TableCell, TableRow } from "@mui/material";
 import DataTable from "../components/DataTable";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
@@ -56,9 +57,9 @@ export default function LocalizacoesPage({
       subtitle="Salas, racks e outros pontos físicos. Cria ou edita no editor."
       rightAction={
         isAdmin ? (
-          <button type="button" className="btn-chip-primary" onClick={openCreate}>
+          <Button type="button" onClick={openCreate}>
             Nova localização
-          </button>
+          </Button>
         ) : null
       }
     >
@@ -70,24 +71,24 @@ export default function LocalizacoesPage({
         emptyTitle="Sem localizações"
         emptyDescription='Adiciona pontos físicos com «Nova localização».'
         renderRow={(l) => (
-          <tr key={l.id}>
-            <td>{l.nome}</td>
-            <td>{l.descricao || "-"}</td>
-            <td>
+          <TableRow key={l.id}>
+            <TableCell>{l.nome}</TableCell>
+            <TableCell>{l.descricao || "-"}</TableCell>
+            <TableCell>
               {isAdmin ? (
                 <>
-                  <button type="button" className="ghost table-btn" onClick={() => openEdit(l)}>
+                  <Button type="button" variant="text" size="small" onClick={() => openEdit(l)}>
                     Editar
-                  </button>
-                  <button type="button" className="danger table-btn" onClick={() => onDeleteRow(l)}>
+                  </Button>
+                  <Button type="button" color="error" variant="text" size="small" onClick={() => onDeleteRow(l)}>
                     Apagar
-                  </button>
+                  </Button>
                 </>
               ) : (
                 "-"
               )}
-            </td>
-          </tr>
+            </TableCell>
+          </TableRow>
         )}
       />
 
@@ -108,17 +109,17 @@ export default function LocalizacoesPage({
           }
           footer={
             <>
-              <button type="button" className="ghost" onClick={closeEditor}>
+              <Button type="button" variant="outlined" onClick={closeEditor}>
                 Cancelar
-              </button>
+              </Button>
               {editorMode === "edit" ? (
-                <button type="button" className="danger" onClick={handleDeleteInModal}>
+                <Button type="button" color="error" variant="outlined" onClick={handleDeleteInModal}>
                   Apagar localização
-                </button>
+                </Button>
               ) : null}
-              <button type="button" onClick={handleSave}>
+              <Button type="button" onClick={handleSave}>
                 {editorMode === "create" ? "Criar localização" : "Guardar alterações"}
-              </button>
+              </Button>
             </>
           }
         >

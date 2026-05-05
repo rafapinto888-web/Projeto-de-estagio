@@ -1,6 +1,7 @@
 /* Gestão de inventários — criar/editar em modal com grelha horizontal. */
 
 import { useCallback, useState } from "react";
+import { Button, TableCell, TableRow } from "@mui/material";
 
 function tipoInventarioLabel(t) {
   if (t === "sub_rede") return "Sub-rede";
@@ -61,9 +62,9 @@ export default function InventariosPage({
       subtitle="Gerir inventários normais e de sub-rede. Usa o editor para criar ou alterar."
       rightAction={
         isAdmin ? (
-          <button type="button" className="btn-chip-primary" onClick={openCreate}>
+          <Button type="button" onClick={openCreate}>
             Novo inventário
-          </button>
+          </Button>
         ) : null
       }
     >
@@ -75,27 +76,27 @@ export default function InventariosPage({
         emptyTitle="Nenhum inventário encontrado"
         emptyDescription='Cria inventários através de «Novo inventário».'
         renderRow={(inv) => (
-          <tr key={inv.id}>
-            <td>{inv.nome}</td>
-            <td>{tipoInventarioLabel(inv.tipo_inventario)}</td>
-            <td>{inv.rede || inv.ip_rede || "—"}</td>
-            <td>{(inv.total_computadores ?? 0) + (inv.total_dispositivos_scan ?? 0)}</td>
-            <td>{inv.descricao || "—"}</td>
-            <td>
+          <TableRow key={inv.id}>
+            <TableCell>{inv.nome}</TableCell>
+            <TableCell>{tipoInventarioLabel(inv.tipo_inventario)}</TableCell>
+            <TableCell>{inv.rede || inv.ip_rede || "—"}</TableCell>
+            <TableCell>{(inv.total_computadores ?? 0) + (inv.total_dispositivos_scan ?? 0)}</TableCell>
+            <TableCell>{inv.descricao || "—"}</TableCell>
+            <TableCell>
               {isAdmin ? (
                 <>
-                  <button type="button" className="ghost table-btn" onClick={() => openEdit(inv)}>
+                  <Button type="button" variant="text" size="small" onClick={() => openEdit(inv)}>
                     Editar
-                  </button>
-                  <button type="button" className="danger table-btn" onClick={() => onDeleteRow?.(inv)}>
+                  </Button>
+                  <Button type="button" color="error" variant="text" size="small" onClick={() => onDeleteRow?.(inv)}>
                     Apagar
-                  </button>
+                  </Button>
                 </>
               ) : (
                 "-"
               )}
-            </td>
-          </tr>
+            </TableCell>
+          </TableRow>
         )}
       />
 
@@ -116,17 +117,17 @@ export default function InventariosPage({
           }
           footer={
             <>
-              <button type="button" className="ghost" onClick={closeEditor}>
+              <Button type="button" variant="outlined" onClick={closeEditor}>
                 Cancelar
-              </button>
+              </Button>
               {editorMode === "edit" ? (
-                <button type="button" className="danger" onClick={handleDeleteInModal}>
+                <Button type="button" color="error" variant="outlined" onClick={handleDeleteInModal}>
                   Apagar inventário
-                </button>
+                </Button>
               ) : null}
-              <button type="button" onClick={handleSave}>
+              <Button type="button" onClick={handleSave}>
                 {editorMode === "create" ? "Criar inventário" : "Guardar alterações"}
-              </button>
+              </Button>
             </>
           }
         >
