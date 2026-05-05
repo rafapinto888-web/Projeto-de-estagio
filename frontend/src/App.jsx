@@ -109,6 +109,7 @@ export default function App() {
   const [globalOutput, setGlobalOutput] = useState("");
   const [globalSearchRequestId, setGlobalSearchRequestId] = useState(0);
   const [logsOutput, setLogsOutput] = useState("Seleciona filtros para consultar logs.");
+  const [historicoConta, setHistoricoConta] = useState([]);
 
   const [logComputadorParams, setLogComputadorParams] = useState({
     computador_id: "",
@@ -142,6 +143,7 @@ export default function App() {
         perfisData,
         localizacoesData,
         ativosGruposData,
+        historicoData,
       ] = await Promise.all([
         api.inventarios.listar(tk),
         api.computadores.listar(tk),
@@ -149,6 +151,7 @@ export default function App() {
         api.perfis.listar(tk),
         api.localizacoes.listar(tk),
         api.inventarios.ativosPorInventario(tk),
+        api.historicoMeu(tk),
       ]);
       setInventarios(inventariosData || []);
       setComputadores(computadoresData || []);
@@ -156,6 +159,7 @@ export default function App() {
       setUtilizadores(utilizadoresData || []);
       setPerfis(perfisData || []);
       setLocalizacoes(localizacoesData || []);
+      setHistoricoConta(Array.isArray(historicoData?.itens) ? historicoData.itens : []);
       const firstId = (inventariosData || [])[0]?.id;
       setSelectedInventarioId((prev) => prev || String(firstId || ""));
     } finally {
@@ -216,6 +220,7 @@ export default function App() {
     setPerfis([]);
     setLocalizacoes([]);
     setAtivos([]);
+    setHistoricoConta([]);
     setStatus({ type: "ok", message: "Sessao terminada" });
   }
 
@@ -349,8 +354,10 @@ export default function App() {
             <DashboardPage
               inventarios={inventarios}
               computadores={computadores}
+              ativosPorInventario={ativosPorInventario}
               utilizadores={utilizadores}
               localizacoes={localizacoes}
+              historicoConta={historicoConta}
               loading={loading}
               onNavigate={setActiveTab}
               onOpenHistorico={() => setActiveTab("historico-conta")}
