@@ -1,7 +1,7 @@
 /* CRUD de computadores + vista agregada com equipamentos descobertos por inventário (scan). */
 
 import { useCallback, useMemo, useState } from "react";
-import { Button } from "@mui/material";
+import { Button, MenuItem, Stack, TextField } from "@mui/material";
 import { api } from "../api";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
@@ -366,23 +366,28 @@ export default function ComputadoresPage({
             <section className="computadores-overview-controls" aria-label="Pesquisa e filtros">
               <div className="computadores-search-row">
                 <div className="computadores-search-field">
-                  <span className="material-symbols-outlined computadores-search-field-icon" aria-hidden>
-                    search
-                  </span>
-                  <input
+                  <TextField
                     type="search"
-                    className="computadores-search-input"
+                    size="small"
+                    fullWidth
                     placeholder="Pesquisar inventário ou equipamento (IP, hostname, série…)"
                     value={pesquisaLista}
                     onChange={(e) => setPesquisaLista(e.target.value)}
                     autoComplete="off"
                     aria-label="Pesquisar na lista"
+                    InputProps={{
+                      startAdornment: (
+                        <span className="material-symbols-outlined computadores-search-field-icon" aria-hidden>
+                          search
+                        </span>
+                      ),
+                    }}
                   />
                 </div>
                 {pesquisaLista ? (
-                  <button type="button" className="ghost ghost-sm computadores-search-clear" onClick={() => setPesquisaLista("")}>
+                  <Button type="button" variant="outlined" size="small" onClick={() => setPesquisaLista("")}>
                     Limpar
-                  </button>
+                  </Button>
                 ) : null}
               </div>
 
@@ -418,24 +423,25 @@ export default function ComputadoresPage({
                 <div className="computadores-toolbar-merge-right">
                   <label className="computadores-jump-compact">
                     <span className="computadores-jump-compact-label">Ir para</span>
-                    <select
-                      className="computadores-toolbar-select"
-                      defaultValue=""
+                    <TextField
+                      select
+                      size="small"
+                      value=""
                       disabled={gruposExibicao.length === 0}
+                      sx={{ minWidth: 180 }}
                       onChange={(e) => {
                         irParaInventario(e.target.value);
-                        e.target.value = "";
                       }}
                     >
-                      <option value="" disabled>
+                      <MenuItem value="" disabled>
                         {gruposExibicao.length === 0 ? "Sem resultados" : "Inventário…"}
-                      </option>
+                      </MenuItem>
                       {gruposExibicao.map((g) => (
-                        <option key={g.inventario_id} value={g.inventario_id}>
+                        <MenuItem key={g.inventario_id} value={g.inventario_id}>
                           {g.inventario_nome}
-                        </option>
+                        </MenuItem>
                       ))}
-                    </select>
+                    </TextField>
                   </label>
                   <div className="computadores-toolbar-actions">
                     <button
@@ -755,125 +761,127 @@ export default function ComputadoresPage({
             </>
           }
         >
-          <div className="form-stack form-stack--horizontal">
-            <label className="field-label">
-              Nome
-              <input
-                placeholder="Identificação do equipamento"
-                value={computadorForm.nome}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, nome: e.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              Estado
-              <input
-                placeholder="ativo, manutenção, …"
-                value={computadorForm.estado}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, estado: e.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              Marca
-              <input
-                placeholder="Marca"
-                value={computadorForm.marca}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, marca: e.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              Modelo
-              <input
-                placeholder="Modelo"
-                value={computadorForm.modelo}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, modelo: e.target.value }))}
-              />
-            </label>
-            <label className="field-label field-label--full">
-              Número de série
-              <input
-                placeholder="S/N ou etiqueta"
-                value={computadorForm.numero_serie}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, numero_serie: e.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              Hostname (rede)
-              <input
-                placeholder="Ex.: PC-LAB-03"
-                value={computadorForm.hostname}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, hostname: e.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              Endereço IP
-              <input
-                placeholder="Ex.: 192.168.1.10"
-                value={computadorForm.endereco_ip}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, endereco_ip: e.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              MAC
-              <input
-                placeholder="Ex.: AA:BB:CC:DD:EE:FF"
-                className="input-mono"
-                value={computadorForm.mac_address}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, mac_address: e.target.value }))}
-              />
-            </label>
-            <label className="field-label field-label--full">
-              Sistema operativo
-              <input
-                placeholder="Ex.: Windows 11 Pro"
-                value={computadorForm.sistema_operativo}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, sistema_operativo: e.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              Inventário
-              <select
-                value={computadorForm.inventario_id}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, inventario_id: e.target.value }))}
-              >
-                <option value="">Escolhe inventário…</option>
-                {inventarios.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.nome}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field-label">
-              Localização (opcional)
-              <select
-                value={computadorForm.localizacao_id}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, localizacao_id: e.target.value }))}
-              >
-                <option value="">—</option>
-                {localizacoes.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.nome}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field-label field-label--full">
-              Responsável (opcional)
-              <select
-                value={computadorForm.utilizador_responsavel_id}
-                onChange={(e) =>
-                  setComputadorForm((p) => ({ ...p, utilizador_responsavel_id: e.target.value }))
-                }
-              >
-                <option value="">—</option>
-                {utilizadores.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.nome}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <Stack spacing={1.2}>
+            <TextField
+              label="Nome"
+              placeholder="Identificação do equipamento"
+              value={computadorForm.nome}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, nome: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Estado"
+              placeholder="ativo, manutenção, …"
+              value={computadorForm.estado}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, estado: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Marca"
+              placeholder="Marca"
+              value={computadorForm.marca}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, marca: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Modelo"
+              placeholder="Modelo"
+              value={computadorForm.modelo}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, modelo: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Número de série"
+              placeholder="S/N ou etiqueta"
+              value={computadorForm.numero_serie}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, numero_serie: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Hostname (rede)"
+              placeholder="Ex.: PC-LAB-03"
+              value={computadorForm.hostname}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, hostname: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Endereço IP"
+              placeholder="Ex.: 192.168.1.10"
+              value={computadorForm.endereco_ip}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, endereco_ip: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="MAC"
+              placeholder="Ex.: AA:BB:CC:DD:EE:FF"
+              value={computadorForm.mac_address}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, mac_address: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Sistema operativo"
+              placeholder="Ex.: Windows 11 Pro"
+              value={computadorForm.sistema_operativo}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, sistema_operativo: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              select
+              label="Inventário"
+              value={computadorForm.inventario_id}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, inventario_id: e.target.value }))}
+              size="small"
+              fullWidth
+            >
+              <MenuItem value="">Escolhe inventário…</MenuItem>
+              {inventarios.map((item) => (
+                <MenuItem key={item.id} value={item.id}>
+                  {item.nome}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Localização (opcional)"
+              value={computadorForm.localizacao_id}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, localizacao_id: e.target.value }))}
+              size="small"
+              fullWidth
+            >
+              <MenuItem value="">—</MenuItem>
+              {localizacoes.map((item) => (
+                <MenuItem key={item.id} value={item.id}>
+                  {item.nome}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Responsável (opcional)"
+              value={computadorForm.utilizador_responsavel_id}
+              onChange={(e) =>
+                setComputadorForm((p) => ({ ...p, utilizador_responsavel_id: e.target.value }))
+              }
+              size="small"
+              fullWidth
+            >
+              <MenuItem value="">—</MenuItem>
+              {utilizadores.map((item) => (
+                <MenuItem key={item.id} value={item.id}>
+                  {item.nome}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
         </FormModal>
 
         <FormModal
@@ -899,70 +907,67 @@ export default function ComputadoresPage({
             </>
           }
         >
-          <div className="form-stack form-stack--horizontal">
-            <label className="field-label">
-              Endereço IP *
-              <input
-                className="input-mono"
-                placeholder="192.168.x.x"
-                value={scanForm.ip}
-                onChange={(e) => setScanForm((p) => ({ ...p, ip: e.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              Estado *
-              <input
-                placeholder="ativo, inativo…"
-                value={scanForm.estado}
-                onChange={(e) => setScanForm((p) => ({ ...p, estado: e.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              Hostname
-              <input
-                value={scanForm.hostname}
-                onChange={(e) => setScanForm((p) => ({ ...p, hostname: e.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              MAC
-              <input
-                className="input-mono"
-                placeholder="AA:BB:CC:DD:EE:FF"
-                value={scanForm.mac_address}
-                onChange={(e) => setScanForm((p) => ({ ...p, mac_address: e.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              Marca
-              <input
-                value={scanForm.marca}
-                onChange={(e) => setScanForm((p) => ({ ...p, marca: e.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              Modelo
-              <input
-                value={scanForm.modelo}
-                onChange={(e) => setScanForm((p) => ({ ...p, modelo: e.target.value }))}
-              />
-            </label>
-            <label className="field-label field-label--full">
-              N.º série
-              <input
-                className="input-mono"
-                value={scanForm.numero_serie}
-                onChange={(e) => setScanForm((p) => ({ ...p, numero_serie: e.target.value }))}
-              />
-            </label>
-            <label className="field-label field-label--full">
-              Sistema operativo
-              <input
-                value={scanForm.sistema_operativo}
-                onChange={(e) => setScanForm((p) => ({ ...p, sistema_operativo: e.target.value }))}
-              />
-            </label>
-          </div>
+          <Stack spacing={1.2}>
+            <TextField
+              label="Endereço IP *"
+              placeholder="192.168.x.x"
+              value={scanForm.ip}
+              onChange={(e) => setScanForm((p) => ({ ...p, ip: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Estado *"
+              placeholder="ativo, inativo…"
+              value={scanForm.estado}
+              onChange={(e) => setScanForm((p) => ({ ...p, estado: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Hostname"
+              value={scanForm.hostname}
+              onChange={(e) => setScanForm((p) => ({ ...p, hostname: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="MAC"
+              placeholder="AA:BB:CC:DD:EE:FF"
+              value={scanForm.mac_address}
+              onChange={(e) => setScanForm((p) => ({ ...p, mac_address: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Marca"
+              value={scanForm.marca}
+              onChange={(e) => setScanForm((p) => ({ ...p, marca: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Modelo"
+              value={scanForm.modelo}
+              onChange={(e) => setScanForm((p) => ({ ...p, modelo: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="N.º série"
+              value={scanForm.numero_serie}
+              onChange={(e) => setScanForm((p) => ({ ...p, numero_serie: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Sistema operativo"
+              value={scanForm.sistema_operativo}
+              onChange={(e) => setScanForm((p) => ({ ...p, sistema_operativo: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+          </Stack>
         </FormModal>
         </>
       ) : null}

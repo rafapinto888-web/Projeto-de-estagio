@@ -1,7 +1,7 @@
 /* Gestão de inventários — criar/editar em modal com grelha horizontal. */
 
 import { useCallback, useState } from "react";
-import { Button, TableCell, TableRow } from "@mui/material";
+import { Button, MenuItem, Stack, TableCell, TableRow, TextField } from "@mui/material";
 
 function tipoInventarioLabel(t) {
   if (t === "sub_rede") return "Sub-rede";
@@ -131,42 +131,43 @@ export default function InventariosPage({
             </>
           }
         >
-          <div className="form-stack form-stack--horizontal">
-            <label className="field-label">
-              Nome
-              <input
-                placeholder="Nome do inventário"
-                value={inventarioForm.nome}
-                onChange={(e) => setInventarioForm((p) => ({ ...p, nome: e.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              Tipo
-              <select
-                value={inventarioForm.tipo_inventario}
-                onChange={(e) => setInventarioForm((p) => ({ ...p, tipo_inventario: e.target.value }))}
-              >
-                <option value="normal">normal</option>
-                <option value="sub_rede">sub_rede</option>
-              </select>
-            </label>
-            <label className="field-label">
-              IP da rede (opcional)
-              <input
-                placeholder="Ex.: 192.168.1.0/24"
-                value={inventarioForm.ip_rede}
-                onChange={(e) => setInventarioForm((p) => ({ ...p, ip_rede: e.target.value }))}
-              />
-            </label>
-            <label className="field-label field-label--full">
-              Descrição
-              <input
-                placeholder="Notas ou contexto (opcional)"
-                value={inventarioForm.descricao}
-                onChange={(e) => setInventarioForm((p) => ({ ...p, descricao: e.target.value }))}
-              />
-            </label>
-          </div>
+          <Stack spacing={1.2}>
+            <TextField
+              label="Nome"
+              placeholder="Nome do inventário"
+              value={inventarioForm.nome}
+              onChange={(e) => setInventarioForm((p) => ({ ...p, nome: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              select
+              label="Tipo"
+              value={inventarioForm.tipo_inventario}
+              onChange={(e) => setInventarioForm((p) => ({ ...p, tipo_inventario: e.target.value }))}
+              size="small"
+              fullWidth
+            >
+              <MenuItem value="normal">normal</MenuItem>
+              <MenuItem value="sub_rede">sub_rede</MenuItem>
+            </TextField>
+            <TextField
+              label="IP da rede (opcional)"
+              placeholder="Ex.: 192.168.1.0/24"
+              value={inventarioForm.ip_rede}
+              onChange={(e) => setInventarioForm((p) => ({ ...p, ip_rede: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Descrição"
+              placeholder="Notas ou contexto (opcional)"
+              value={inventarioForm.descricao}
+              onChange={(e) => setInventarioForm((p) => ({ ...p, descricao: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+          </Stack>
         </FormModal>
       ) : null}
     </SectionCard>

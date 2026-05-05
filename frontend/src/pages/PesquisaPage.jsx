@@ -1,7 +1,29 @@
 /* Pesquisa global - layout aproximado da referencia visual. */
 
 import { useEffect, useMemo, useState } from "react";
-import { Button } from "@mui/material";
+import {
+  Box,
+  Button,
+  Card,
+  Chip,
+  FormControl,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Tabs,
+  TextField,
+  Typography,
+} from "@mui/material";
 import SectionCard from "../components/SectionCard";
 
 function tituloSecao(chave) {
@@ -11,6 +33,13 @@ function tituloSecao(chave) {
     .trim()
     .replace(/^./, (s) => s.toUpperCase());
 }
+
+const TIPOS_SUPORTADOS = [
+  { value: "computadores", label: "Computadores" },
+  { value: "inventarios", label: "Inventários" },
+  { value: "utilizadores", label: "Utilizadores" },
+  { value: "localizacoes", label: "Localizações" },
+];
 
 function parseOutput(raw) {
   if (!raw || !String(raw).trim()) return null;
@@ -30,13 +59,13 @@ function toSections(parsed) {
 
 function secaoVisual(secao) {
   const key = String(secao || "").toLowerCase();
-  if (key.includes("invent")) return { icon: "inventory_2", label: "Inventários" };
-  if (key.includes("utiliz") || key.includes("user")) return { icon: "group", label: "Utilizadores" };
-  if (key.includes("local")) return { icon: "location_on", label: "Localizações" };
+  if (key.includes("invent")) return { icon: "inventory_2", label: "Inventários", tone: "green" };
+  if (key.includes("utiliz") || key.includes("user")) return { icon: "group", label: "Utilizadores", tone: "purple" };
+  if (key.includes("local")) return { icon: "location_on", label: "Localizações", tone: "amber" };
   if (key.includes("comput") || key.includes("ativo") || key.includes("dispositivo")) {
-    return { icon: "computer", label: "Ativos encontrados" };
+    return { icon: "computer", label: "Ativos encontrados", tone: "blue" };
   }
-  return { icon: "list_alt", label: tituloSecao(secao) };
+  return { icon: "list_alt", label: tituloSecao(secao), tone: "slate" };
 }
 
 function valorHumano(v) {
@@ -44,10 +73,49 @@ function valorHumano(v) {
   return String(v);
 }
 
+function normalizarTexto(v) {
+  return String(v == null ? "" : v)
+    .trim()
+    .toLowerCase();
+}
+
+function estadoChipColor(estado) {
+  const e = String(estado || "").toLowerCase();
+  if (e.includes("ativo") || e.includes("conclu")) return "success";
+  if (e.includes("manut") || e.includes("pend")) return "warning";
+  if (e.includes("inativ") || e.includes("erro")) return "error";
+  return "default";
+}
+
+function itemCorrespondeTermo(item, termoNormalizado) {
+  if (!termoNormalizado) return true;
+  const texto = [
+    item?.nome,
+    item?.hostname,
+    item?.email,
+    item?.descricao,
+    item?.numero_serie,
+    item?.ip,
+    item?.endereco_ip,
+    item?.estado,
+    item?.localizacao_nome,
+    item?.utilizador_responsavel_nome,
+    item?.utilizador_nome,
+    item?.inventario_nome,
+    item?.sistema_operativo,
+    item?.marca,
+    item?.modelo,
+  ]
+    .filter((x) => x != null && String(x).trim() !== "")
+    .join(" ")
+    .toLowerCase();
+  return texto.includes(termoNormalizado);
+}
+
 function normalizarLinha(row) {
   const item = row.item || {};
   const nome = item.nome || item.hostname || item.email || item.descricao || "—";
-  const desc = item.descricao || item.sistema_operativo || "";
+  const desc = item.descricao || item.sistema_operativo || item.modelo || "";
   const detalhes = [
     item.numero_serie ? `SN: ${item.numero_serie}` : null,
     item.ip || item.endereco_ip ? `IP: ${item.ip || item.endereco_ip}` : null,
@@ -60,7 +128,7 @@ function normalizarLinha(row) {
     desc,
     detalhes,
     localizacao: item.localizacao_nome || item.localizacao || "",
-    utilizador: item.utilizador_nome || item.username || item.email || "",
+    utilizador: item.utilizador_nome || item.utilizador_responsavel_nome || item.username || item.email || "",
     estado: item.estado || "",
   };
 }
@@ -72,11 +140,15 @@ export default function PesquisaPage({
   globalOutput,
   loading,
   searchRequestId,
+  localizacoesBase = [],
+  computadoresBase = [],
+  inventariosBase = [],
+  utilizadoresBase = [],
+  ativosPorInventarioBase = [],
 }) {
   const [filtroSecao, setFiltroSecao] = useState("todas");
   const [filtroEstado, setFiltroEstado] = useState("todos");
   const [filtroLocalizacao, setFiltroLocalizacao] = useState("todas");
-  const [filtroData, setFiltroData] = useState("qualquer");
   const [aba, setAba] = useState("resultados");
   const [ordem, setOrdem] = useState("relevancia");
   const [mostrarRaw, setMostrarRaw] = useState(false);
@@ -85,7 +157,60 @@ export default function PesquisaPage({
   const porPagina = 10;
 
   const parsed = useMemo(() => parseOutput(globalOutput), [globalOutput]);
-  const secoes = useMemo(() => toSections(parsed), [parsed]);
+  const dispositivosDescobertosBase = useMemo(() => {
+    return (ativosPorInventarioBase || []).flatMap((grupo) =>
+      (grupo?.ativos || [])
+        .filter((a) => a?.tipo === "dispositivo_descoberto")
+        .map((a) => ({
+          ...a,
+          nome: a?.nome || a?.hostname || a?.ip || `Dispositivo ${a?.id ?? ""}`.trim(),
+          endereco_ip: a?.endereco_ip || a?.ip || null,
+          inventario_nome: grupo?.inventario_nome || null,
+        })),
+    );
+  }, [ativosPorInventarioBase]);
+
+  const termoNormalizado = useMemo(() => normalizarTexto(globalTermo), [globalTermo]);
+  const scansFiltradosPorTermo = useMemo(
+    () => dispositivosDescobertosBase.filter((item) => itemCorrespondeTermo(item, termoNormalizado)),
+    [dispositivosDescobertosBase, termoNormalizado],
+  );
+
+  const computadoresComScansBase = useMemo(
+    () => [...(computadoresBase || []), ...dispositivosDescobertosBase],
+    [computadoresBase, dispositivosDescobertosBase],
+  );
+
+  const secoesBase = useMemo(
+    () => [
+      { key: "computadores", value: computadoresComScansBase || [] },
+      { key: "inventarios", value: inventariosBase || [] },
+      { key: "utilizadores", value: utilizadoresBase || [] },
+      { key: "localizacoes", value: localizacoesBase || [] },
+    ],
+    [computadoresComScansBase, inventariosBase, utilizadoresBase, localizacoesBase],
+  );
+  const secoes = useMemo(() => {
+    const fromSearch = toSections(parsed);
+    const temResultadoPesquisa = fromSearch.some((s) => Array.isArray(s.value) && s.value.length > 0);
+    if (!temResultadoPesquisa) return secoesBase;
+
+    if (scansFiltradosPorTermo.length === 0) return fromSearch;
+
+    let encontrouSecaoComputadores = false;
+    const merged = fromSearch.map((secao) => {
+      if (secao.key !== "computadores") return secao;
+      encontrouSecaoComputadores = true;
+      const lista = Array.isArray(secao.value) ? secao.value : [secao.value];
+      return { ...secao, value: [...lista, ...scansFiltradosPorTermo] };
+    });
+
+    if (!encontrouSecaoComputadores) {
+      merged.unshift({ key: "computadores", value: scansFiltradosPorTermo });
+    }
+
+    return merged;
+  }, [parsed, secoesBase, scansFiltradosPorTermo]);
 
   const rowsBase = useMemo(() => {
     return secoes.flatMap(({ key, value }) => {
@@ -94,44 +219,64 @@ export default function PesquisaPage({
     });
   }, [secoes]);
 
-  const opcoesTipo = useMemo(() => secoes.map((s) => s.key), [secoes]);
+  const opcoesTipo = useMemo(() => {
+    const extras = secoes
+      .map((s) => s.key)
+      .filter((k) => !TIPOS_SUPORTADOS.some((base) => base.value === k))
+      .map((k) => ({ value: k, label: tituloSecao(k) }));
+    return [...TIPOS_SUPORTADOS, ...extras];
+  }, [secoes]);
   const opcoesLocalizacao = useMemo(() => {
-    const set = new Set(rowsBase.map((r) => r.localizacao).filter((x) => x && x.trim()));
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt"));
-  }, [rowsBase]);
+    const mapa = new Map();
+
+    (localizacoesBase || []).forEach((loc) => {
+      const label = String(loc?.nome || "").trim();
+      const value = normalizarTexto(label);
+      if (!value) return;
+      if (!mapa.has(value)) mapa.set(value, label);
+    });
+
+    rowsBase.forEach((r) => {
+      const label = String(r.localizacao || "").trim();
+      const value = normalizarTexto(label);
+      if (!value) return;
+      if (!mapa.has(value)) mapa.set(value, label);
+    });
+
+    return Array.from(mapa.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt"));
+  }, [localizacoesBase, rowsBase]);
+
   const opcoesEstado = useMemo(() => {
-    const set = new Set(rowsBase.map((r) => r.estado).filter((x) => x && x.trim()));
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt"));
-  }, [rowsBase]);
+    const mapa = new Map();
+
+    (computadoresBase || []).forEach((pc) => {
+      const label = String(pc?.estado || "").trim();
+      const value = normalizarTexto(label);
+      if (!value) return;
+      if (!mapa.has(value)) mapa.set(value, label);
+    });
+
+    rowsBase.forEach((r) => {
+      const label = String(r.estado || "").trim();
+      const value = normalizarTexto(label);
+      if (!value) return;
+      if (!mapa.has(value)) mapa.set(value, label);
+    });
+    return Array.from(mapa.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt"));
+  }, [computadoresBase, rowsBase]);
 
   const rowsFiltradas = useMemo(() => {
-    const agora = new Date();
-    const inicioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()).getTime();
-    const seteDias = agora.getTime() - 7 * 24 * 60 * 60 * 1000;
-    const trintaDias = agora.getTime() - 30 * 24 * 60 * 60 * 1000;
-
     return rowsBase.filter((r) => {
-      if (filtroSecao !== "todas" && r.secao !== filtroSecao) return false;
-      if (filtroEstado !== "todos" && r.estado !== filtroEstado) return false;
-      if (filtroLocalizacao !== "todas" && r.localizacao !== filtroLocalizacao) return false;
-      if (filtroData !== "qualquer") {
-        const bruto =
-          r.item?.data_registo ||
-          r.item?.created_at ||
-          r.item?.data_criacao ||
-          r.item?.createdAt ||
-          r.item?.updated_at ||
-          "";
-        if (!bruto) return false;
-        const ts = new Date(bruto).getTime();
-        if (!Number.isFinite(ts)) return false;
-        if (filtroData === "hoje" && ts < inicioHoje) return false;
-        if (filtroData === "7dias" && ts < seteDias) return false;
-        if (filtroData === "30dias" && ts < trintaDias) return false;
-      }
+      if (filtroSecao !== "todas" && normalizarTexto(r.secao) !== normalizarTexto(filtroSecao)) return false;
+      if (filtroEstado !== "todos" && normalizarTexto(r.estado) !== normalizarTexto(filtroEstado)) return false;
+      if (filtroLocalizacao !== "todas" && normalizarTexto(r.localizacao) !== normalizarTexto(filtroLocalizacao)) return false;
       return true;
     });
-  }, [rowsBase, filtroSecao, filtroEstado, filtroLocalizacao, filtroData]);
+  }, [rowsBase, filtroSecao, filtroEstado, filtroLocalizacao]);
 
   const rowsOrdenadas = useMemo(() => {
     if (ordem === "relevancia") return rowsFiltradas;
@@ -170,240 +315,295 @@ export default function PesquisaPage({
 
   return (
     <SectionCard title="Pesquisa Global" subtitle="Encontra rapidamente ativos, inventários e utilizadores em todo o sistema.">
-      <div className="pesq-ref-wrap">
-        <div className="pesq-ref-top">
-          <form className="pesq-ref-search" onSubmit={handleSubmit}>
-            <span className="material-symbols-outlined" aria-hidden>
-              search
-            </span>
-            <input
-              value={globalTermo}
-              onChange={(e) => setGlobalTermo(e.target.value)}
-              placeholder="Ex.: dell latitude 5420"
-              aria-label="Termo da pesquisa global"
-            />
-            <Button type="submit" size="small" disabled={loading || !String(globalTermo || "").trim()}>
-              {loading ? "A pesquisar..." : "Pesquisar"}
-            </Button>
-            <Button type="button" variant="outlined" size="small" onClick={() => setGlobalTermo("")} disabled={loading}>
-              Limpar
-            </Button>
-          </form>
-          <aside className="pesq-ref-tip">
-            <span className="material-symbols-outlined">tips_and_updates</span>
-            <div>
-              <strong>Dicas de pesquisa</strong>
-              <p>Pesquisar por nome do ativo, IP, número de série, utilizador, inventário ou localização.</p>
-            </div>
-          </aside>
-        </div>
+      <Stack spacing={1.5}>
+        <Stack direction={{ xs: "column", lg: "row" }} spacing={1.25}>
+          <Paper component="form" onSubmit={handleSubmit} variant="outlined" sx={{ flex: 1, p: 1 }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <TextField
+                fullWidth
+                value={globalTermo}
+                onChange={(e) => setGlobalTermo(e.target.value)}
+                placeholder="Ex.: dell latitude 5420"
+                size="small"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <span className="material-symbols-outlined" style={{ fontSize: 18, color: "#94a3b8" }}>
+                        search
+                      </span>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <Button type="submit" size="small" disabled={loading || !String(globalTermo || "").trim()}>
+                {loading ? "A pesquisar..." : "Pesquisar"}
+              </Button>
+              <Button type="button" size="small" variant="outlined" onClick={() => setGlobalTermo("")} disabled={loading}>
+                Limpar
+              </Button>
+            </Stack>
+          </Paper>
 
-        <div className="pesq-ref-filters">
-          <label>
-            Tipo de resultado
-            <select value={filtroSecao} onChange={(e) => setFiltroSecao(e.target.value)}>
-              <option value="todas">Todos os tipos</option>
-              {opcoesTipo.map((k) => (
-                <option key={k} value={k}>
-                  {tituloSecao(k)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Localização
-            <select value={filtroLocalizacao} onChange={(e) => setFiltroLocalizacao(e.target.value)}>
-              <option value="todas">Todas as localizações</option>
-              {opcoesLocalizacao.map((l) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Estado
-            <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
-              <option value="todos">Todos os estados</option>
-              {opcoesEstado.map((e) => (
-                <option key={e} value={e}>
-                  {e}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Data de registo
-            <select value={filtroData} onChange={(e) => setFiltroData(e.target.value)}>
-              <option value="qualquer">Qualquer data</option>
-              <option value="hoje">Hoje</option>
-              <option value="7dias">Últimos 7 dias</option>
-              <option value="30dias">Últimos 30 dias</option>
-            </select>
-          </label>
-          <Button
-            type="button"
-            variant="outlined"
-            size="small"
-            onClick={() => setMostrarAvancados((v) => !v)}
-          >
-            {mostrarAvancados ? "Ocultar avançados" : "Filtros avançados"}
-          </Button>
-        </div>
+          <Paper variant="outlined" sx={{ p: 1.25, minWidth: { lg: 320 } }}>
+            <Stack direction="row" spacing={1}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18, color: "#2563eb", marginTop: 2 }}>
+                tips_and_updates
+              </span>
+              <Box>
+                <Typography fontSize={12} fontWeight={700}>
+                  Dicas de pesquisa
+                </Typography>
+                <Typography fontSize={11} color="text.secondary">
+                  Pesquisa por nome do ativo, IP, número de série, utilizador, inventário e localização.
+                </Typography>
+              </Box>
+            </Stack>
+          </Paper>
+        </Stack>
+
+        <Paper variant="outlined" sx={{ p: 1.25 }}>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "flex-end" }}>
+            <FormControl size="small" sx={{ minWidth: 160, flex: 1 }}>
+              <Typography fontSize={11} color="text.secondary" mb={0.4}>
+                Tipo de entidade
+              </Typography>
+              <Select value={filtroSecao} onChange={(e) => setFiltroSecao(e.target.value)}>
+                <MenuItem value="todas">Todos os tipos</MenuItem>
+                {opcoesTipo.map((k) => (
+                  <MenuItem key={k.value} value={k.value}>
+                    {k.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 160, flex: 1 }}>
+              <Typography fontSize={11} color="text.secondary" mb={0.4}>
+                Localização
+              </Typography>
+              <Select value={filtroLocalizacao} onChange={(e) => setFiltroLocalizacao(e.target.value)}>
+                <MenuItem value="todas">Todas as localizações</MenuItem>
+                {opcoesLocalizacao.map((l) => (
+                  <MenuItem key={l.value} value={l.value}>
+                    {l.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 160, flex: 1 }}>
+              <Typography fontSize={11} color="text.secondary" mb={0.4}>
+                Estado
+              </Typography>
+              <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+                <MenuItem value="todos">Todos (campos de estado)</MenuItem>
+                {opcoesEstado.map((e) => (
+                  <MenuItem key={e.value} value={e.value}>
+                    {e.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Button type="button" variant={mostrarAvancados ? "contained" : "outlined"} size="small" onClick={() => setMostrarAvancados((v) => !v)}>
+              {mostrarAvancados ? "Ocultar avançados" : "Filtros avançados"}
+            </Button>
+          </Stack>
+        </Paper>
 
         {mostrarAvancados ? (
-          <div className="pesq-ref-advanced">
-            <Button type="button" variant="outlined" size="small" onClick={() => setMostrarRaw((v) => !v)}>
+          <Stack direction="row" spacing={1}>
+            <Button type="button" size="small" variant="outlined" onClick={() => setMostrarRaw((v) => !v)}>
               {mostrarRaw ? "Vista normal" : "Ver JSON bruto"}
             </Button>
             <Button
               type="button"
-              variant="outlined"
               size="small"
+              variant="outlined"
               onClick={() => {
                 setFiltroSecao("todas");
                 setFiltroEstado("todos");
                 setFiltroLocalizacao("todas");
-                setFiltroData("qualquer");
                 setOrdem("relevancia");
               }}
             >
               Limpar filtros
             </Button>
-          </div>
+          </Stack>
         ) : null}
 
         {loading ? (
           <div className="loading-box">A pesquisar…</div>
         ) : semResultado ? (
-          <div className="pesq-ref-empty">
-            <span className="material-symbols-outlined">travel_explore</span>
-            <div>
-              <strong>Pronto para pesquisar</strong>
-              <p>Introduz um termo e carrega em Pesquisar para ver resultados organizados por secção.</p>
-            </div>
-          </div>
+          <Paper variant="outlined" sx={{ p: 2, borderStyle: "dashed", bgcolor: "#f8fafc" }}>
+            <Stack direction="row" spacing={1}>
+              <span className="material-symbols-outlined" style={{ color: "#94a3b8" }}>
+                travel_explore
+              </span>
+              <Box>
+                <Typography fontSize={14} fontWeight={700}>
+                  Pronto para pesquisar
+                </Typography>
+                <Typography fontSize={12} color="text.secondary">
+                  Introduz um termo e carrega em Pesquisar para ver resultados organizados por secção.
+                </Typography>
+              </Box>
+            </Stack>
+          </Paper>
         ) : (
           <>
-            <div className="pesq-ref-cards">
+            <Box
+              sx={{
+                display: "grid",
+                gap: 1,
+                gridTemplateColumns: { xs: "1fr", sm: "repeat(2,minmax(0,1fr))", lg: "repeat(4,minmax(0,1fr))" },
+              }}
+            >
               {cardsResumo.map((c) => (
-                <article key={c.secao} className="pesq-ref-card">
-                  <span className="material-symbols-outlined">{secaoVisual(c.secao).icon}</span>
-                  <div>
-                    <strong>{c.total}</strong>
-                    <p>{secaoVisual(c.secao).label}</p>
-                    <small>Ver detalhes</small>
-                  </div>
-                </article>
+                <Card key={c.secao} variant="outlined" sx={{ p: 1.25 }}>
+                  <Stack direction="row" spacing={1.1}>
+                    <span className="material-symbols-outlined" style={{ color: "#2563eb", fontSize: 18 }}>
+                      {secaoVisual(c.secao).icon}
+                    </span>
+                    <Box>
+                      <Typography fontSize={22} lineHeight={1} fontWeight={800}>
+                        {c.total}
+                      </Typography>
+                      <Typography fontSize={12} color="text.secondary">
+                        {secaoVisual(c.secao).label}
+                      </Typography>
+                      <Typography fontSize={11} color="#2563eb" mt={0.25}>
+                        Ver detalhes
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Card>
               ))}
-            </div>
+            </Box>
 
-            <div className="pesq-ref-results-head">
-              <div className="pesq-ref-tabs">
-                <Button type="button" variant={aba === "resultados" ? "contained" : "text"} size="small" onClick={() => setAba("resultados")}>
-                  Resultados
-                </Button>
-                <Button type="button" variant={aba === "agrupado" ? "contained" : "text"} size="small" onClick={() => setAba("agrupado")}>
-                  Agrupado por tipo
-                </Button>
-                <Button type="button" variant={aba === "tendencias" ? "contained" : "text"} size="small" onClick={() => setAba("tendencias")}>
-                  Tendências
-                </Button>
-              </div>
-              <div className="pesq-ref-head-actions">
-                <label>
-                  Ordenar por
-                  <select value={ordem} onChange={(e) => setOrdem(e.target.value)}>
-                    <option value="relevancia">Relevância</option>
-                    <option value="nome">Nome (A-Z)</option>
-                  </select>
-                </label>
-                <Button type="button" variant="outlined" size="small" onClick={() => setMostrarRaw((v) => !v)}>
+            <Stack direction={{ xs: "column", lg: "row" }} spacing={1} justifyContent="space-between" alignItems={{ lg: "center" }}>
+              <Tabs value={aba} onChange={(_, value) => setAba(value)} variant="scrollable" allowScrollButtonsMobile>
+                <Tab value="resultados" label="Resultados" />
+                <Tab value="agrupado" label="Agrupado por tipo" />
+                <Tab value="tendencias" label="Tendências" />
+              </Tabs>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <FormControl size="small">
+                  <Select value={ordem} onChange={(e) => setOrdem(e.target.value)}>
+                    <MenuItem value="relevancia">Ordenar por Relevância</MenuItem>
+                    <MenuItem value="nome">Nome (A-Z)</MenuItem>
+                  </Select>
+                </FormControl>
+                <Button type="button" size="small" variant="outlined" onClick={() => setMostrarRaw((v) => !v)}>
                   Ver JSON bruto
                 </Button>
-              </div>
-            </div>
+              </Stack>
+            </Stack>
 
             {mostrarRaw ? (
               <pre className="pesq-ref-raw">{globalOutput || "Sem dados para mostrar."}</pre>
             ) : aba === "resultados" ? (
               <>
-                <p className="pesq-ref-count">{rowsOrdenadas.length} resultado(s) encontrado(s)</p>
-                <div className="table-shell table-shell--responsive">
-                  <table className="pesq-ref-table">
-                    <thead>
-                      <tr>
-                        <th>Tipo</th>
-                        <th>Nome / Descrição</th>
-                        <th>Detalhes</th>
-                        <th>Localização</th>
-                        <th>Utilizador</th>
-                        <th>Estado</th>
-                        <th>Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <Typography fontSize={11} color="text.secondary">
+                  {rowsOrdenadas.length} resultado(s) encontrado(s)
+                </Typography>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Tipo</TableCell>
+                        <TableCell>Nome / Descrição</TableCell>
+                        <TableCell>Detalhes</TableCell>
+                        <TableCell>Localização</TableCell>
+                        <TableCell>Utilizador</TableCell>
+                        <TableCell>Estado</TableCell>
+                        <TableCell>Ações</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
                       {rowsPaginadas.map((r) => (
-                        <tr key={r.key}>
-                          <td>
-                            <span className="material-symbols-outlined">{secaoVisual(r.secao).icon}</span>
-                          </td>
-                          <td>
-                            <strong>{r.nome}</strong>
-                            <small>{r.desc || "—"}</small>
-                          </td>
-                          <td>{r.detalhes || "—"}</td>
-                          <td>{valorHumano(r.localizacao)}</td>
-                          <td>{valorHumano(r.utilizador)}</td>
-                          <td>
-                            <span className="pill badge-info">{valorHumano(r.estado)}</span>
-                          </td>
-                          <td>
-                            <button type="button" className="table-icon-btn" aria-label="ver">
-                              <span className="material-symbols-outlined">visibility</span>
-                            </button>
-                          </td>
-                        </tr>
+                        <TableRow key={r.key}>
+                          <TableCell>
+                            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                              {secaoVisual(r.secao).icon}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Typography fontSize={12.5} fontWeight={700}>
+                              {r.nome}
+                            </Typography>
+                            <Typography fontSize={11} color="text.secondary">
+                              {r.desc || "—"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>{r.detalhes || "—"}</TableCell>
+                          <TableCell>{valorHumano(r.localizacao)}</TableCell>
+                          <TableCell>{valorHumano(r.utilizador)}</TableCell>
+                          <TableCell>
+                            <Chip label={valorHumano(r.estado)} size="small" color={estadoChipColor(r.estado)} />
+                          </TableCell>
+                          <TableCell>
+                            <IconButton size="small" aria-label="ver">
+                              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                                visibility
+                              </span>
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="pesq-ref-pagination">
-                  <span>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1} alignItems={{ sm: "center" }}>
+                  <Typography fontSize={11} color="text.secondary">
                     Mostrando {rowsPaginadas.length === 0 ? 0 : (paginaAtual - 1) * porPagina + 1} a{" "}
                     {(paginaAtual - 1) * porPagina + rowsPaginadas.length} de {rowsOrdenadas.length} resultado(s)
-                  </span>
-                  <div>
-                    <Button type="button" variant="outlined" size="small" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={paginaAtual <= 1}>
+                  </Typography>
+                  <Stack direction="row" spacing={0.75}>
+                    <Button type="button" size="small" variant="outlined" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={paginaAtual <= 1}>
                       Anterior
                     </Button>
-                    <Button type="button" variant="outlined" size="small" onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))} disabled={paginaAtual >= totalPaginas}>
+                    <Button type="button" size="small" variant="outlined" onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))} disabled={paginaAtual >= totalPaginas}>
                       Seguinte
                     </Button>
-                  </div>
-                </div>
+                  </Stack>
+                </Stack>
               </>
             ) : aba === "agrupado" ? (
-              <ul className="pesq-ref-grouped">
-                {cardsResumo.map((c) => (
-                  <li key={c.secao}>
-                    <strong>{tituloSecao(c.secao)}</strong>
-                    <span>{c.total}</span>
-                  </li>
+              <Paper component="ul" variant="outlined" sx={{ m: 0, p: 0, listStyle: "none" }}>
+                {cardsResumo.map((c, idx) => (
+                  <Box
+                    key={c.secao}
+                    component="li"
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      p: 1.25,
+                      borderBottom: idx < cardsResumo.length - 1 ? "1px solid #e2e8f0" : "none",
+                    }}
+                  >
+                    <Typography fontWeight={700}>{tituloSecao(c.secao)}</Typography>
+                    <Typography color="text.secondary">{c.total}</Typography>
+                  </Box>
                 ))}
-              </ul>
+              </Paper>
             ) : (
-              <div className="pesq-ref-empty">
-                <span className="material-symbols-outlined">query_stats</span>
-                <div>
-                  <strong>Tendências</strong>
-                  <p>Vista reservada para evolução temporal numa próxima versão.</p>
-                </div>
-              </div>
+              <Paper variant="outlined" sx={{ p: 2, borderStyle: "dashed", bgcolor: "#f8fafc" }}>
+                <Stack direction="row" spacing={1}>
+                  <span className="material-symbols-outlined" style={{ color: "#94a3b8" }}>
+                    query_stats
+                  </span>
+                  <Box>
+                    <Typography fontSize={13} fontWeight={700}>
+                      Tendências
+                    </Typography>
+                    <Typography fontSize={12} color="text.secondary">
+                      Vista reservada para evolução temporal numa próxima versão.
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
             )}
           </>
         )}
-      </div>
+      </Stack>
     </SectionCard>
   );
 }

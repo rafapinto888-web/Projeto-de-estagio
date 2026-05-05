@@ -1,7 +1,7 @@
 /* Gestão de utilizadores — criar/editar dentro de modal (componente FormModal). */
 
 import { useCallback, useState } from "react";
-import { Button, TableCell, TableRow, Typography } from "@mui/material";
+import { Button, MenuItem, Stack, TableCell, TableRow, TextField, Typography } from "@mui/material";
 import DataTable from "../components/DataTable";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
@@ -134,60 +134,61 @@ export default function UtilizadoresPage({
             </>
           }
         >
-          <div className="form-stack form-stack--horizontal">
-            <label className="field-label">
-              Nome completo
-              <input
-                placeholder="Nome a apresentar na aplicação"
-                value={utilizadorForm.nome}
-                onChange={(e) => setUtilizadorForm((p) => ({ ...p, nome: e.target.value }))}
-                autoComplete="name"
-              />
-            </label>
-            <label className="field-label">
-              Username
-              <input
-                placeholder="Identificador de login"
-                value={utilizadorForm.username}
-                onChange={(e) => setUtilizadorForm((p) => ({ ...p, username: e.target.value }))}
-                autoComplete="username"
-              />
-            </label>
-            <label className="field-label">
-              Email
-              <input
-                type="email"
-                placeholder="nome@empresa.pt"
-                value={utilizadorForm.email}
-                onChange={(e) => setUtilizadorForm((p) => ({ ...p, email: e.target.value }))}
-                autoComplete="email"
-              />
-            </label>
-            <label className="field-label">
-              Perfil
-              <select
-                value={utilizadorForm.perfil_id}
-                onChange={(e) => setUtilizadorForm((p) => ({ ...p, perfil_id: e.target.value }))}
-              >
-                <option value="">Escolhe um perfil…</option>
-                {perfis.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.nome}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field-label field-label--full">
-              {editorMode === "create" ? "Palavra-passe inicial" : "Nova palavra-passe (opcional)"}
-              <input
-                type="password"
-                placeholder={editorMode === "create" ? "Obrigatório na criação" : "Vazio = manter a atual"}
-                value={utilizadorForm.palavra_passe}
-                onChange={(e) => setUtilizadorForm((p) => ({ ...p, palavra_passe: e.target.value }))}
-                autoComplete="new-password"
-              />
-            </label>
-          </div>
+          <Stack spacing={1.2}>
+            <TextField
+              label="Nome completo"
+              placeholder="Nome a apresentar na aplicação"
+              value={utilizadorForm.nome}
+              onChange={(e) => setUtilizadorForm((p) => ({ ...p, nome: e.target.value }))}
+              autoComplete="name"
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Username"
+              placeholder="Identificador de login"
+              value={utilizadorForm.username}
+              onChange={(e) => setUtilizadorForm((p) => ({ ...p, username: e.target.value }))}
+              autoComplete="username"
+              size="small"
+              fullWidth
+            />
+            <TextField
+              type="email"
+              label="Email"
+              placeholder="nome@empresa.pt"
+              value={utilizadorForm.email}
+              onChange={(e) => setUtilizadorForm((p) => ({ ...p, email: e.target.value }))}
+              autoComplete="email"
+              size="small"
+              fullWidth
+            />
+            <TextField
+              select
+              label="Perfil"
+              value={utilizadorForm.perfil_id}
+              onChange={(e) => setUtilizadorForm((p) => ({ ...p, perfil_id: e.target.value }))}
+              size="small"
+              fullWidth
+            >
+              <MenuItem value="">Escolhe um perfil…</MenuItem>
+              {perfis.map((item) => (
+                <MenuItem key={item.id} value={item.id}>
+                  {item.nome}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              type="password"
+              label={editorMode === "create" ? "Palavra-passe inicial" : "Nova palavra-passe (opcional)"}
+              placeholder={editorMode === "create" ? "Obrigatório na criação" : "Vazio = manter a atual"}
+              value={utilizadorForm.palavra_passe}
+              onChange={(e) => setUtilizadorForm((p) => ({ ...p, palavra_passe: e.target.value }))}
+              autoComplete="new-password"
+              size="small"
+              fullWidth
+            />
+          </Stack>
         </FormModal>
       ) : null}
     </SectionCard>

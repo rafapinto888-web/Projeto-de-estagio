@@ -1,7 +1,7 @@
 /* Localizações físicas — CRUD em modal com grelha horizontal. */
 
 import { useCallback, useState } from "react";
-import { Button, TableCell, TableRow } from "@mui/material";
+import { Button, Stack, TableCell, TableRow, TextField } from "@mui/material";
 import DataTable from "../components/DataTable";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
@@ -123,24 +123,24 @@ export default function LocalizacoesPage({
             </>
           }
         >
-          <div className="form-stack form-stack--horizontal">
-            <label className="field-label">
-              Nome
-              <input
-                placeholder="Ex.: Sala reuniões A2"
-                value={localizacaoForm.nome}
-                onChange={(e) => setLocalizacaoForm((p) => ({ ...p, nome: e.target.value }))}
-              />
-            </label>
-            <label className="field-label field-label--full">
-              Descrição (opcional)
-              <input
-                placeholder="Piso, edifício, notas…"
-                value={localizacaoForm.descricao}
-                onChange={(e) => setLocalizacaoForm((p) => ({ ...p, descricao: e.target.value }))}
-              />
-            </label>
-          </div>
+          <Stack spacing={1.2}>
+            <TextField
+              label="Nome"
+              placeholder="Ex.: Sala reuniões A2"
+              value={localizacaoForm.nome}
+              onChange={(e) => setLocalizacaoForm((p) => ({ ...p, nome: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Descrição (opcional)"
+              placeholder="Piso, edifício, notas…"
+              value={localizacaoForm.descricao}
+              onChange={(e) => setLocalizacaoForm((p) => ({ ...p, descricao: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+          </Stack>
         </FormModal>
       ) : null}
     </SectionCard>

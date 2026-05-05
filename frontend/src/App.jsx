@@ -719,6 +719,11 @@ export default function App() {
               globalOutput={globalOutput}
               loading={actionLoading}
               searchRequestId={globalSearchRequestId}
+              localizacoesBase={localizacoes}
+              computadoresBase={computadores}
+              inventariosBase={inventarios}
+              utilizadoresBase={utilizadores}
+              ativosPorInventarioBase={ativosPorInventario}
             />
           )}
 

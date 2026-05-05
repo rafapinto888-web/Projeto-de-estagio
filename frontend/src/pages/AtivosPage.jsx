@@ -1,7 +1,7 @@
 /* Scan — lista de ativos por inventário; pesquisa e scan de rede em modais. */
 
 import { useState } from "react";
-import { Button, TableCell, TableRow } from "@mui/material";
+import { Button, MenuItem, Stack, TableCell, TableRow, TextField, Typography } from "@mui/material";
 import DataTable from "../components/DataTable";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
@@ -60,21 +60,29 @@ export default function AtivosPage({
         </div>
       }
     >
-      <div className="form-stack form-stack--horizontal scan-context-bar">
-        <label className="field-label field-label--full">
-          Inventário ativo
-          <select value={selectedInventarioId} onChange={(e) => setSelectedInventarioId(e.target.value)}>
-            <option value="">Seleciona inventário</option>
-            {inventarios.map((inv) => (
-            <option key={inv.id} value={inv.id}>
+      <Stack spacing={1.1}>
+        <TextField
+          select
+          label="Inventário ativo"
+          value={selectedInventarioId}
+          onChange={(e) => setSelectedInventarioId(e.target.value)}
+          size="small"
+          fullWidth
+        >
+          <MenuItem value="">Seleciona inventário</MenuItem>
+          {inventarios.map((inv) => (
+            <MenuItem key={inv.id} value={inv.id}>
               {inv.nome}
-            </option>
-            ))}
-          </select>
-        </label>
-      </div>
+            </MenuItem>
+          ))}
+        </TextField>
 
-      {scanInfo ? <p className="section-subtitle">{scanInfo}</p> : null}
+        {scanInfo ? (
+          <Typography variant="body2" color="text.secondary">
+            {scanInfo}
+          </Typography>
+        ) : null}
+      </Stack>
 
       <DataTable
         columns={["Tipo", "Nome / host", "IP", "MAC", "Série", "Marca", "Modelo", "SO", "Estado"]}
@@ -119,16 +127,14 @@ export default function AtivosPage({
           </>
         }
       >
-        <div className="form-stack form-stack--horizontal">
-          <label className="field-label field-label--full">
-            Termo na lista
-            <input
-              value={ativoPesquisa}
-              onChange={(e) => setAtivoPesquisa(e.target.value)}
-              placeholder="Nome, IP, série…"
-            />
-          </label>
-        </div>
+        <TextField
+          label="Termo na lista"
+          value={ativoPesquisa}
+          onChange={(e) => setAtivoPesquisa(e.target.value)}
+          placeholder="Nome, IP, série…"
+          size="small"
+          fullWidth
+        />
       </FormModal>
 
       {isAdmin ? (
@@ -150,35 +156,35 @@ export default function AtivosPage({
             </>
           }
         >
-          <div className="form-stack form-stack--horizontal">
-            <label className="field-label field-label--full">
-              Rede (opcional)
-              <input
-                value={scanRede}
-                onChange={(e) => setScanRede(e.target.value)}
-                placeholder="Ex.: 192.168.1.0/24"
-              />
-            </label>
-            <label className="field-label">
-              Utilizador de rede
-              <input
-                value={scanUser}
-                onChange={(e) => setScanUser(e.target.value)}
-                placeholder="Obrigatório"
-                autoComplete="username"
-              />
-            </label>
-            <label className="field-label">
-              Palavra-passe
-              <input
-                value={scanPass}
-                onChange={(e) => setScanPass(e.target.value)}
-                type="password"
-                placeholder="Obrigatória"
-                autoComplete="current-password"
-              />
-            </label>
-          </div>
+          <Stack spacing={1.2}>
+            <TextField
+              label="Rede (opcional)"
+              value={scanRede}
+              onChange={(e) => setScanRede(e.target.value)}
+              placeholder="Ex.: 192.168.1.0/24"
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Utilizador de rede"
+              value={scanUser}
+              onChange={(e) => setScanUser(e.target.value)}
+              placeholder="Obrigatório"
+              autoComplete="username"
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Palavra-passe"
+              value={scanPass}
+              onChange={(e) => setScanPass(e.target.value)}
+              type="password"
+              placeholder="Obrigatória"
+              autoComplete="current-password"
+              size="small"
+              fullWidth
+            />
+          </Stack>
         </FormModal>
       ) : null}
     </SectionCard>

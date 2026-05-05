@@ -1,7 +1,7 @@
 /* Perfis — lista em tabela como as outras abas; membros em modal dedicado. */
 
 import { useCallback, useState } from "react";
-import { Button, TableCell, TableRow, Typography } from "@mui/material";
+import { Button, Stack, TableCell, TableRow, TextField, Typography } from "@mui/material";
 import DataTable from "../components/DataTable";
 import EmptyState from "../components/EmptyState";
 import FormModal from "../components/FormModal";
@@ -225,16 +225,16 @@ export default function PerfisPage({
             </>
           }
         >
-          <div className="form-stack">
-            <label className="field-label">
-              Nome do cargo
-              <input
-                placeholder="Ex.: Administrador, Operador, Leitura"
-                value={perfilForm.nome}
-                onChange={(e) => setPerfilForm((p) => ({ ...p, nome: e.target.value }))}
-              />
-            </label>
-          </div>
+          <Stack spacing={1.2}>
+            <TextField
+              label="Nome do cargo"
+              placeholder="Ex.: Administrador, Operador, Leitura"
+              value={perfilForm.nome}
+              onChange={(e) => setPerfilForm((p) => ({ ...p, nome: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+          </Stack>
         </FormModal>
       ) : null}
     </SectionCard>
