@@ -6,7 +6,7 @@ Painel web para gestao de inventario de TI: inventarios, computadores, localizac
 
 - **Inventários** (tipos normal / sub-rede) agrupam equipamento e apoiam scans.
 - **Computadores** ligam-se a inventário, localização opcional e responsável.
-- **Scan** lista ativos do inventário selecionado, permite filtrar na lista e (admin) disparar scan de rede credenciado.
+- **Scan** lista ativos do inventário selecionado e (admin) dispara scan de rede credenciado por modal, com escolha/criação de inventário no mesmo fluxo.
 - **Utilizadores e perfis** controlam quem acede e o que pode alterar (operações administrativas condicionadas ao perfil).
 - **Pesquisa global** e **logs** consultam dados agregados ou por filtros.
 
@@ -16,7 +16,7 @@ Painel web para gestao de inventario de TI: inventarios, computadores, localizac
 |------|-----------|
 | **API** | Funcional para CRUD principal, auth por JWT e documentação Swagger. Rotas organizadas (`inventarios`, `computadores`, `utilizadores`, `perfis`, `localizacoes`, `pesquisa`, `auth`). |
 | **Frontend** | SPA React (Vite) com navegação por abas, estado global em `App.jsx` e cliente em `api.js`. |
-| **UX** | Criação/edição de entidades (**Inventários, Computadores, Utilizadores, Perfis, Localizações**) em **modais** com formulário em grelha; evita formulários inline “em linha” na página. Na área **Scan**, pesquisa na lista e **scan de rede** abrem modais; seleção do inventário para a tabela mantém-se visível. Em **Logs**, os filtros (por computador / por inventário) estão em modais e o resultado JSON aparece na página. |
+| **UX** | Criação/edição de entidades (**Inventários, Computadores, Utilizadores, Perfis, Localizações**) em **modais** com formulário em grelha; evita formulários inline “em linha” na página. Na área **Scan**, o fluxo principal é iniciar scan por modal (com separadores para inventário existente/criar inventário), pedir rede, credenciais e opções de logs. Em **Pesquisa global**, a interface foca resultados e filtros (sem ação de “ver detalhes” nem vista de JSON bruto). Em **Logs**, os filtros (por computador / por inventário) estão em modais e o resultado JSON aparece na página. |
 | **Design** | Tema único (`styles.css`), tipografia definida nos tokens CSS, tabelas, cartões em perfis, feedback global de operações (`StatusAlert`). |
 | **Produção** | Pensado sobretudo para **desenvolvimento local**: Postgres manual, servidor Vite/Uvicorn. Não há pipeline de CI/CD ou empacotamento definitivo neste repositório. |
 | **Testes / qualidade** | Sem suíte de testes automatizados documentada aqui; validação feita ao correr backend + frontend manualmente contra a API real. |
@@ -143,4 +143,10 @@ npm run dev
 - O tema global fica centralizado em `frontend/src/theme.js`.
 - A navegacao continua por `activeTab` em `frontend/src/App.jsx` (sem React Router nesta fase).
 - O consumo de dados reais continua centralizado em `frontend/src/api.js` sem alteracoes de contrato backend.
+
+## Regras funcionais recentes
+
+- **Apagar computador**: a API bloqueia o delete quando existe **utilizador responsável associado** ao computador.
+- **Delete com logs técnicos**: quando não existe utilizador associado, os logs técnicos desse computador são removidos antes do delete para evitar bloqueio por chave estrangeira.
+- **Scan de rede**: usa credenciais de rede fornecidas no momento de execução (não usa credenciais de login da aplicação).
 
