@@ -78,16 +78,6 @@ export default function AtivosPage({
     descricao: "",
   });
 
-  async function handlePesquisar() {
-    const ok = Boolean(await onPesquisar?.());
-    if (ok) setModal(null);
-  }
-
-  async function handleRecarregarLista() {
-    const ok = Boolean(await onRecarregarLista?.());
-    if (ok) setModal(null);
-  }
-
   async function handleScan() {
     if (!selectedInventarioId) {
       return;
@@ -131,7 +121,7 @@ export default function AtivosPage({
   return (
     <SectionCard
       title="Scan"
-      subtitle="Escolhe o inventário para ver ativos. Pesquisa na lista ou (admin) executa descoberta na rede a partir dos modais."
+      subtitle="Seleciona o inventário e executa descoberta de rede com credenciais reais."
       rightAction={
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           {isAdmin ? (
@@ -146,6 +136,14 @@ export default function AtivosPage({
                 setScanTab("existente");
                 setModal("scan");
               }}
+              sx={{
+                minWidth: 170,
+                borderRadius: 2.5,
+                fontWeight: 700,
+                borderColor: "#c7d8f8",
+                color: "#1d4ed8",
+                "&:hover": { borderColor: "#93b4f0", bgcolor: "#eef5ff" },
+              }}
             >
               Scan de rede
             </Button>
@@ -153,9 +151,17 @@ export default function AtivosPage({
         </Stack>
       }
     >
-      <Stack spacing={1.4}>
-        <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 3, bgcolor: "#f8fbff", borderColor: "#dbe5f2" }}>
-          <Stack direction={{ xs: "column", lg: "row" }} spacing={1.2} alignItems={{ lg: "center" }}>
+      <Stack spacing={1.1}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: { xs: 1, md: 1.2 },
+            borderRadius: 3,
+            borderColor: "#dbe5f2",
+            background: "#fff",
+          }}
+        >
+          <Stack direction={{ xs: "column", lg: "row" }} spacing={1.2} alignItems={{ lg: "center" }} useFlexGap>
             <TextField
               select
               label="Inventário ativo"
@@ -174,7 +180,7 @@ export default function AtivosPage({
             </TextField>
 
             <Typography variant="body2" color="text.secondary" sx={{ px: 0.5 }}>
-              Seleciona um inventário e usa os botões para pesquisar ou lançar scan.
+              O inventário selecionado define onde os dispositivos encontrados serão associados.
             </Typography>
           </Stack>
         </Paper>
@@ -183,7 +189,7 @@ export default function AtivosPage({
           <Paper
             variant="outlined"
             sx={{
-              p: 1.25,
+              p: 1.1,
               borderRadius: 3,
               bgcolor: "#0f172a",
               borderColor: "#1e293b",
@@ -214,17 +220,20 @@ export default function AtivosPage({
           </Paper>
         ) : null}
 
-        <Box
-          sx={{
-            display: "grid",
-            gap: 1.1,
-            gridTemplateColumns: { xs: "1fr", sm: "repeat(3,minmax(0,1fr))" },
-          }}
-        >
+        <Box sx={{ display: "grid", gap: 1.1, gridTemplateColumns: { xs: "1fr", sm: "repeat(3,minmax(0,1fr))" } }}>
           {cardsResumo.map((c) => (
-            <Paper key={c.key} variant="outlined" sx={{ p: 1.25, borderRadius: 3 }}>
+            <Paper
+              key={c.key}
+              variant="outlined"
+              sx={{
+                p: 1.1,
+                borderRadius: 3,
+                borderColor: "#dbe5f2",
+                backgroundColor: "#fff",
+              }}
+            >
               <Stack direction="row" spacing={1.2} alignItems="center">
-                <Avatar sx={{ width: 30, height: 30, bgcolor: "#eaf2ff", color: "primary.main" }}>
+                <Avatar sx={{ width: 32, height: 32, bgcolor: "#eaf2ff", color: "primary.main" }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                     {c.icon}
                   </span>
@@ -243,62 +252,39 @@ export default function AtivosPage({
         </Box>
       </Stack>
 
-      <DataTable
-        columns={["Tipo", "Nome / host", "IP", "MAC", "Série", "Marca", "Modelo", "SO", "Estado"]}
-        tableClassName="table-shell--responsive"
-        rows={ativos}
-        loading={loading}
-        emptyTitle="Sem ativos para mostrar"
-        emptyDescription="Seleciona um inventário e usa «Pesquisar na lista» ou recarrega a lista completa no modal."
-        renderRow={(a, idx) => (
-          <TableRow key={`${a.id || a.ip || idx}`}>
-            <TableCell>
-              <Chip size="small" label={tipoAtivoLabel(a)} color={tipoAtivoChipColor(a)} />
-            </TableCell>
-            <TableCell>{a.nome || a.hostname || "—"}</TableCell>
-            <TableCell sx={{ fontFamily: "monospace" }}>{a.ip || "—"}</TableCell>
-            <TableCell sx={{ fontFamily: "monospace" }}>{a.mac_address || "—"}</TableCell>
-            <TableCell sx={{ fontFamily: "monospace" }}>{a.numero_serie || "—"}</TableCell>
-            <TableCell>{a.marca || "—"}</TableCell>
-            <TableCell>{a.modelo || "—"}</TableCell>
-            <TableCell>{a.sistema_operativo || "—"}</TableCell>
-            <TableCell>
-              <Chip size="small" label={a.estado || "—"} color={estadoChipColor(a.estado)} />
-            </TableCell>
-          </TableRow>
-        )}
-      />
-
-      <FormModal
-        open={modal === "pesquisa"}
-        onClose={() => setModal(null)}
-        wide
-        titleId="modal-scan-pesquisa-title"
-        title="Pesquisar na lista"
-        subtitle={<>Filtra os ativos do inventário selecionado. «Recarregar lista» limpa o filtro e volta a carregar tudo.</>}
-        footer={
-          <>
-              <Button type="button" variant="outlined" onClick={() => setModal(null)}>
-              Cancelar
-              </Button>
-            <Button type="button" variant="outlined" onClick={handleRecarregarLista}>
-              Recarregar lista
-            </Button>
-            <Button type="button" onClick={handlePesquisar}>
-              Pesquisar
-            </Button>
-          </>
-        }
-      >
-        <TextField
-          label="Termo na lista"
-          value={ativoPesquisa}
-          onChange={(e) => setAtivoPesquisa(e.target.value)}
-          placeholder="Nome, IP, série…"
-          size="small"
-          fullWidth
+      <Paper variant="outlined" sx={{ p: 0.8, borderRadius: 3, borderColor: "#dbe5f2" }}>
+        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} px={0.4} pb={0.5}>
+          <Typography variant="h3" fontSize={16}>
+            Dispositivos encontrados
+          </Typography>
+          <Chip size="small" label={`${totalAtivos} itens`} color="primary" variant="outlined" />
+        </Stack>
+        <DataTable
+          columns={["Tipo", "Nome / host", "IP", "MAC", "Série", "Marca", "Modelo", "SO", "Estado"]}
+          tableClassName="table-shell--responsive"
+          rows={ativos}
+          loading={loading}
+          emptyTitle="Sem ativos para mostrar"
+          emptyDescription="Seleciona um inventário e executa o scan para carregar dispositivos."
+          renderRow={(a, idx) => (
+            <TableRow key={`${a.id || a.ip || idx}`}>
+              <TableCell>
+                <Chip size="small" label={tipoAtivoLabel(a)} color={tipoAtivoChipColor(a)} />
+              </TableCell>
+              <TableCell>{a.nome || a.hostname || "—"}</TableCell>
+              <TableCell sx={{ fontFamily: "monospace" }}>{a.ip || "—"}</TableCell>
+              <TableCell sx={{ fontFamily: "monospace" }}>{a.mac_address || "—"}</TableCell>
+              <TableCell sx={{ fontFamily: "monospace" }}>{a.numero_serie || "—"}</TableCell>
+              <TableCell>{a.marca || "—"}</TableCell>
+              <TableCell>{a.modelo || "—"}</TableCell>
+              <TableCell>{a.sistema_operativo || "—"}</TableCell>
+              <TableCell>
+                <Chip size="small" label={a.estado || "—"} color={estadoChipColor(a.estado)} />
+              </TableCell>
+            </TableRow>
+          )}
         />
-      </FormModal>
+      </Paper>
 
       {isAdmin ? (
         <FormModal
@@ -325,91 +311,109 @@ export default function AtivosPage({
             </>
           }
         >
-          <Stack spacing={1.2}>
-            <Tabs value={scanTab} onChange={(_, v) => setScanTab(v)}>
+          <Stack spacing={1}>
+            <Tabs
+              value={scanTab}
+              onChange={(_, v) => setScanTab(v)}
+              sx={{ "& .MuiTab-root": { fontWeight: 700 }, "& .MuiTabs-indicator": { bgcolor: "primary.main" } }}
+            >
               <Tab value="existente" label="Inventário existente" />
               <Tab value="criar" label="Criar inventário" />
             </Tabs>
 
             {scanTab === "existente" ? (
-              <>
+              <Stack spacing={1}>
                 <Alert severity="info" variant="outlined">
                   Para executar, tens de escolher inventário de rede, indicar utilizador de rede e password de rede.
                 </Alert>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="scan-inv-label">Inventário para scan</InputLabel>
-                  <Select
-                    labelId="scan-inv-label"
-                    label="Inventário para scan"
-                    value={selectedInventarioId || ""}
-                    onChange={(e) => setSelectedInventarioId(e.target.value)}
-                  >
-                    <MenuItem value="">Seleciona inventário</MenuItem>
-                    {inventariosSubRede.map((inv) => (
-                      <MenuItem key={inv.id} value={String(inv.id)}>
-                        {inv.nome}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+
+                <Box
+                  sx={{
+                    display: "grid",
+                    gap: 1,
+                    gridTemplateColumns: { xs: "1fr", md: "repeat(2,minmax(0,1fr))" },
+                    alignItems: "start",
+                  }}
+                >
+                  <FormControl fullWidth size="small" sx={{ gridColumn: { md: "1 / -1" } }}>
+                    <InputLabel id="scan-inv-label">Inventário para scan</InputLabel>
+                    <Select
+                      labelId="scan-inv-label"
+                      label="Inventário para scan"
+                      value={selectedInventarioId || ""}
+                      onChange={(e) => setSelectedInventarioId(e.target.value)}
+                    >
+                      <MenuItem value="">Seleciona inventário</MenuItem>
+                      {inventariosSubRede.map((inv) => (
+                        <MenuItem key={inv.id} value={String(inv.id)}>
+                          {inv.nome}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <TextField
+                    label="IP/rede para scan"
+                    value={scanRede}
+                    onChange={(e) => setScanRede(e.target.value)}
+                    placeholder="Ex.: 192.168.1.0/24 ou 192.168.1.1-192.168.1.254"
+                    helperText="Formatos aceites: CIDR, IP único ou intervalo /24 completo."
+                    size="small"
+                    fullWidth
+                    sx={{ gridColumn: { md: "1 / -1" } }}
+                  />
+
+                  <Paper variant="outlined" sx={{ p: 0.8, borderRadius: 2 }}>
+                    <Typography variant="body2" fontWeight={700} mb={0.4}>
+                      Logs após scan
+                    </Typography>
+                    <FormControlLabel
+                      control={<Checkbox checked={Boolean(scanLogsRdp)} onChange={(e) => setScanLogsRdp?.(e.target.checked)} />}
+                      label="RDP"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={Boolean(scanLogsSeguranca)}
+                          onChange={(e) => setScanLogsSeguranca?.(e.target.checked)}
+                        />
+                      }
+                      label="Segurança"
+                    />
+                  </Paper>
+
+                  <Stack spacing={0.9}>
+                    <TextField
+                      label="Credenciais (utilizador)"
+                      value={scanUser}
+                      onChange={(e) => setScanUser(e.target.value)}
+                      placeholder="Obrigatório"
+                      autoComplete="username"
+                      required
+                      helperText={!scanUser?.trim() ? "Obrigatório para iniciar scan" : " "}
+                      size="small"
+                      fullWidth
+                    />
+                    <TextField
+                      label="Credenciais (palavra-passe)"
+                      value={scanPass}
+                      onChange={(e) => setScanPass(e.target.value)}
+                      type="password"
+                      placeholder="Obrigatória"
+                      autoComplete="current-password"
+                      required
+                      helperText={!scanPass ? "Obrigatória para iniciar scan" : " "}
+                      size="small"
+                      fullWidth
+                    />
+                  </Stack>
+                </Box>
+
                 {inventariosSubRede.length === 0 ? (
                   <Typography variant="caption" color="error.main">
                     Não existem inventários do tipo Rede (sub-rede). Cria um na tab ao lado.
                   </Typography>
                 ) : null}
-                <TextField
-                  label="IP/rede para scan"
-                  value={scanRede}
-                  onChange={(e) => setScanRede(e.target.value)}
-                  placeholder="Ex.: 192.168.1.0/24 ou 192.168.1.1-192.168.1.254"
-                  helperText="Formatos aceites: CIDR, IP único ou intervalo /24 completo."
-                  size="small"
-                  fullWidth
-                />
-                <Alert severity="info" variant="outlined">
-                  Depois da rede, indica credenciais com permissões no domínio/rede para recolha completa.
-                </Alert>
-                <Paper variant="outlined" sx={{ p: 1, borderRadius: 2 }}>
-                  <Typography variant="body2" fontWeight={700} mb={0.6}>
-                    Logs que queres consultar após o scan
-                  </Typography>
-                  <FormControlLabel
-                    control={<Checkbox checked={Boolean(scanLogsRdp)} onChange={(e) => setScanLogsRdp?.(e.target.checked)} />}
-                    label="Quero logs RDP"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={Boolean(scanLogsSeguranca)}
-                        onChange={(e) => setScanLogsSeguranca?.(e.target.checked)}
-                      />
-                    }
-                    label="Quero logs de Segurança"
-                  />
-                </Paper>
-                <TextField
-                  label="Credenciais (utilizador)"
-                  value={scanUser}
-                  onChange={(e) => setScanUser(e.target.value)}
-                  placeholder="Obrigatório"
-                  autoComplete="username"
-                  required
-                  helperText={!scanUser?.trim() ? "Obrigatório para iniciar scan" : " "}
-                  size="small"
-                  fullWidth
-                />
-                <TextField
-                  label="Credenciais (palavra-passe)"
-                  value={scanPass}
-                  onChange={(e) => setScanPass(e.target.value)}
-                  type="password"
-                  placeholder="Obrigatória"
-                  autoComplete="current-password"
-                  required
-                  helperText={!scanPass ? "Obrigatória para iniciar scan" : " "}
-                  size="small"
-                  fullWidth
-                />
                 {!selectedInventarioId ? (
                   <Typography variant="caption" color="error.main">
                     Seleciona ou cria um inventário para começar o scan.
@@ -425,9 +429,9 @@ export default function AtivosPage({
                     Introduz as credenciais da rede para executar o scan.
                   </Typography>
                 ) : null}
-              </>
+              </Stack>
             ) : (
-              <Stack spacing={1.2}>
+              <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: { xs: "1fr", md: "repeat(2,minmax(0,1fr))" } }}>
                 <TextField
                   label="Nome do inventário"
                   value={novoInventario.nome}
@@ -436,6 +440,7 @@ export default function AtivosPage({
                   required
                   size="small"
                   fullWidth
+                  sx={{ gridColumn: { md: "1 / -1" } }}
                 />
                 <TextField
                   select
@@ -463,8 +468,9 @@ export default function AtivosPage({
                   placeholder="Opcional"
                   size="small"
                   fullWidth
+                  sx={{ gridColumn: { md: "1 / -1" } }}
                 />
-              </Stack>
+              </Box>
             )}
           </Stack>
         </FormModal>

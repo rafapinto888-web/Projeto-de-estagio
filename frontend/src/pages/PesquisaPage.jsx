@@ -7,7 +7,6 @@ import {
   Card,
   Chip,
   FormControl,
-  IconButton,
   InputAdornment,
   MenuItem,
   Paper,
@@ -566,9 +565,6 @@ export default function PesquisaPage({
                       <Typography fontSize={12} color="text.secondary">
                         {secaoVisual(c.secao).label}
                       </Typography>
-                      <Typography fontSize={11} color="#2563eb" mt={0.25}>
-                        Ver detalhes
-                      </Typography>
                     </Box>
                   </Stack>
                 </Card>
@@ -652,7 +648,6 @@ export default function PesquisaPage({
                         <TableCell>Localização</TableCell>
                         <TableCell>Utilizador</TableCell>
                         <TableCell>Estado</TableCell>
-                        <TableCell>Ações</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -676,17 +671,6 @@ export default function PesquisaPage({
                           <TableCell>{valorHumano(r.utilizador)}</TableCell>
                           <TableCell>
                             <Chip label={valorHumano(r.estado)} size="small" color={estadoChipColor(r.estado)} />
-                          </TableCell>
-                          <TableCell>
-                            <IconButton
-                              size="small"
-                              aria-label="ver"
-                              sx={{ border: "1px solid #dbe5f2", bgcolor: "#fff" }}
-                            >
-                              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                                visibility
-                              </span>
-                            </IconButton>
                           </TableCell>
                         </TableRow>
                       ))}
