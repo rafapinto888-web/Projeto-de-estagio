@@ -1,7 +1,19 @@
 /* CRUD de computadores + vista agregada com equipamentos descobertos por inventário (scan). */
 
 import { useCallback, useMemo, useState } from "react";
-import { Button, MenuItem, Stack, TextField } from "@mui/material";
+import {
+  Box,
+  Button,
+  Chip,
+  InputAdornment,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+} from "@mui/material";
 import { api } from "../api";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
@@ -346,7 +358,18 @@ export default function ComputadoresPage({
       subtitle="Por inventário: uma única lista; a coluna Origem indica se o registo é manual ou do scan."
       rightAction={
         isAdmin ? (
-          <Button type="button" variant="outlined" onClick={openCreate}>
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={openCreate}
+            sx={{
+              borderRadius: 2.5,
+              fontWeight: 700,
+              borderColor: "#c7d8f8",
+              color: "#1d4ed8",
+              "&:hover": { borderColor: "#93b4f0", bgcolor: "#eef5ff" },
+            }}
+          >
             Novo computador
           </Button>
         ) : null
@@ -364,6 +387,10 @@ export default function ComputadoresPage({
           <div className="computadores-page">
           <div className="computadores-overview">
             <section className="computadores-overview-controls" aria-label="Pesquisa e filtros">
+              <Paper
+                variant="outlined"
+                sx={{ p: 1.1, borderRadius: 3, borderColor: "#dbe5f2", bgcolor: "#fff", mb: 1.1 }}
+              >
               <div className="computadores-search-row">
                 <div className="computadores-search-field">
                   <TextField
@@ -377,9 +404,11 @@ export default function ComputadoresPage({
                     aria-label="Pesquisar na lista"
                     InputProps={{
                       startAdornment: (
-                        <span className="material-symbols-outlined computadores-search-field-icon" aria-hidden>
-                          search
-                        </span>
+                        <InputAdornment position="start">
+                          <span className="material-symbols-outlined computadores-search-field-icon" aria-hidden>
+                            search
+                          </span>
+                        </InputAdornment>
                       ),
                     }}
                   />
@@ -394,31 +423,26 @@ export default function ComputadoresPage({
               <div className="computadores-toolbar-merge">
                 <div className="computadores-toolbar-merge-left">
                   <span className="computadores-toolbar-merge-label">Tipo</span>
-                  <div className="computadores-filter-chips" role="group" aria-label="Tipo de registo">
-                    <button
-                      type="button"
-                      className={`computadores-chip ${filtroTipo === "todos" ? "computadores-chip--active" : ""}`}
-                      onClick={() => setFiltroTipo("todos")}
-                    >
+                  <ToggleButtonGroup
+                    size="small"
+                    exclusive
+                    value={filtroTipo}
+                    onChange={(_, value) => {
+                      if (value) setFiltroTipo(value);
+                    }}
+                    aria-label="Tipo de registo"
+                    sx={{ "& .MuiToggleButton-root": { px: 1.4, textTransform: "none", fontWeight: 700 } }}
+                  >
+                    <ToggleButton value="todos">
                       Tudo
-                    </button>
-                    <button
-                      type="button"
-                      title="Apenas registos manuais"
-                      className={`computadores-chip ${filtroTipo === "manuais" ? "computadores-chip--active" : ""}`}
-                      onClick={() => setFiltroTipo("manuais")}
-                    >
+                    </ToggleButton>
+                    <ToggleButton value="manuais" title="Apenas registos manuais">
                       Manuais
-                    </button>
-                    <button
-                      type="button"
-                      title="Apenas equipamentos descobertos pelo scan"
-                      className={`computadores-chip ${filtroTipo === "scan" ? "computadores-chip--active" : ""}`}
-                      onClick={() => setFiltroTipo("scan")}
-                    >
+                    </ToggleButton>
+                    <ToggleButton value="scan" title="Apenas equipamentos descobertos pelo scan">
                       Scan
-                    </button>
-                  </div>
+                    </ToggleButton>
+                  </ToggleButtonGroup>
                 </div>
                 <div className="computadores-toolbar-merge-right">
                   <label className="computadores-jump-compact">
@@ -444,25 +468,28 @@ export default function ComputadoresPage({
                     </TextField>
                   </label>
                   <div className="computadores-toolbar-actions">
-                    <button
+                    <Button
                       type="button"
-                      className="ghost ghost-sm"
+                      variant="outlined"
+                      size="small"
                       onClick={() => expandirTodosBlocos(true)}
                       disabled={gruposExibicao.length === 0}
                     >
                       Expandir todos
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
-                      className="ghost ghost-sm"
+                      variant="outlined"
+                      size="small"
                       onClick={() => expandirTodosBlocos(false)}
                       disabled={gruposExibicao.length === 0}
                     >
                       Recolher todos
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
+              </Paper>
             </section>
 
             <div className="computadores-stat-strip" aria-label={filtroActivo ? "Resumo filtrado" : "Resumo global"}>
@@ -525,9 +552,9 @@ export default function ComputadoresPage({
                     </p>
                   </div>
                 </div>
-                <button type="button" className="btn-chip-primary" onClick={limparFiltrosLista}>
+                <Button type="button" variant="contained" onClick={limparFiltrosLista}>
                   Repor pesquisa e filtros
-                </button>
+                </Button>
               </div>
             ) : (
               gruposExibicao.map((grupo, idxInv) => {
@@ -657,39 +684,34 @@ export default function ComputadoresPage({
                                 <td>
                                   {isAdmin ? (
                                     a.tipo === "computador" ? (
-                                      <>
-                                        <button
-                                          type="button"
-                                          className="ghost table-btn"
-                                          onClick={() => handleRowEdit(a)}
-                                        >
+                                      <Stack direction="row" spacing={0.6}>
+                                        <Button type="button" variant="outlined" size="small" onClick={() => handleRowEdit(a)}>
                                           Editar
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="danger table-btn"
-                                          onClick={() => onDeleteRow?.(a)}
-                                        >
+                                        </Button>
+                                        <Button type="button" color="error" variant="outlined" size="small" onClick={() => onDeleteRow?.(a)}>
                                           Apagar
-                                        </button>
-                                      </>
+                                        </Button>
+                                      </Stack>
                                     ) : (
-                                      <>
-                                        <button
+                                      <Stack direction="row" spacing={0.6}>
+                                        <Button
                                           type="button"
-                                          className="ghost table-btn"
+                                          variant="outlined"
+                                          size="small"
                                           onClick={() => openScanEdit(a, grupo.inventario_id)}
                                         >
                                           Editar
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                           type="button"
-                                          className="danger table-btn"
+                                          color="error"
+                                          variant="outlined"
+                                          size="small"
                                           onClick={() => handleScanDeleteRow(a, grupo.inventario_id)}
                                         >
                                           Apagar
-                                        </button>
-                                      </>
+                                        </Button>
+                                      </Stack>
                                     )
                                   ) : (
                                     <span className="cell-muted">—</span>

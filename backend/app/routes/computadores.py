@@ -358,9 +358,25 @@ def atualizar_parcialmente_computador(
     dependencies=[Depends(require_admin)],
 )
 def apagar_computador(computador_id: int, db: Session = Depends(get_db)):
-    # Remove um computador pelo id.
+    # Regra funcional: apenas bloqueia delete quando existe utilizador responsavel associado.
+    computador = obter_computador(db, computador_id)
+    if computador is None:
+        raise HTTPException(status_code=404, detail="Computador nao encontrado")
+
+    if computador.utilizador_responsavel_id is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Nao e possivel apagar o computador porque existe utilizador associado",
+        )
+
+    # Remove logs tecnicos associados para evitar bloqueio por FK ao apagar o computador.
+    db.query(LogDispositivoDB).filter(LogDispositivoDB.computador_id == computador_id).delete(
+        synchronize_session=False
+    )
+
     removido = apagar_computador_db(db, computador_id)
     if not removido:
+        # Salvaguarda extra para manter comportamento previsivel.
         raise HTTPException(status_code=404, detail="Computador nao encontrado")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
