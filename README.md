@@ -29,7 +29,7 @@ Painel web para gestao de inventario de TI: inventarios, computadores, localizac
 - **Frontend**: React 18, Vite 5, Material UI (MUI) e Emotion.
 - **API**: OpenAPI/Swagger em `/docs`.
 
-## Bibliotecas do frontend (guia rapido de estudo)
+## Bibliotecas do frontend
 
 - `react` e `react-dom`: base da interface (componentes, estado, renderizacao no browser).
 - `vite`: bundler/dev server rapido para desenvolvimento e build.
