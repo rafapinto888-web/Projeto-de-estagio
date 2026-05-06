@@ -39,11 +39,6 @@ function estadoPcColor(estado) {
   return "default";
 }
 
-function horaRelativa(index) {
-  if (index < 3) return `Hoje, 09:4${index}`;
-  return `Ontem, 17:${String(3 + index)}`;
-}
-
 function horaDoEvento(iso, fallback = "—") {
   if (!iso) return fallback;
   try {
@@ -121,10 +116,9 @@ export default function DashboardPage({
   }, [estadoContagens]);
 
   const atividadeHistorico = useMemo(() => {
-    const lista = [];
-    (historicoConta || [])
+    return (historicoConta || [])
       .slice(0, 20)
-      .forEach((ev, idx) => {
+      .map((ev, idx) => {
         const acao = String(ev?.acao || "Evento");
         const descricao = String(ev?.descricao || "Sem descrição");
         const txt = `${acao} ${descricao}`.toLowerCase();
@@ -137,28 +131,28 @@ export default function DashboardPage({
               : txt.includes("apagar") || txt.includes("delete")
                 ? "delete"
                 : "task_alt";
-        lista.push({
+        return {
           id: ev?.id ? `hist-${ev.id}` : `hist-${idx}`,
           titulo: acao,
           detalhe: descricao,
-          hora: horaDoEvento(ev?.data_evento, horaRelativa(idx)),
+          hora: horaDoEvento(ev?.data_evento),
           icon,
           tone,
-        });
-      });
+        };
+      })
+      .slice(0, 6);
+  }, [historicoConta]);
 
-    if (lista.length === 0) {
-      lista.push({
-        id: "no-alert",
-        titulo: "Sem histórico recente",
-        detalhe: "Ainda não existem eventos da conta para mostrar.",
-        hora: "Agora",
-        icon: "check_circle",
-        tone: "success",
-      });
-    }
-
-    return lista.slice(0, 6);
+  const eventosHoje = useMemo(() => {
+    const hoje = new Date().toLocaleDateString("pt-PT");
+    return (historicoConta || []).filter((ev) => {
+      if (!ev?.data_evento) return false;
+      try {
+        return new Date(ev.data_evento).toLocaleDateString("pt-PT") === hoje;
+      } catch {
+        return false;
+      }
+    }).length;
   }, [historicoConta]);
 
   const dataHoje = useMemo(() => {
@@ -174,8 +168,7 @@ export default function DashboardPage({
     { key: "computadores", label: "Computadores", value: computadores.length, icon: "computer" },
     { key: "ativos", label: "Dispositivos ativos", value: totalAtivos, icon: "devices" },
     { key: "utilizadores", label: "Utilizadores", value: utilizadores.length, icon: "group" },
-    { key: "scan", label: "Scans realizados", value: totalScan, icon: "radar" },
-    { key: "logs", label: "Eventos hoje", value: atividadeHistorico.length, icon: "receipt_long" },
+    { key: "logs", label: "Eventos hoje", value: eventosHoje, icon: "receipt_long" },
   ];
 
   const atividadeRede = atividadeHistorico;
@@ -494,36 +487,42 @@ export default function DashboardPage({
                 Logs e alertas recentes
               </Typography>
               <Divider sx={{ mb: 1.25 }} />
-              <Box sx={{ ...listaScrollSx, maxHeight: { xs: 210, lg: 235 } }}>
-                <List disablePadding>
-                  {atividadeHistorico.map((alerta, idx) => (
-                    <ListItem
-                      key={alerta.id}
-                      divider={idx < atividadeHistorico.length - 1}
-                      disableGutters
-                      secondaryAction={<Typography variant="caption">{alerta.hora}</Typography>}
-                    >
-                      <ListItemIcon sx={{ minWidth: 28 }}>
-                        <span
-                          className="material-symbols-outlined"
-                          style={{
-                            fontSize: 18,
-                            color: alerta.tone === "warning" ? "#f59e0b" : alerta.tone === "success" ? "#22c55e" : "#3b82f6",
-                          }}
-                        >
-                          {alerta.icon}
-                        </span>
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={alerta.titulo}
-                        secondary={alerta.detalhe}
-                        primaryTypographyProps={{ fontSize: 13, fontWeight: 700 }}
-                        secondaryTypographyProps={{ fontSize: 12 }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
+              {atividadeHistorico.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  Sem eventos recentes para mostrar.
+                </Typography>
+              ) : (
+                <Box sx={{ ...listaScrollSx, maxHeight: { xs: 210, lg: 235 } }}>
+                  <List disablePadding>
+                    {atividadeHistorico.map((alerta, idx) => (
+                      <ListItem
+                        key={alerta.id}
+                        divider={idx < atividadeHistorico.length - 1}
+                        disableGutters
+                        secondaryAction={<Typography variant="caption">{alerta.hora}</Typography>}
+                      >
+                        <ListItemIcon sx={{ minWidth: 28 }}>
+                          <span
+                            className="material-symbols-outlined"
+                            style={{
+                              fontSize: 18,
+                              color: alerta.tone === "warning" ? "#f59e0b" : alerta.tone === "success" ? "#22c55e" : "#3b82f6",
+                            }}
+                          >
+                            {alerta.icon}
+                          </span>
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={alerta.titulo}
+                          secondary={alerta.detalhe}
+                          primaryTypographyProps={{ fontSize: 13, fontWeight: 700 }}
+                          secondaryTypographyProps={{ fontSize: 12 }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              )}
               <Button variant="text" size="small" sx={{ mt: 1 }} onClick={() => onNavigate("logs")}>
                 Ver todos os logs
               </Button>

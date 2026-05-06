@@ -135,10 +135,11 @@ export default function App() {
     return isAdminProfileName(nomePerfil) || user?.is_admin === true;
   }, [user]);
 
-  async function loadAllData(currentToken) {
+  async function loadAllData(currentToken, options = {}) {
     const tk = currentToken || token;
     if (!tk) return;
-    setDataLoading(true);
+    const { silent = false } = options;
+    if (!silent) setDataLoading(true);
     try {
       const [
         inventariosData,
@@ -167,7 +168,7 @@ export default function App() {
       const firstId = (inventariosData || [])[0]?.id;
       setSelectedInventarioId((prev) => prev || String(firstId || ""));
     } finally {
-      setDataLoading(false);
+      if (!silent) setDataLoading(false);
     }
   }
 
@@ -270,17 +271,6 @@ export default function App() {
         const me = await api.me(token);
         setUser(me);
         await loadAllData(token);
-        try {
-          await api.registarHistorico(
-            {
-              acao: "painel.acesso",
-              descricao: "Sessão ativa no painel (carregamento da aplicação).",
-            },
-            token,
-          );
-        } catch {
-          /* auditoria opcional; não bloquear o painel */
-        }
       } catch {
         localStorage.removeItem("access_token");
         setToken("");
@@ -303,6 +293,17 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!token || activeTab !== "dashboard") return undefined;
+    const timer = setInterval(() => {
+      loadAllData(token, { silent: true }).catch(() => {
+        /* atualização automática opcional; falhas pontuais não devem quebrar UI */
+      });
+    }, 30000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, activeTab]);
 
   const loading = dataLoading || actionLoading;
 
