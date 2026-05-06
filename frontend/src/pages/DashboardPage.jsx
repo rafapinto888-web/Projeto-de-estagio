@@ -253,9 +253,6 @@ export default function DashboardPage({
                     <Typography fontWeight={800} fontSize={26} lineHeight={1.05}>
                       {c.value}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.2 }}>
-                      Registos reais
-                    </Typography>
                   </Box>
                 </Stack>
               </Paper>

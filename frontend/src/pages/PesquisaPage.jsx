@@ -68,6 +68,15 @@ function secaoVisual(secao) {
   return { icon: "list_alt", label: tituloSecao(secao), tone: "slate" };
 }
 
+function secaoAccent(secao) {
+  const tone = secaoVisual(secao).tone;
+  if (tone === "blue") return { bg: "#eff6ff", border: "#2563eb", icon: "#1d4ed8" };
+  if (tone === "green") return { bg: "#ecfdf5", border: "#16a34a", icon: "#15803d" };
+  if (tone === "purple") return { bg: "#f5f3ff", border: "#7c3aed", icon: "#6d28d9" };
+  if (tone === "amber") return { bg: "#fffbeb", border: "#d97706", icon: "#b45309" };
+  return { bg: "#f8fafc", border: "#64748b", icon: "#475569" };
+}
+
 function valorHumano(v) {
   if (v == null || String(v).trim() === "") return "—";
   return String(v);
@@ -305,6 +314,11 @@ export default function PesquisaPage({
   }, [rowsFiltradas]);
 
   const semResultado = !loading && rowsBase.length === 0;
+  const semResultadosFiltrados = !loading && !semResultado && rowsOrdenadas.length === 0;
+  const erroMensagem =
+    parsed && typeof parsed === "object" && !Array.isArray(parsed) && parsed?.erro
+      ? String(parsed.erro)
+      : "";
   const totalResultados = rowsOrdenadas.length;
 
   async function handleSubmit(e) {
@@ -328,13 +342,21 @@ export default function PesquisaPage({
         />
       }
     >
-      <Stack spacing={1.75}>
+      <Stack spacing={2.3}>
         <Stack direction={{ xs: "column", lg: "row" }} spacing={1.25}>
           <Paper
             component="form"
             onSubmit={handleSubmit}
             variant="outlined"
-            sx={{ flex: 1, p: 1.1, bgcolor: "#ffffff", borderColor: "#dbe5f2" }}
+            sx={{
+              flex: 1,
+              p: 1.2,
+              bgcolor: "#ffffff",
+              borderColor: "#bfdbfe",
+              borderWidth: 2,
+              borderRadius: 3,
+              boxShadow: "0 14px 30px rgba(37,99,235,0.12)",
+            }}
           >
             <Stack direction="row" spacing={1} alignItems="center">
               <TextField
@@ -343,6 +365,7 @@ export default function PesquisaPage({
                 onChange={(e) => setGlobalTermo(e.target.value)}
                 placeholder="Ex.: dell latitude 5420"
                 size="small"
+                sx={{ "& .MuiOutlinedInput-root": { minHeight: 44 } }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -353,10 +376,17 @@ export default function PesquisaPage({
                   ),
                 }}
               />
-              <Button type="submit" size="small" disabled={loading || !String(globalTermo || "").trim()}>
+              <Button type="submit" size="small" sx={{ minWidth: 110 }} disabled={loading || !String(globalTermo || "").trim()}>
                 {loading ? "A pesquisar..." : "Pesquisar"}
               </Button>
-              <Button type="button" size="small" variant="outlined" onClick={() => setGlobalTermo("")} disabled={loading}>
+              <Button
+                type="button"
+                size="small"
+                variant="outlined"
+                sx={{ minWidth: 88 }}
+                onClick={() => setGlobalTermo("")}
+                disabled={loading}
+              >
                 Limpar
               </Button>
             </Stack>
@@ -364,7 +394,13 @@ export default function PesquisaPage({
 
           <Paper
             variant="outlined"
-            sx={{ p: 1.25, minWidth: { lg: 320 }, bgcolor: "#f8fbff", borderColor: "#dbe5f2" }}
+            sx={{
+              p: 1.25,
+              minWidth: { lg: 320 },
+              bgcolor: "#eff6ff",
+              borderColor: "#bfdbfe",
+              borderRadius: 3,
+            }}
           >
             <Stack direction="row" spacing={1}>
               <span className="material-symbols-outlined" style={{ fontSize: 18, color: "#2563eb", marginTop: 2 }}>
@@ -382,8 +418,22 @@ export default function PesquisaPage({
           </Paper>
         </Stack>
 
-        <Paper variant="outlined" sx={{ p: 1.25, bgcolor: "#fcfdff", borderColor: "#dbe5f2" }}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "flex-end" }}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 1.25,
+            bgcolor: "#fcfdff",
+            borderColor: "#bfdbfe",
+            borderRadius: 3,
+            boxShadow: "0 8px 20px rgba(15,23,42,0.05)",
+          }}
+        >
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={1}
+            alignItems={{ md: "flex-end" }}
+            sx={{ "& .MuiFormControl-root": { minWidth: { md: 170 } } }}
+          >
             <FormControl size="small" sx={{ minWidth: 160, flex: 1 }}>
               <Typography fontSize={11} color="text.secondary" mb={0.4}>
                 Tipo de entidade
@@ -452,6 +502,22 @@ export default function PesquisaPage({
 
         {loading ? (
           <div className="loading-box">A pesquisar…</div>
+        ) : erroMensagem ? (
+          <Paper variant="outlined" sx={{ p: 2, borderStyle: "dashed", bgcolor: "#fff1f2", borderColor: "#fecdd3" }}>
+            <Stack direction="row" spacing={1}>
+              <span className="material-symbols-outlined" style={{ color: "#e11d48" }}>
+                error
+              </span>
+              <Box>
+                <Typography fontSize={14} fontWeight={700}>
+                  Erro na pesquisa
+                </Typography>
+                <Typography fontSize={12} color="text.secondary">
+                  {erroMensagem}
+                </Typography>
+              </Box>
+            </Stack>
+          </Paper>
         ) : semResultado ? (
           <Paper variant="outlined" sx={{ p: 2, borderStyle: "dashed", bgcolor: "#f8fafc" }}>
             <Stack direction="row" spacing={1}>
@@ -478,9 +544,19 @@ export default function PesquisaPage({
               }}
             >
               {cardsResumo.map((c) => (
-                <Card key={c.secao} variant="outlined" sx={{ p: 1.25, borderColor: "#dbe5f2", bgcolor: "#ffffff" }}>
+                <Card
+                  key={c.secao}
+                  variant="outlined"
+                  sx={{
+                    p: 1.35,
+                    borderColor: secaoAccent(c.secao).border,
+                    bgcolor: secaoAccent(c.secao).bg,
+                    borderLeft: `5px solid ${secaoAccent(c.secao).border}`,
+                    boxShadow: "0 10px 20px rgba(15,23,42,0.08)",
+                  }}
+                >
                   <Stack direction="row" spacing={1.1}>
-                    <span className="material-symbols-outlined" style={{ color: "#2563eb", fontSize: 18 }}>
+                    <span className="material-symbols-outlined" style={{ color: secaoAccent(c.secao).icon, fontSize: 20 }}>
                       {secaoVisual(c.secao).icon}
                     </span>
                     <Box>
@@ -499,32 +575,74 @@ export default function PesquisaPage({
               ))}
             </Box>
 
-            <Stack direction={{ xs: "column", lg: "row" }} spacing={1} justifyContent="space-between" alignItems={{ lg: "center" }}>
-              <Tabs value={aba} onChange={(_, value) => setAba(value)} variant="scrollable" allowScrollButtonsMobile>
-                <Tab value="resultados" label="Resultados" />
-                <Tab value="agrupado" label="Agrupado por tipo" />
-              </Tabs>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <FormControl size="small">
-                  <Select value={ordem} onChange={(e) => setOrdem(e.target.value)}>
-                    <MenuItem value="relevancia">Ordenar por Relevância</MenuItem>
-                    <MenuItem value="nome">Nome (A-Z)</MenuItem>
-                  </Select>
-                </FormControl>
-                <Button type="button" size="small" variant="outlined" onClick={() => setMostrarRaw((v) => !v)}>
-                  Ver JSON bruto
-                </Button>
+            <Paper variant="outlined" sx={{ p: 1, borderRadius: 3, borderColor: "#dbe5f2", bgcolor: "#fff" }}>
+              <Stack direction={{ xs: "column", lg: "row" }} spacing={1} justifyContent="space-between" alignItems={{ lg: "center" }}>
+                <Tabs value={aba} onChange={(_, value) => setAba(value)} variant="scrollable" allowScrollButtonsMobile>
+                  <Tab value="resultados" label="Resultados" />
+                  <Tab value="agrupado" label="Agrupado por tipo" />
+                </Tabs>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <FormControl size="small">
+                    <Select value={ordem} onChange={(e) => setOrdem(e.target.value)}>
+                      <MenuItem value="relevancia">Ordenar por Relevância</MenuItem>
+                      <MenuItem value="nome">Nome (A-Z)</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <Button type="button" size="small" variant="outlined" onClick={() => setMostrarRaw((v) => !v)}>
+                    Ver JSON bruto
+                  </Button>
+                </Stack>
               </Stack>
-            </Stack>
+            </Paper>
 
             {mostrarRaw ? (
               <pre className="pesq-ref-raw">{globalOutput || "Sem dados para mostrar."}</pre>
             ) : aba === "resultados" ? (
               <>
+                {semResultadosFiltrados ? (
+                  <Paper variant="outlined" sx={{ p: 2, borderStyle: "dashed", bgcolor: "#f8fafc" }}>
+                    <Stack direction="row" spacing={1}>
+                      <span className="material-symbols-outlined" style={{ color: "#94a3b8" }}>
+                        filter_alt_off
+                      </span>
+                      <Box>
+                        <Typography fontSize={13} fontWeight={700}>
+                          Sem resultados com os filtros atuais
+                        </Typography>
+                        <Typography fontSize={12} color="text.secondary">
+                          Ajusta os filtros ou limpa para voltar a ver os dados.
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Paper>
+                ) : null}
                 <Typography fontSize={11} color="text.secondary" sx={{ px: 0.25 }}>
                   {rowsOrdenadas.length} resultado(s) encontrado(s)
                 </Typography>
-                <TableContainer component={Paper} variant="outlined">
+                <TableContainer
+                  component={Paper}
+                  variant="outlined"
+                  sx={{
+                    borderRadius: 3,
+                    borderColor: "#dbe5f2",
+                    "& .MuiTableHead-root .MuiTableCell-root": {
+                      fontSize: 11,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "#e2e8f0",
+                      bgcolor: "#0f172a",
+                    },
+                    "& .MuiTableBody-root .MuiTableRow-root:hover": {
+                      bgcolor: "#eff6ff",
+                    },
+                    "& .MuiTableBody-root .MuiTableRow-root:nth-of-type(even)": {
+                      bgcolor: "#fbfdff",
+                    },
+                    "& .MuiTableBody-root .MuiTableCell-root": {
+                      py: 1.1,
+                    },
+                  }}
+                >
                   <Table size="small">
                     <TableHead>
                       <TableRow>
@@ -560,7 +678,11 @@ export default function PesquisaPage({
                             <Chip label={valorHumano(r.estado)} size="small" color={estadoChipColor(r.estado)} />
                           </TableCell>
                           <TableCell>
-                            <IconButton size="small" aria-label="ver">
+                            <IconButton
+                              size="small"
+                              aria-label="ver"
+                              sx={{ border: "1px solid #dbe5f2", bgcolor: "#fff" }}
+                            >
                               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                                 visibility
                               </span>
@@ -586,24 +708,6 @@ export default function PesquisaPage({
                   </Stack>
                 </Stack>
               </>
-            ) : aba === "agrupado" ? (
-              <Paper component="ul" variant="outlined" sx={{ m: 0, p: 0, listStyle: "none" }}>
-                {cardsResumo.map((c, idx) => (
-                  <Box
-                    key={c.secao}
-                    component="li"
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      p: 1.25,
-                      borderBottom: idx < cardsResumo.length - 1 ? "1px solid #e2e8f0" : "none",
-                    }}
-                  >
-                    <Typography fontWeight={700}>{tituloSecao(c.secao)}</Typography>
-                    <Typography color="text.secondary">{c.total}</Typography>
-                  </Box>
-                ))}
-              </Paper>
             ) : (
               <Paper component="ul" variant="outlined" sx={{ m: 0, p: 0, listStyle: "none" }}>
                 {cardsResumo.map((c, idx) => (

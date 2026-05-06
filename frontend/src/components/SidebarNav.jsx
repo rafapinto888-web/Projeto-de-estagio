@@ -64,7 +64,7 @@ function MenuContent({ tabs, activeTab, onSelect, mobile = false, onClose }) {
             sx={{
               mb: 0.5,
               borderRadius: 2.5,
-              minHeight: 40,
+              minHeight: 42,
               color: "#334155",
               "&:hover": {
                 bgcolor: "#f1f6ff",
@@ -73,13 +73,23 @@ function MenuContent({ tabs, activeTab, onSelect, mobile = false, onClose }) {
                 bgcolor: "#eaf1ff",
                 color: "#1d4ed8",
                 border: "1px solid #dbeafe",
+                boxShadow: "0 6px 14px rgba(37,99,235,0.12)",
               },
               "& .MuiListItemIcon-root": {
                 minWidth: 34,
               },
             }}
           >
-            <ListItemIcon sx={{ color: "inherit" }}>{iconForTab(tab.id)}</ListItemIcon>
+            <ListItemIcon
+              sx={{
+                color: "inherit",
+                "& .material-symbols-outlined": {
+                  fontSize: 19,
+                },
+              }}
+            >
+              {iconForTab(tab.id)}
+            </ListItemIcon>
             <ListItemText primary={tab.label} primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }} />
           </ListItemButton>
         ))}
