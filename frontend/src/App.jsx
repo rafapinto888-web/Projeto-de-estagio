@@ -77,6 +77,68 @@ function emptyInventarioForm() {
   return { id: "", nome: "", tipo_inventario: "normal", ip_rede: "", descricao: "" };
 }
 
+function parseIPv4(ip) {
+  const txt = String(ip || "").trim();
+  const parts = txt.split(".");
+  if (parts.length !== 4) return null;
+  const nums = parts.map((p) => Number(p));
+  if (nums.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return null;
+  return nums;
+}
+
+function compareIPv4(a, b) {
+  for (let i = 0; i < 4; i += 1) {
+    if (a[i] !== b[i]) return a[i] - b[i];
+  }
+  return 0;
+}
+
+function normalizarRedeScan(rawValue) {
+  const input = String(rawValue || "").trim();
+  if (!input) {
+    return { ok: true, rede: null, label: "rede padrão do inventário" };
+  }
+
+  const cidrMatch = input.match(/^(\d{1,3}(?:\.\d{1,3}){3})\/(\d{1,2})$/);
+  if (cidrMatch) {
+    const ip = parseIPv4(cidrMatch[1]);
+    const prefix = Number(cidrMatch[2]);
+    if (!ip || prefix < 0 || prefix > 32) {
+      return { ok: false, message: "IP ou intervalo de rede inválido." };
+    }
+    return { ok: true, rede: `${ip.join(".")}/${prefix}`, label: `${ip.join(".")}/${prefix}` };
+  }
+
+  const singleIp = parseIPv4(input);
+  if (singleIp) {
+    const rede = `${singleIp.join(".")}/32`;
+    return { ok: true, rede, label: rede };
+  }
+
+  const rangeMatch = input.match(/^(\d{1,3}(?:\.\d{1,3}){3})\s*-\s*(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (rangeMatch) {
+    const start = parseIPv4(rangeMatch[1]);
+    const end = parseIPv4(rangeMatch[2]);
+    if (!start || !end || compareIPv4(start, end) > 0) {
+      return { ok: false, message: "IP ou intervalo de rede inválido." };
+    }
+    if (start[0] === end[0] && start[1] === end[1] && start[2] === end[2] && start[3] === 1 && end[3] === 254) {
+      const rede = `${start[0]}.${start[1]}.${start[2]}.0/24`;
+      return { ok: true, rede, label: `${start.join(".")}-${end.join(".")} (${rede})` };
+    }
+    if (compareIPv4(start, end) === 0) {
+      const rede = `${start.join(".")}/32`;
+      return { ok: true, rede, label: rede };
+    }
+    return {
+      ok: false,
+      message: "Intervalo válido, mas não suportado neste modo. Usa CIDR (ex.: 192.168.1.0/24).",
+    };
+  }
+
+  return { ok: false, message: "IP ou intervalo de rede inválido." };
+}
+
 export default function App() {
   const theme = useTheme();
   const isMobileNav = useMediaQuery(theme.breakpoints.down("lg"));
@@ -106,6 +168,8 @@ export default function App() {
   const [scanRede, setScanRede] = useState("");
   const [scanUser, setScanUser] = useState("");
   const [scanPass, setScanPass] = useState("");
+  const [scanLogsRdp, setScanLogsRdp] = useState(true);
+  const [scanLogsSeguranca, setScanLogsSeguranca] = useState(true);
   const [scanInfo, setScanInfo] = useState("");
   const [ativoPesquisa, setAtivoPesquisa] = useState("");
 
@@ -488,25 +552,133 @@ export default function App() {
               setScanUser={setScanUser}
               scanPass={scanPass}
               setScanPass={setScanPass}
-              onScan={async () =>
-                withAction(
+              scanLogsRdp={scanLogsRdp}
+              setScanLogsRdp={setScanLogsRdp}
+              scanLogsSeguranca={scanLogsSeguranca}
+              setScanLogsSeguranca={setScanLogsSeguranca}
+              onCreateInventarioFromScan={async (payload) => {
+                setActionLoading(true);
+                try {
+                  const created = await api.inventarios.criar(payload, token);
+                  await loadAllData();
+                  const createdId = created?.id ?? created?.inventario_id ?? null;
+                  if (createdId) {
+                    setSelectedInventarioId(String(createdId));
+                  }
+                  setStatus({ type: "ok", message: "Inventário criado para scan" });
+                  const tk = token || localStorage.getItem("access_token");
+                  if (tk) {
+                    try {
+                      await api.registarHistorico(
+                        {
+                          acao: "painel",
+                          descricao: "Inventário criado a partir do fluxo de scan.",
+                        },
+                        tk,
+                      );
+                    } catch {
+                      /* não bloquear operação por falha de auditoria */
+                    }
+                  }
+                  return createdId;
+                } catch (err) {
+                  setStatus({ type: "err", message: err.message });
+                  return null;
+                } finally {
+                  setActionLoading(false);
+                }
+              }}
+              onScan={async () => {
+                if (!selectedInventarioId) {
+                  setStatus({ type: "err", message: "Seleciona um inventário para executar o scan" });
+                  return false;
+                }
+                const inventarioSelecionado = (inventarios || []).find(
+                  (inv) => String(inv.id) === String(selectedInventarioId),
+                );
+                if (inventarioSelecionado?.tipo_inventario !== "sub_rede") {
+                  setStatus({ type: "err", message: "O scan só está disponível para inventários do tipo Rede (sub-rede)" });
+                  return false;
+                }
+                if (!scanUser.trim() || !scanPass) {
+                  setStatus({ type: "err", message: "Indica as credenciais da rede para iniciar o scan" });
+                  return false;
+                }
+                const redeNormalizada = normalizarRedeScan(scanRede);
+                if (!redeNormalizada.ok) {
+                  setStatus({ type: "err", message: redeNormalizada.message });
+                  return false;
+                }
+                const userCred = scanUser.trim();
+                const stamp = new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                const alvoRede = redeNormalizada.label;
+                const logsEscolhidos = [];
+                if (scanLogsRdp) logsEscolhidos.push("RDP");
+                if (scanLogsSeguranca) logsEscolhidos.push("Segurança");
+                const modoLogsLabel = logsEscolhidos.length ? logsEscolhidos.join(" + ") : "Nenhum selecionado";
+                setScanInfo(
+                  `[${stamp}] Iniciar scan...\n` +
+                    `[${stamp}] Inventário: ${selectedInventarioId || "não definido"}\n` +
+                    `[${stamp}] Alvo: ${alvoRede}\n` +
+                    `[${stamp}] Logs pedidos: ${modoLogsLabel}\n` +
+                    `[${stamp}] Utilizador: ${userCred || "não definido"}\n` +
+                    `[${stamp}] Estado: em execução`,
+                );
+                const ok = await withAction(
                   async () => {
                     const out = await api.inventarios.scan(
                       selectedInventarioId,
                       {
-                        rede: scanRede.trim() || null,
-                        utilizador: scanUser.trim(),
+                        rede: redeNormalizada.rede,
+                        utilizador: userCred,
                         password: scanPass,
                       },
                       token,
                     );
+                    let totalLogsPreferidos = null;
+                    if (scanLogsRdp !== scanLogsSeguranca) {
+                      const tipoLog = scanLogsRdp ? "rdp" : "seguranca";
+                      try {
+                        const consulta = await api.inventarios.logsDispositivos(
+                          selectedInventarioId,
+                          { coletar_agora: "false", tipo_log: tipoLog },
+                          token,
+                        );
+                        totalLogsPreferidos = consulta?.total_logs ?? 0;
+                      } catch {
+                        totalLogsPreferidos = null;
+                      }
+                    }
+                    const doneStamp = new Date().toLocaleTimeString("pt-PT", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    });
                     setScanInfo(
-                      `Scan OK: ${out?.total_dispositivos_encontrados ?? 0} dispositivos, ${out?.total_logs_recolhidos ?? 0} logs`,
+                      `[${doneStamp}] Iniciar scan...\n` +
+                        `[${doneStamp}] Inventário: ${selectedInventarioId || "não definido"}\n` +
+                        `[${doneStamp}] Alvo: ${alvoRede}\n` +
+                        `[${doneStamp}] Resultado: concluído com sucesso\n` +
+                        `[${doneStamp}] Dispositivos encontrados: ${out?.total_dispositivos_encontrados ?? 0}\n` +
+                        `[${doneStamp}] Logs recolhidos: ${out?.total_logs_recolhidos ?? 0}` +
+                        (totalLogsPreferidos === null
+                          ? ""
+                          : `\n[${doneStamp}] Logs (${scanLogsRdp ? "rdp" : "seguranca"}) disponíveis: ${totalLogsPreferidos}`),
                     );
                   },
-                  "Scan executado",
-                )
-              }
+                  "Scan iniciado com sucesso.",
+                );
+                if (!ok) {
+                  const errStamp = new Date().toLocaleTimeString("pt-PT", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  });
+                  setScanInfo((prev) => `${prev ? `${prev}\n` : ""}[${errStamp}] Resultado: erro ao executar scan`);
+                }
+                setScanPass("");
+                return ok;
+              }}
               scanInfo={scanInfo}
               ativos={ativos}
               loading={loading}
