@@ -137,20 +137,10 @@ npm run dev
 - Backend: ver `backend/requirements.txt` (FastAPI, Uvicorn, SQLAlchemy, psycopg2-binary, PyJWT, httpx, hashing de passwords, etc.).
 - Frontend: ver `frontend/package.json` (React, Vite, MUI, Emotion).
 
-## Notas de arquitetura frontend (apos remake)
+## Notas de arquitetura frontend 
 
 - O shell principal (`Sidebar` + `Topbar`) e componentes base estao em MUI.
 - O tema global fica centralizado em `frontend/src/theme.js`.
 - A navegacao continua por `activeTab` em `frontend/src/App.jsx` (sem React Router nesta fase).
 - O consumo de dados reais continua centralizado em `frontend/src/api.js` sem alteracoes de contrato backend.
 
-## Troubleshooting rápido
-
-- **PowerShell e scripts**: podes usar `.\.venv\Scripts\python.exe` sem executar `Activate.ps1`.
-- **`npm` não reconhecido** (Windows): usar `"%ProgramFiles%\nodejs\npm.cmd"` ou garantir Node no PATH.
-- **Porta 5173 ocupada**: aceitar a porta alternativa que o Vite mostrar.
-
-## Histórico de contexto no README
-
-- A aba de inventário de rede aparece como **«Scan»** na interface (ID interno de navegação pode continuar `ativos`).
-- Esta secção deve ser atualizada quando adicionares testes automatizados, Docker fixo ou deploy.
