@@ -79,7 +79,7 @@ export default function InventariosPage({
           <TableRow key={inv.id}>
             <TableCell>{inv.nome}</TableCell>
             <TableCell>{tipoInventarioLabel(inv.tipo_inventario)}</TableCell>
-            <TableCell>{inv.rede || inv.ip_rede || "—"}</TableCell>
+            <TableCell>{inv.tipo_inventario === "sub_rede" ? inv.rede || inv.ip_rede || "—" : "—"}</TableCell>
             <TableCell>{(inv.total_computadores ?? 0) + (inv.total_dispositivos_scan ?? 0)}</TableCell>
             <TableCell>{inv.descricao || "—"}</TableCell>
             <TableCell>
@@ -144,21 +144,29 @@ export default function InventariosPage({
               select
               label="Tipo"
               value={inventarioForm.tipo_inventario}
-              onChange={(e) => setInventarioForm((p) => ({ ...p, tipo_inventario: e.target.value }))}
+              onChange={(e) =>
+                setInventarioForm((p) => ({
+                  ...p,
+                  tipo_inventario: e.target.value,
+                  ip_rede: e.target.value === "sub_rede" ? p.ip_rede : "",
+                }))
+              }
               size="small"
               fullWidth
             >
-              <MenuItem value="normal">normal</MenuItem>
-              <MenuItem value="sub_rede">sub_rede</MenuItem>
+              <MenuItem value="normal">Normal</MenuItem>
+              <MenuItem value="sub_rede">Rede (sub-rede)</MenuItem>
             </TextField>
-            <TextField
-              label="IP da rede (opcional)"
-              placeholder="Ex.: 192.168.1.0/24"
-              value={inventarioForm.ip_rede}
-              onChange={(e) => setInventarioForm((p) => ({ ...p, ip_rede: e.target.value }))}
-              size="small"
-              fullWidth
-            />
+            {inventarioForm.tipo_inventario === "sub_rede" ? (
+              <TextField
+                label="IP da rede (opcional)"
+                placeholder="Ex.: 192.168.1.0/24"
+                value={inventarioForm.ip_rede}
+                onChange={(e) => setInventarioForm((p) => ({ ...p, ip_rede: e.target.value }))}
+                size="small"
+                fullWidth
+              />
+            ) : null}
             <TextField
               label="Descrição"
               placeholder="Notas ou contexto (opcional)"

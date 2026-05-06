@@ -503,7 +503,6 @@ export default function PesquisaPage({
               <Tabs value={aba} onChange={(_, value) => setAba(value)} variant="scrollable" allowScrollButtonsMobile>
                 <Tab value="resultados" label="Resultados" />
                 <Tab value="agrupado" label="Agrupado por tipo" />
-                <Tab value="tendencias" label="Tendências" />
               </Tabs>
               <Stack direction="row" spacing={1} alignItems="center">
                 <FormControl size="small">
@@ -606,20 +605,22 @@ export default function PesquisaPage({
                 ))}
               </Paper>
             ) : (
-              <Paper variant="outlined" sx={{ p: 2, borderStyle: "dashed", bgcolor: "#f8fafc" }}>
-                <Stack direction="row" spacing={1}>
-                  <span className="material-symbols-outlined" style={{ color: "#94a3b8" }}>
-                    query_stats
-                  </span>
-                  <Box>
-                    <Typography fontSize={13} fontWeight={700}>
-                      Tendências
-                    </Typography>
-                    <Typography fontSize={12} color="text.secondary">
-                      Vista reservada para evolução temporal numa próxima versão.
-                    </Typography>
+              <Paper component="ul" variant="outlined" sx={{ m: 0, p: 0, listStyle: "none" }}>
+                {cardsResumo.map((c, idx) => (
+                  <Box
+                    key={c.secao}
+                    component="li"
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      p: 1.25,
+                      borderBottom: idx < cardsResumo.length - 1 ? "1px solid #e2e8f0" : "none",
+                    }}
+                  >
+                    <Typography fontWeight={700}>{tituloSecao(c.secao)}</Typography>
+                    <Typography color="text.secondary">{c.total}</Typography>
                   </Box>
-                </Stack>
+                ))}
               </Paper>
             )}
           </>
