@@ -159,7 +159,6 @@ export default function PesquisaPage({
   const [filtroLocalizacao, setFiltroLocalizacao] = useState("todas");
   const [aba, setAba] = useState("resultados");
   const [ordem, setOrdem] = useState("relevancia");
-  const [mostrarRaw, setMostrarRaw] = useState(false);
   const [mostrarAvancados, setMostrarAvancados] = useState(false);
   const [pagina, setPagina] = useState(1);
   const porPagina = 10;
@@ -480,9 +479,6 @@ export default function PesquisaPage({
 
         {mostrarAvancados ? (
           <Stack direction="row" spacing={1}>
-            <Button type="button" size="small" variant="outlined" onClick={() => setMostrarRaw((v) => !v)}>
-              {mostrarRaw ? "Vista normal" : "Ver JSON bruto"}
-            </Button>
             <Button
               type="button"
               size="small"
@@ -584,16 +580,11 @@ export default function PesquisaPage({
                       <MenuItem value="nome">Nome (A-Z)</MenuItem>
                     </Select>
                   </FormControl>
-                  <Button type="button" size="small" variant="outlined" onClick={() => setMostrarRaw((v) => !v)}>
-                    Ver JSON bruto
-                  </Button>
                 </Stack>
               </Stack>
             </Paper>
 
-            {mostrarRaw ? (
-              <pre className="pesq-ref-raw">{globalOutput || "Sem dados para mostrar."}</pre>
-            ) : aba === "resultados" ? (
+            {aba === "resultados" ? (
               <>
                 {semResultadosFiltrados ? (
                   <Paper variant="outlined" sx={{ p: 2, borderStyle: "dashed", bgcolor: "#f8fafc" }}>
