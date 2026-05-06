@@ -159,10 +159,12 @@ export default function InventariosPage({
             </TextField>
             {inventarioForm.tipo_inventario === "sub_rede" ? (
               <TextField
-                label="IP da rede (opcional)"
+                label="IP da rede"
                 placeholder="Ex.: 192.168.1.0/24"
                 value={inventarioForm.ip_rede}
                 onChange={(e) => setInventarioForm((p) => ({ ...p, ip_rede: e.target.value }))}
+                required
+                helperText={!String(inventarioForm.ip_rede || "").trim() ? "Obrigatório para inventário de rede" : " "}
                 size="small"
                 fullWidth
               />

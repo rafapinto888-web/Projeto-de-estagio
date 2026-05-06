@@ -6,6 +6,7 @@ import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
 
 export default function LogsPage({
+  inventarios = [],
   selectedInventarioId,
   logComputadorParams,
   setLogComputadorParams,
@@ -137,17 +138,29 @@ export default function LogsPage({
       >
         <Stack spacing={1.2}>
           <TextField
+            select
             label="Inventário (opcional)"
-            placeholder={
-              selectedInventarioId
-                ? "Vazio = inventário já escolhido na área Scan"
-                : "Referência técnica, se necessário"
-            }
             value={logInventarioParams.inventario_id}
             onChange={(e) => setLogInventarioParams((p) => ({ ...p, inventario_id: e.target.value }))}
             size="small"
             fullWidth
-          />
+            helperText={
+              selectedInventarioId
+                ? "Se ficares em branco, usa o inventário selecionado na área Scan."
+                : "Seleciona um inventário para consultar logs."
+            }
+          >
+            <MenuItem value="">
+              {selectedInventarioId
+                ? "Usar inventário selecionado na área Scan"
+                : "Selecionar inventário..."}
+            </MenuItem>
+            {inventarios.map((inv) => (
+              <MenuItem key={inv.id} value={String(inv.id)}>
+                {inv.nome}
+              </MenuItem>
+            ))}
+          </TextField>
           <TextField
             label="Dispositivo (opcional)"
             placeholder="Referência técnica do dispositivo"

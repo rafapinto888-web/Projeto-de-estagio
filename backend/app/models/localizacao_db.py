@@ -3,10 +3,15 @@
 # Modelo ORM das localizacoes fisicas dos equipamentos.
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.connection import Base
+
+if TYPE_CHECKING:
+    from app.models.computador_db import ComputadorDB
 
 
 class LocalizacaoDB(Base):

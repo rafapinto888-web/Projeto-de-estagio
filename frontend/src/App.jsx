@@ -1,6 +1,6 @@
 /* Comentario geral deste ficheiro: orquestra estado global e navegacao entre paginas. */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { api } from "./api";
@@ -178,6 +178,7 @@ export default function App() {
   const [globalSearchRequestId, setGlobalSearchRequestId] = useState(0);
   const [logsOutput, setLogsOutput] = useState("Seleciona filtros para consultar logs.");
   const [historicoConta, setHistoricoConta] = useState([]);
+  const lastInventarioIdForScanRef = useRef("");
 
   const [logComputadorParams, setLogComputadorParams] = useState({
     computador_id: "",
@@ -355,6 +356,15 @@ export default function App() {
   }, [selectedInventarioId, token]);
 
   useEffect(() => {
+    const invId = String(selectedInventarioId || "");
+    if (!invId || lastInventarioIdForScanRef.current === invId) return;
+    lastInventarioIdForScanRef.current = invId;
+    const inv = (inventarios || []).find((x) => String(x.id) === invId);
+    const redePadrao = String(inv?.rede || inv?.ip_rede || "").trim();
+    setScanRede(redePadrao);
+  }, [selectedInventarioId, inventarios]);
+
+  useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeTab]);
 
@@ -468,32 +478,42 @@ export default function App() {
               loading={loading}
               onCreate={() =>
                 withAction(
-                  () =>
-                    api.inventarios.criar(
+                  () => {
+                    const rede = inventarioForm.ip_rede.trim();
+                    if (inventarioForm.tipo_inventario === "sub_rede" && !rede) {
+                      throw new Error("IP da rede é obrigatório para inventário do tipo Rede (sub-rede)");
+                    }
+                    return api.inventarios.criar(
                       {
                         nome: inventarioForm.nome.trim(),
                         tipo_inventario: inventarioForm.tipo_inventario,
-                        rede: inventarioForm.ip_rede.trim() || null,
+                        rede: rede || null,
                         descricao: inventarioForm.descricao.trim() || null,
                       },
                       token,
-                    ),
+                    );
+                  },
                   "Inventario criado",
                 )
               }
               onUpdate={() =>
                 withAction(
-                  () =>
-                    api.inventarios.atualizar(
+                  () => {
+                    const rede = inventarioForm.ip_rede.trim();
+                    if (inventarioForm.tipo_inventario === "sub_rede" && !rede) {
+                      throw new Error("IP da rede é obrigatório para inventário do tipo Rede (sub-rede)");
+                    }
+                    return api.inventarios.atualizar(
                       inventarioForm.id,
                       {
                         nome: inventarioForm.nome.trim(),
                         tipo_inventario: inventarioForm.tipo_inventario,
-                        rede: inventarioForm.ip_rede.trim() || null,
+                        rede: rede || null,
                         descricao: inventarioForm.descricao.trim() || null,
                       },
                       token,
-                    ),
+                    );
+                  },
                   "Inventario atualizado",
                 )
               }
@@ -935,6 +955,7 @@ export default function App() {
 
           {activeTab === "logs" && (
             <LogsPage
+              inventarios={inventarios}
               selectedInventarioId={selectedInventarioId}
               logComputadorParams={logComputadorParams}
               setLogComputadorParams={setLogComputadorParams}

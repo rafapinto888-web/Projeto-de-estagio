@@ -122,6 +122,7 @@ function itemCorrespondeTermo(item, termoNormalizado) {
 
 function normalizarLinha(row) {
   const item = row.item || {};
+  const secao = normalizarTexto(row.secao);
   const nome = item.nome || item.hostname || item.email || item.descricao || "—";
   const desc = item.descricao || item.sistema_operativo || item.modelo || "";
   const detalhes = [
@@ -130,13 +131,17 @@ function normalizarLinha(row) {
   ]
     .filter(Boolean)
     .join(" • ");
+  const utilizadorAssociado =
+    secao === "computadores" || secao.includes("dispositivo") || secao.includes("ativo")
+      ? item.utilizador_nome || item.utilizador_responsavel_nome || ""
+      : "";
   return {
     ...row,
     nome,
     desc,
     detalhes,
     localizacao: item.localizacao_nome || item.localizacao || "",
-    utilizador: item.utilizador_nome || item.utilizador_responsavel_nome || item.username || item.email || "",
+    utilizador: utilizadorAssociado,
     estado: item.estado || "",
   };
 }
@@ -157,7 +162,6 @@ export default function PesquisaPage({
   const [filtroSecao, setFiltroSecao] = useState("todas");
   const [filtroEstado, setFiltroEstado] = useState("todos");
   const [filtroLocalizacao, setFiltroLocalizacao] = useState("todas");
-  const [aba, setAba] = useState("resultados");
   const [ordem, setOrdem] = useState("relevancia");
   const [mostrarAvancados, setMostrarAvancados] = useState(false);
   const [pagina, setPagina] = useState(1);
@@ -569,9 +573,8 @@ export default function PesquisaPage({
 
             <Paper variant="outlined" sx={{ p: 1, borderRadius: 3, borderColor: "#dbe5f2", bgcolor: "#fff" }}>
               <Stack direction={{ xs: "column", lg: "row" }} spacing={1} justifyContent="space-between" alignItems={{ lg: "center" }}>
-                <Tabs value={aba} onChange={(_, value) => setAba(value)} variant="scrollable" allowScrollButtonsMobile>
+                <Tabs value="resultados" variant="scrollable" allowScrollButtonsMobile>
                   <Tab value="resultados" label="Resultados" />
-                  <Tab value="agrupado" label="Agrupado por tipo" />
                 </Tabs>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <FormControl size="small">
@@ -584,124 +587,104 @@ export default function PesquisaPage({
               </Stack>
             </Paper>
 
-            {aba === "resultados" ? (
-              <>
-                {semResultadosFiltrados ? (
-                  <Paper variant="outlined" sx={{ p: 2, borderStyle: "dashed", bgcolor: "#f8fafc" }}>
-                    <Stack direction="row" spacing={1}>
-                      <span className="material-symbols-outlined" style={{ color: "#94a3b8" }}>
-                        filter_alt_off
-                      </span>
-                      <Box>
-                        <Typography fontSize={13} fontWeight={700}>
-                          Sem resultados com os filtros atuais
-                        </Typography>
-                        <Typography fontSize={12} color="text.secondary">
-                          Ajusta os filtros ou limpa para voltar a ver os dados.
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </Paper>
-                ) : null}
-                <Typography fontSize={11} color="text.secondary" sx={{ px: 0.25 }}>
-                  {rowsOrdenadas.length} resultado(s) encontrado(s)
-                </Typography>
-                <TableContainer
-                  component={Paper}
-                  variant="outlined"
-                  sx={{
-                    borderRadius: 3,
-                    borderColor: "#dbe5f2",
-                    "& .MuiTableHead-root .MuiTableCell-root": {
-                      fontSize: 11,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      color: "#e2e8f0",
-                      bgcolor: "#0f172a",
-                    },
-                    "& .MuiTableBody-root .MuiTableRow-root:hover": {
-                      bgcolor: "#eff6ff",
-                    },
-                    "& .MuiTableBody-root .MuiTableRow-root:nth-of-type(even)": {
-                      bgcolor: "#fbfdff",
-                    },
-                    "& .MuiTableBody-root .MuiTableCell-root": {
-                      py: 1.1,
-                    },
-                  }}
-                >
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Tipo</TableCell>
-                        <TableCell>Nome / Descrição</TableCell>
-                        <TableCell>Detalhes</TableCell>
-                        <TableCell>Localização</TableCell>
-                        <TableCell>Utilizador</TableCell>
-                        <TableCell>Estado</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {rowsPaginadas.map((r) => (
-                        <TableRow key={r.key}>
-                          <TableCell>
-                            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                              {secaoVisual(r.secao).icon}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Typography fontSize={12.5} fontWeight={700}>
-                              {r.nome}
-                            </Typography>
-                            <Typography fontSize={11} color="text.secondary">
-                              {r.desc || "—"}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>{r.detalhes || "—"}</TableCell>
-                          <TableCell>{valorHumano(r.localizacao)}</TableCell>
-                          <TableCell>{valorHumano(r.utilizador)}</TableCell>
-                          <TableCell>
-                            <Chip label={valorHumano(r.estado)} size="small" color={estadoChipColor(r.estado)} />
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1} alignItems={{ sm: "center" }}>
-                  <Typography fontSize={11} color="text.secondary">
-                    Mostrando {rowsPaginadas.length === 0 ? 0 : (paginaAtual - 1) * porPagina + 1} a{" "}
-                    {(paginaAtual - 1) * porPagina + rowsPaginadas.length} de {rowsOrdenadas.length} resultado(s)
-                  </Typography>
-                  <Stack direction="row" spacing={0.75}>
-                    <Button type="button" size="small" variant="outlined" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={paginaAtual <= 1}>
-                      Anterior
-                    </Button>
-                    <Button type="button" size="small" variant="outlined" onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))} disabled={paginaAtual >= totalPaginas}>
-                      Seguinte
-                    </Button>
+            <>
+              {semResultadosFiltrados ? (
+                <Paper variant="outlined" sx={{ p: 2, borderStyle: "dashed", bgcolor: "#f8fafc" }}>
+                  <Stack direction="row" spacing={1}>
+                    <span className="material-symbols-outlined" style={{ color: "#94a3b8" }}>
+                      filter_alt_off
+                    </span>
+                    <Box>
+                      <Typography fontSize={13} fontWeight={700}>
+                        Sem resultados com os filtros atuais
+                      </Typography>
+                      <Typography fontSize={12} color="text.secondary">
+                        Ajusta os filtros ou limpa para voltar a ver os dados.
+                      </Typography>
+                    </Box>
                   </Stack>
+                </Paper>
+              ) : null}
+              <Typography fontSize={11} color="text.secondary" sx={{ px: 0.25 }}>
+                {rowsOrdenadas.length} resultado(s) encontrado(s)
+              </Typography>
+              <TableContainer
+                component={Paper}
+                variant="outlined"
+                sx={{
+                  borderRadius: 3,
+                  borderColor: "#dbe5f2",
+                  "& .MuiTableHead-root .MuiTableCell-root": {
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    color: "#e2e8f0",
+                    bgcolor: "#0f172a",
+                  },
+                  "& .MuiTableBody-root .MuiTableRow-root:hover": {
+                    bgcolor: "#eff6ff",
+                  },
+                  "& .MuiTableBody-root .MuiTableRow-root:nth-of-type(even)": {
+                    bgcolor: "#fbfdff",
+                  },
+                  "& .MuiTableBody-root .MuiTableCell-root": {
+                    py: 1.1,
+                  },
+                }}
+              >
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Tipo</TableCell>
+                      <TableCell>Nome / Descrição</TableCell>
+                      <TableCell>Detalhes</TableCell>
+                      <TableCell>Localização</TableCell>
+                      <TableCell>Utilizador</TableCell>
+                      <TableCell>Estado</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rowsPaginadas.map((r) => (
+                      <TableRow key={r.key}>
+                        <TableCell>
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                            {secaoVisual(r.secao).icon}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Typography fontSize={12.5} fontWeight={700}>
+                            {r.nome}
+                          </Typography>
+                          <Typography fontSize={11} color="text.secondary">
+                            {r.desc || "—"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{r.detalhes || "—"}</TableCell>
+                        <TableCell>{valorHumano(r.localizacao)}</TableCell>
+                        <TableCell>{valorHumano(r.utilizador)}</TableCell>
+                        <TableCell>
+                          <Chip label={valorHumano(r.estado)} size="small" color={estadoChipColor(r.estado)} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1} alignItems={{ sm: "center" }}>
+                <Typography fontSize={11} color="text.secondary">
+                  Mostrando {rowsPaginadas.length === 0 ? 0 : (paginaAtual - 1) * porPagina + 1} a{" "}
+                  {(paginaAtual - 1) * porPagina + rowsPaginadas.length} de {rowsOrdenadas.length} resultado(s)
+                </Typography>
+                <Stack direction="row" spacing={0.75}>
+                  <Button type="button" size="small" variant="outlined" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={paginaAtual <= 1}>
+                    Anterior
+                  </Button>
+                  <Button type="button" size="small" variant="outlined" onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))} disabled={paginaAtual >= totalPaginas}>
+                    Seguinte
+                  </Button>
                 </Stack>
-              </>
-            ) : (
-              <Paper component="ul" variant="outlined" sx={{ m: 0, p: 0, listStyle: "none" }}>
-                {cardsResumo.map((c, idx) => (
-                  <Box
-                    key={c.secao}
-                    component="li"
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      p: 1.25,
-                      borderBottom: idx < cardsResumo.length - 1 ? "1px solid #e2e8f0" : "none",
-                    }}
-                  >
-                    <Typography fontWeight={700}>{tituloSecao(c.secao)}</Typography>
-                    <Typography color="text.secondary">{c.total}</Typography>
-                  </Box>
-                ))}
-              </Paper>
-            )}
+              </Stack>
+            </>
           </>
         )}
       </Stack>
