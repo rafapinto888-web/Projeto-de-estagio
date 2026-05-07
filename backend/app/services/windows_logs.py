@@ -8,6 +8,9 @@ import os
 import subprocess
 from datetime import datetime
 
+LOG_RDP = "Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational"
+EVENTO_RDP = 1149
+
 
 def _to_iso(value: str | None) -> str | None:
     if not value:
@@ -51,19 +54,19 @@ if ($remote -and $cred) {{
     $security = Get-WinEvent -ComputerName $target -Credential $cred -FilterHashtable @{{LogName='Security'; StartTime=$start}} -MaxEvents $max |
         Select-Object @{{Name='tipo_log';Expression={{'seguranca'}}}}, TimeCreated, Id, ProviderName, Message
 
-    $rdp = Get-WinEvent -ComputerName $target -Credential $cred -FilterHashtable @{{LogName='Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'; StartTime=$start}} -MaxEvents $max |
+    $rdp = Get-WinEvent -ComputerName $target -Credential $cred -FilterHashtable @{{LogName='{LOG_RDP}'; Id={EVENTO_RDP}; StartTime=$start}} -MaxEvents $max |
         Select-Object @{{Name='tipo_log';Expression={{'rdp'}}}}, TimeCreated, Id, ProviderName, Message
 }} elseif ($remote) {{
     $security = Get-WinEvent -ComputerName $target -FilterHashtable @{{LogName='Security'; StartTime=$start}} -MaxEvents $max |
         Select-Object @{{Name='tipo_log';Expression={{'seguranca'}}}}, TimeCreated, Id, ProviderName, Message
 
-    $rdp = Get-WinEvent -ComputerName $target -FilterHashtable @{{LogName='Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'; StartTime=$start}} -MaxEvents $max |
+    $rdp = Get-WinEvent -ComputerName $target -FilterHashtable @{{LogName='{LOG_RDP}'; Id={EVENTO_RDP}; StartTime=$start}} -MaxEvents $max |
         Select-Object @{{Name='tipo_log';Expression={{'rdp'}}}}, TimeCreated, Id, ProviderName, Message
 }} else {{
     $security = Get-WinEvent -FilterHashtable @{{LogName='Security'; StartTime=$start}} -MaxEvents $max |
         Select-Object @{{Name='tipo_log';Expression={{'seguranca'}}}}, TimeCreated, Id, ProviderName, Message
 
-    $rdp = Get-WinEvent -FilterHashtable @{{LogName='Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'; StartTime=$start}} -MaxEvents $max |
+    $rdp = Get-WinEvent -FilterHashtable @{{LogName='{LOG_RDP}'; Id={EVENTO_RDP}; StartTime=$start}} -MaxEvents $max |
         Select-Object @{{Name='tipo_log';Expression={{'rdp'}}}}, TimeCreated, Id, ProviderName, Message
 }}
 
@@ -131,7 +134,13 @@ $all | ConvertTo-Json -Depth 3
         provider = str(item.get("ProviderName") or "").strip()
         event_id = str(item.get("Id") or "").strip()
         message = str(item.get("Message") or "").strip()
-        descricao = f"[{provider}][EventID={event_id}] {message}".strip()
+        if tipo == "rdp":
+            partes = [f"[{provider or 'RDP'}][EventID={event_id or str(EVENTO_RDP)}] Autenticacao RDP"]
+            if message:
+                partes.append(message)
+            descricao = " | ".join(p for p in partes if p).strip()
+        else:
+            descricao = f"[{provider}][EventID={event_id}] {message}".strip()
         logs.append(
             {
                 "tipo_log": tipo,
