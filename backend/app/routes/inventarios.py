@@ -794,6 +794,8 @@ def listar_logs_dos_dispositivos_descobertos(
     dispositivo_id: int | None = Query(default=None),
     coletar_agora: bool = Query(default=False),
     tipo_log: Literal["seguranca", "rdp"] | None = Query(default=None),
+    utilizador: str | None = Query(default=None),
+    password: str | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: UtilizadorDB = Depends(get_current_user),
 ):
@@ -818,6 +820,14 @@ def listar_logs_dos_dispositivos_descobertos(
         )
 
     computadores_ids: set[int] = set()
+    utilizador_rede = (utilizador or "").strip()
+    password_rede = password or ""
+    if coletar_agora and (not utilizador_rede or not password_rede.strip()):
+        raise HTTPException(
+            status_code=400,
+            detail="Credenciais de rede obrigatorias para recolher logs agora",
+        )
+
     for dispositivo in dispositivos:
         computador = _resolver_computador_para_dispositivo(db, inventario_id, dispositivo)
         if computador is None:
@@ -827,6 +837,8 @@ def listar_logs_dos_dispositivos_descobertos(
             logs_windows = coletar_logs_windows(
                 dispositivo.hostname or computador.nome,
                 tipos_log=[tipo_log] if tipo_log else None,
+                utilizador=utilizador_rede,
+                password=password_rede,
             )
             _guardar_logs_windows_no_computador(db, computador.id, logs_windows)
 

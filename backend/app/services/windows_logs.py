@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from datetime import datetime
 
@@ -24,31 +25,60 @@ def coletar_logs_windows(
     max_eventos: int = 50,
     horas: int = 24,
     tipos_log: list[str] | None = None,
+    utilizador: str | None = None,
+    password: str | None = None,
 ) -> list[dict[str, str]]:
     # Tenta recolher logs Windows por PowerShell; devolve vazio em caso de erro.
     target = (computer_name or "").strip()
-    computer_param = (
-        f"-ComputerName '{target}'"
-        if target and target.lower() not in {"localhost", "127.0.0.1"}
-        else ""
-    )
+    target_remoto = target and target.lower() not in {"localhost", "127.0.0.1"}
 
     script = f"""
 $ErrorActionPreference = 'SilentlyContinue'
 $start = (Get-Date).AddHours(-{int(horas)})
 $max = {int(max_eventos)}
 
-$security = Get-WinEvent {computer_param} -FilterHashtable @{{LogName='Security'; StartTime=$start}} -MaxEvents $max |
-    Select-Object @{{Name='tipo_log';Expression={{'seguranca'}}}}, TimeCreated, Id, ProviderName, Message
+$target = {json.dumps(target)}
+$remote = {"$true" if target_remoto else "$false"}
+$credUser = $env:REDE_LOG_USER
+$credPass = $env:REDE_LOG_PASSWORD
+$cred = $null
+if ($remote -and $credUser -and $credPass) {{
+    $securePassword = ConvertTo-SecureString $credPass -AsPlainText -Force
+    $cred = New-Object System.Management.Automation.PSCredential ($credUser, $securePassword)
+}}
 
-$rdp = Get-WinEvent {computer_param} -FilterHashtable @{{LogName='Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'; StartTime=$start}} -MaxEvents $max |
-    Select-Object @{{Name='tipo_log';Expression={{'rdp'}}}}, TimeCreated, Id, ProviderName, Message
+if ($remote -and $cred) {{
+    $security = Get-WinEvent -ComputerName $target -Credential $cred -FilterHashtable @{{LogName='Security'; StartTime=$start}} -MaxEvents $max |
+        Select-Object @{{Name='tipo_log';Expression={{'seguranca'}}}}, TimeCreated, Id, ProviderName, Message
+
+    $rdp = Get-WinEvent -ComputerName $target -Credential $cred -FilterHashtable @{{LogName='Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'; StartTime=$start}} -MaxEvents $max |
+        Select-Object @{{Name='tipo_log';Expression={{'rdp'}}}}, TimeCreated, Id, ProviderName, Message
+}} elseif ($remote) {{
+    $security = Get-WinEvent -ComputerName $target -FilterHashtable @{{LogName='Security'; StartTime=$start}} -MaxEvents $max |
+        Select-Object @{{Name='tipo_log';Expression={{'seguranca'}}}}, TimeCreated, Id, ProviderName, Message
+
+    $rdp = Get-WinEvent -ComputerName $target -FilterHashtable @{{LogName='Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'; StartTime=$start}} -MaxEvents $max |
+        Select-Object @{{Name='tipo_log';Expression={{'rdp'}}}}, TimeCreated, Id, ProviderName, Message
+}} else {{
+    $security = Get-WinEvent -FilterHashtable @{{LogName='Security'; StartTime=$start}} -MaxEvents $max |
+        Select-Object @{{Name='tipo_log';Expression={{'seguranca'}}}}, TimeCreated, Id, ProviderName, Message
+
+    $rdp = Get-WinEvent -FilterHashtable @{{LogName='Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'; StartTime=$start}} -MaxEvents $max |
+        Select-Object @{{Name='tipo_log';Expression={{'rdp'}}}}, TimeCreated, Id, ProviderName, Message
+}}
 
 $all = @($security) + @($rdp) | Sort-Object TimeCreated -Descending | Select-Object -First $max
 $all | ConvertTo-Json -Depth 3
 """.strip()
 
     try:
+        env = None
+        if target_remoto and utilizador and password:
+            env = {
+                **os.environ,
+                "REDE_LOG_USER": str(utilizador).strip(),
+                "REDE_LOG_PASSWORD": str(password),
+            }
         result = subprocess.run(
             [
                 "powershell",
@@ -62,6 +92,7 @@ $all | ConvertTo-Json -Depth 3
             text=True,
             timeout=40,
             check=False,
+            env=env,
         )
     except (OSError, subprocess.SubprocessError):
         return []

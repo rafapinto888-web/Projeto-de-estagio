@@ -1,7 +1,22 @@
 /* Consulta de logs — filtros em modais horizontais; resultado mantém-se na página. */
 
-import { useState } from "react";
-import { Button, Checkbox, FormControlLabel, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
+import { useMemo, useState } from "react";
+import {
+  Button,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+} from "@mui/material";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
 
@@ -25,6 +40,20 @@ export default function LogsPage({
     seguranca: true,
     rdp: true,
   });
+  const [credenciaisLogs, setCredenciaisLogs] = useState({
+    utilizador: "",
+    password: "",
+  });
+
+  const parsedOutput = useMemo(() => {
+    try {
+      return logsOutput ? JSON.parse(logsOutput) : null;
+    } catch {
+      return null;
+    }
+  }, [logsOutput]);
+
+  const logsTabela = Array.isArray(parsedOutput?.logs) ? parsedOutput.logs : [];
 
   async function handleComputadorConsultar() {
     const valor = String(pcValorPesquisa || "").trim();
@@ -50,7 +79,13 @@ export default function LogsPage({
       ...(tiposLogInventario.rdp ? ["rdp"] : []),
     ];
     if (tiposSelecionados.length === 0) return;
-    const ok = Boolean(await onLogsInventario?.(tiposSelecionados));
+    if (!credenciaisLogs.utilizador.trim() || !credenciaisLogs.password) return;
+    const ok = Boolean(
+      await onLogsInventario?.({
+        tiposSelecionados,
+        credenciais: credenciaisLogs,
+      }),
+    );
     if (ok) setModal(null);
   }
 
@@ -71,6 +106,34 @@ export default function LogsPage({
     >
       {loading ? (
         <div className="loading-box">A consultar logs…</div>
+      ) : logsTabela.length > 0 ? (
+        <TableContainer component={Paper} variant="outlined" sx={{ borderColor: "#dbe5f2" }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Data/hora</TableCell>
+                <TableCell>Tipo</TableCell>
+                <TableCell>Descrição</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {logsTabela.map((item, idx) => (
+                <TableRow key={item.id || `${item.data_evento || "sem-data"}-${idx}`}>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>
+                    {item.data_evento
+                      ? new Date(item.data_evento).toLocaleString("pt-PT", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })
+                      : "—"}
+                  </TableCell>
+                  <TableCell sx={{ textTransform: "capitalize" }}>{item.tipo_log || "—"}</TableCell>
+                  <TableCell>{item.descricao || "—"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       ) : (
         <Paper variant="outlined" sx={{ borderColor: "#dbe5f2", bgcolor: "#fff" }}>
           <pre className="logs-output">{logsOutput}</pre>
@@ -222,6 +285,40 @@ export default function LogsPage({
               </Typography>
             ) : null}
           </Paper>
+          <TextField
+            label="Credenciais da rede (utilizador)"
+            value={credenciaisLogs.utilizador}
+            onChange={(e) =>
+              setCredenciaisLogs((p) => ({
+                ...p,
+                utilizador: e.target.value,
+              }))
+            }
+            placeholder="Obrigatório para recolher logs"
+            size="small"
+            fullWidth
+            required
+          />
+          <TextField
+            label="Credenciais da rede (palavra-passe)"
+            value={credenciaisLogs.password}
+            onChange={(e) =>
+              setCredenciaisLogs((p) => ({
+                ...p,
+                password: e.target.value,
+              }))
+            }
+            type="password"
+            placeholder="Obrigatória para recolher logs"
+            size="small"
+            fullWidth
+            required
+          />
+          {!credenciaisLogs.utilizador.trim() || !credenciaisLogs.password ? (
+            <Typography variant="caption" color="warning.main">
+              Introduz credenciais da rede para executar a recolha de logs.
+            </Typography>
+          ) : null}
         </Stack>
       </FormModal>
     </SectionCard>

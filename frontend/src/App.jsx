@@ -77,6 +77,16 @@ function emptyInventarioForm() {
   return { id: "", nome: "", tipo_inventario: "normal", ip_rede: "", descricao: "" };
 }
 
+function limparQueryVazia(params) {
+  return Object.fromEntries(
+    Object.entries(params || {}).filter(([, value]) => {
+      if (value == null) return false;
+      if (typeof value === "string" && value.trim() === "") return false;
+      return true;
+    }),
+  );
+}
+
 function parseIPv4(ip) {
   const txt = String(ip || "").trim();
   const parts = txt.split(".");
@@ -968,7 +978,12 @@ export default function App() {
               onLogsComputador={async (paramsOverride = null) => {
                 setActionLoading(true);
                 try {
-                  const query = paramsOverride || logComputadorParams;
+                  const query = limparQueryVazia(paramsOverride || logComputadorParams);
+                  const temIdentificador =
+                    query.computador_id || query.nome || query.numero_serie || query.hostname;
+                  if (!temIdentificador) {
+                    throw new Error("Escolhe um tipo de procura e escreve o valor para consultar logs");
+                  }
                   const data = await api.logs.porComputador(query, token);
                   setLogsOutput(JSON.stringify(data, null, 2));
                   return true;
@@ -981,22 +996,33 @@ export default function App() {
               }}
               logInventarioParams={logInventarioParams}
               setLogInventarioParams={setLogInventarioParams}
-              onLogsInventario={async (tiposSelecionados = []) => {
+              onLogsInventario={async ({ tiposSelecionados = [], credenciais = {} } = {}) => {
                 setActionLoading(true);
                 try {
                   const invId = logInventarioParams.inventario_id || selectedInventarioId;
                   if (!invId) {
                     throw new Error("Seleciona um inventário ou define um inventário ativo na área Scan");
                   }
+                  const utilizador = String(credenciais?.utilizador || "").trim();
+                  const password = String(credenciais?.password || "");
+                  if (!utilizador || !password) {
+                    throw new Error("Credenciais de rede obrigatórias para recolher logs");
+                  }
                   const query = { ...logInventarioParams };
                   delete query.inventario_id;
                   query.coletar_agora = "true";
+                  query.utilizador = utilizador;
+                  query.password = password;
                   if (Array.isArray(tiposSelecionados) && tiposSelecionados.length === 1) {
                     query.tipo_log = tiposSelecionados[0];
                   } else {
                     delete query.tipo_log;
                   }
-                  const data = await api.inventarios.logsDispositivos(invId, query, token);
+                  const data = await api.inventarios.logsDispositivos(
+                    invId,
+                    limparQueryVazia(query),
+                    token,
+                  );
                   setLogsOutput(JSON.stringify(data, null, 2));
                   return true;
                 } catch (error) {
