@@ -23,6 +23,7 @@ def coletar_logs_windows(
     *,
     max_eventos: int = 50,
     horas: int = 24,
+    tipos_log: list[str] | None = None,
 ) -> list[dict[str, str]]:
     # Tenta recolher logs Windows por PowerShell; devolve vazio em caso de erro.
     target = (computer_name or "").strip()
@@ -80,12 +81,18 @@ $all | ConvertTo-Json -Depth 3
     else:
         return []
 
+    tipos_permitidos = {str(t).strip().lower() for t in (tipos_log or ["seguranca", "rdp"])}
+    if not tipos_permitidos:
+        return []
+
     logs: list[dict[str, str]] = []
     for item in items:
         if not isinstance(item, dict):
             continue
         tipo = str(item.get("tipo_log") or "").strip().lower()
         if tipo not in {"seguranca", "rdp"}:
+            continue
+        if tipo not in tipos_permitidos:
             continue
         data_iso = _to_iso(item.get("TimeCreated"))
         if not data_iso:

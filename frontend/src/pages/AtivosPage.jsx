@@ -110,7 +110,10 @@ export default function AtivosPage({
   const totalScan = totalAtivos - totalRegistos;
   const inventariosSubRede = (inventarios || []).filter((inv) => String(inv?.tipo_inventario || "").toLowerCase() === "sub_rede");
   const inventarioScanValido = inventariosSubRede.some((inv) => String(inv.id) === String(selectedInventarioId || ""));
-  const scanPodeExecutar = Boolean(inventarioScanValido && scanUser?.trim() && scanPass && scanTab === "existente");
+  const temTipoLogSelecionado = Boolean(scanLogsRdp || scanLogsSeguranca);
+  const scanPodeExecutar = Boolean(
+    inventarioScanValido && scanUser?.trim() && scanPass && temTipoLogSelecionado && scanTab === "existente",
+  );
 
   const cardsResumo = [
     { key: "total", label: "Total de ativos", value: totalAtivos, icon: "devices" },
@@ -427,6 +430,11 @@ export default function AtivosPage({
                 {selectedInventarioId && (!scanUser?.trim() || !scanPass) ? (
                   <Typography variant="caption" color="warning.main">
                     Introduz as credenciais da rede para executar o scan.
+                  </Typography>
+                ) : null}
+                {selectedInventarioId && !temTipoLogSelecionado ? (
+                  <Typography variant="caption" color="warning.main">
+                    Seleciona pelo menos um tipo de log (RDP ou Segurança).
                   </Typography>
                 ) : null}
               </Stack>

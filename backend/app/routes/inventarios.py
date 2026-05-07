@@ -131,7 +131,7 @@ def _resolver_computador_para_dispositivo(
     inventario_id: int,
     dispositivo: DispositivoDescobertoDB,
 ) -> ComputadorDB | None:
-    # Tenta resolver computador por numero de serie (mais fiavel) ou nome/hostname.
+    # Tenta resolver computador por numero de serie, hostname/nome ou IP.
     if dispositivo.numero_serie:
         por_serie = (
             db.query(ComputadorDB)
@@ -147,16 +147,34 @@ def _resolver_computador_para_dispositivo(
     if dispositivo.hostname:
         hostname = dispositivo.hostname.strip()
         if hostname:
-            por_nome = (
+            por_host_ou_nome = (
                 db.query(ComputadorDB)
                 .filter(
                     ComputadorDB.inventario_id == inventario_id,
-                    ComputadorDB.nome.ilike(hostname),
+                    (ComputadorDB.nome.ilike(hostname))
+                    | (ComputadorDB.hostname.ilike(hostname))
+                    | (ComputadorDB.nome.ilike(f"%{hostname}%"))
+                    | (ComputadorDB.hostname.ilike(f"%{hostname}%")),
                 )
                 .first()
             )
-            if por_nome is not None:
-                return por_nome
+            if por_host_ou_nome is not None:
+                return por_host_ou_nome
+
+    if dispositivo.ip:
+        ip = dispositivo.ip.strip()
+        if ip:
+            por_ip = (
+                db.query(ComputadorDB)
+                .filter(
+                    ComputadorDB.inventario_id == inventario_id,
+                    ComputadorDB.endereco_ip == ip,
+                )
+                .first()
+            )
+            if por_ip is not None:
+                return por_ip
+
     return None
 
 
@@ -613,6 +631,7 @@ def executar_scan_do_inventario(
                     dispositivo.hostname or computador_alvo.nome,
                     max_eventos=20,
                     horas=24,
+                    tipos_log=pedido_scan.tipos_log,
                 )
                 logs_recolhidos_no_scan += _guardar_logs_windows_no_computador(
                     db, computador_alvo.id, logs_windows
@@ -805,7 +824,10 @@ def listar_logs_dos_dispositivos_descobertos(
             continue
         computadores_ids.add(computador.id)
         if coletar_agora:
-            logs_windows = coletar_logs_windows(dispositivo.hostname or computador.nome)
+            logs_windows = coletar_logs_windows(
+                dispositivo.hostname or computador.nome,
+                tipos_log=[tipo_log] if tipo_log else None,
+            )
             _guardar_logs_windows_no_computador(db, computador.id, logs_windows)
 
     if coletar_agora:

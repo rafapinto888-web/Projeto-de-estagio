@@ -5,7 +5,7 @@ from enum import Enum
 from ipaddress import ip_network
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing import Literal
 
 from app.schemas.dispositivo_descoberto import (
@@ -80,6 +80,9 @@ class ScanRedeRequest(BaseModel):
     rede: str | None = None
     utilizador: str
     password: str
+    tipos_log: list[Literal["seguranca", "rdp"]] = Field(
+        default_factory=lambda: ["seguranca", "rdp"]
+    )
 
     @field_validator("rede")
     @classmethod
@@ -114,6 +117,23 @@ class ScanRedeRequest(BaseModel):
         if not valor or not valor.strip():
             raise ValueError("password de rede e obrigatoria")
         return valor
+
+    @field_validator("tipos_log")
+    @classmethod
+    def validar_tipos_log(
+        cls, valor: list[Literal["seguranca", "rdp"]]
+    ) -> list[Literal["seguranca", "rdp"]]:
+        if not valor:
+            raise ValueError("seleciona pelo menos um tipo de log")
+        # Remove duplicados mantendo ordem.
+        vistos: set[str] = set()
+        limpo: list[Literal["seguranca", "rdp"]] = []
+        for item in valor:
+            if item in vistos:
+                continue
+            vistos.add(item)
+            limpo.append(item)
+        return limpo
 
 
 class InventarioScanInfo(BaseModel):

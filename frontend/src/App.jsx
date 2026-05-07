@@ -190,8 +190,6 @@ export default function App() {
   const [logInventarioParams, setLogInventarioParams] = useState({
     inventario_id: "",
     dispositivo_id: "",
-    tipo_log: "",
-    coletar_agora: "false",
   });
 
   const isAdmin = useMemo(() => {
@@ -624,6 +622,10 @@ export default function App() {
                   setStatus({ type: "err", message: "Indica as credenciais da rede para iniciar o scan" });
                   return false;
                 }
+                if (!scanLogsRdp && !scanLogsSeguranca) {
+                  setStatus({ type: "err", message: "Seleciona pelo menos um tipo de log (RDP ou Segurança)" });
+                  return false;
+                }
                 const redeNormalizada = normalizarRedeScan(scanRede);
                 if (!redeNormalizada.ok) {
                   setStatus({ type: "err", message: redeNormalizada.message });
@@ -652,6 +654,10 @@ export default function App() {
                         rede: redeNormalizada.rede,
                         utilizador: userCred,
                         password: scanPass,
+                        tipos_log: [
+                          ...(scanLogsSeguranca ? ["seguranca"] : []),
+                          ...(scanLogsRdp ? ["rdp"] : []),
+                        ],
                       },
                       token,
                     );
@@ -959,10 +965,11 @@ export default function App() {
               selectedInventarioId={selectedInventarioId}
               logComputadorParams={logComputadorParams}
               setLogComputadorParams={setLogComputadorParams}
-              onLogsComputador={async () => {
+              onLogsComputador={async (paramsOverride = null) => {
                 setActionLoading(true);
                 try {
-                  const data = await api.logs.porComputador(logComputadorParams, token);
+                  const query = paramsOverride || logComputadorParams;
+                  const data = await api.logs.porComputador(query, token);
                   setLogsOutput(JSON.stringify(data, null, 2));
                   return true;
                 } catch (error) {
@@ -974,17 +981,32 @@ export default function App() {
               }}
               logInventarioParams={logInventarioParams}
               setLogInventarioParams={setLogInventarioParams}
-              onLogsInventario={async () => {
+              onLogsInventario={async (tiposSelecionados = []) => {
                 setActionLoading(true);
                 try {
                   const invId = logInventarioParams.inventario_id || selectedInventarioId;
+                  if (!invId) {
+                    throw new Error("Seleciona um inventário ou define um inventário ativo na área Scan");
+                  }
                   const query = { ...logInventarioParams };
                   delete query.inventario_id;
+                  query.coletar_agora = "true";
+                  if (Array.isArray(tiposSelecionados) && tiposSelecionados.length === 1) {
+                    query.tipo_log = tiposSelecionados[0];
+                  } else {
+                    delete query.tipo_log;
+                  }
                   const data = await api.inventarios.logsDispositivos(invId, query, token);
                   setLogsOutput(JSON.stringify(data, null, 2));
                   return true;
                 } catch (error) {
-                  setLogsOutput(JSON.stringify({ erro: error.message }, null, 2));
+                  const mensagem =
+                    typeof error?.message === "string"
+                      ? error.message
+                      : typeof error === "string"
+                        ? error
+                        : "Erro ao consultar logs";
+                  setLogsOutput(JSON.stringify({ erro: mensagem }, null, 2));
                   return false;
                 } finally {
                   setActionLoading(false);

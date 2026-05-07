@@ -1,7 +1,7 @@
 /* Consulta de logs — filtros em modais horizontais; resultado mantém-se na página. */
 
 import { useState } from "react";
-import { Button, MenuItem, Paper, Stack, TextField } from "@mui/material";
+import { Button, Checkbox, FormControlLabel, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
 
@@ -18,14 +18,39 @@ export default function LogsPage({
   loading,
 }) {
   const [modal, setModal] = useState(null);
+  const [pcCampoPesquisa, setPcCampoPesquisa] = useState("nome");
+  const [pcValorPesquisa, setPcValorPesquisa] = useState("");
+  const [pcTipoLog, setPcTipoLog] = useState(logComputadorParams.tipo_log || "");
+  const [tiposLogInventario, setTiposLogInventario] = useState({
+    seguranca: true,
+    rdp: true,
+  });
 
   async function handleComputadorConsultar() {
-    const ok = Boolean(await onLogsComputador?.());
+    const valor = String(pcValorPesquisa || "").trim();
+    if (!valor) return;
+
+    const filtros = {
+      computador_id: "",
+      nome: "",
+      numero_serie: "",
+      hostname: "",
+      tipo_log: pcTipoLog,
+    };
+    filtros[pcCampoPesquisa] = valor;
+    setLogComputadorParams(filtros);
+
+    const ok = Boolean(await onLogsComputador?.(filtros));
     if (ok) setModal(null);
   }
 
   async function handleInventarioConsultar() {
-    const ok = Boolean(await onLogsInventario?.());
+    const tiposSelecionados = [
+      ...(tiposLogInventario.seguranca ? ["seguranca"] : []),
+      ...(tiposLogInventario.rdp ? ["rdp"] : []),
+    ];
+    if (tiposSelecionados.length === 0) return;
+    const ok = Boolean(await onLogsInventario?.(tiposSelecionados));
     if (ok) setModal(null);
   }
 
@@ -72,42 +97,30 @@ export default function LogsPage({
       >
         <Stack spacing={1.2}>
           <TextField
-            label="Referência do PC (opcional)"
-            placeholder="Só se souberes o valor técnico do sistema"
-            value={logComputadorParams.computador_id}
-            onChange={(e) => setLogComputadorParams((p) => ({ ...p, computador_id: e.target.value }))}
+            select
+            label="Procurar por"
+            value={pcCampoPesquisa}
+            onChange={(e) => setPcCampoPesquisa(e.target.value)}
             size="small"
             fullWidth
-          />
+          >
+            <MenuItem value="nome">Nome do computador</MenuItem>
+            <MenuItem value="numero_serie">Número de série</MenuItem>
+          </TextField>
           <TextField
-            label="Nome"
-            placeholder="nome"
-            value={logComputadorParams.nome}
-            onChange={(e) => setLogComputadorParams((p) => ({ ...p, nome: e.target.value }))}
+            label={pcCampoPesquisa === "numero_serie" ? "Número de série" : "Nome do computador"}
+            placeholder={pcCampoPesquisa === "numero_serie" ? "Ex.: SN123456" : "Ex.: desktop-lab-01"}
+            value={pcValorPesquisa}
+            onChange={(e) => setPcValorPesquisa(e.target.value)}
             size="small"
             fullWidth
-          />
-          <TextField
-            label="N.º série"
-            placeholder="numero_serie"
-            value={logComputadorParams.numero_serie}
-            onChange={(e) => setLogComputadorParams((p) => ({ ...p, numero_serie: e.target.value }))}
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label="Hostname"
-            placeholder="hostname"
-            value={logComputadorParams.hostname}
-            onChange={(e) => setLogComputadorParams((p) => ({ ...p, hostname: e.target.value }))}
-            size="small"
-            fullWidth
+            helperText={!String(pcValorPesquisa || "").trim() ? "Preenche este campo para consultar logs." : " "}
           />
           <TextField
             select
             label="Tipo de log"
-            value={logComputadorParams.tipo_log}
-            onChange={(e) => setLogComputadorParams((p) => ({ ...p, tipo_log: e.target.value }))}
+            value={pcTipoLog}
+            onChange={(e) => setPcTipoLog(e.target.value)}
             size="small"
             fullWidth
           >
@@ -169,29 +182,46 @@ export default function LogsPage({
             size="small"
             fullWidth
           />
-          <TextField
-            select
-            label="Tipo de log"
-            value={logInventarioParams.tipo_log}
-            onChange={(e) => setLogInventarioParams((p) => ({ ...p, tipo_log: e.target.value }))}
-            size="small"
-            fullWidth
-          >
-            <MenuItem value="">Todos os tipos</MenuItem>
-            <MenuItem value="seguranca">seguranca</MenuItem>
-            <MenuItem value="rdp">rdp</MenuItem>
-          </TextField>
-          <TextField
-            select
-            label="Recolher agora"
-            value={logInventarioParams.coletar_agora}
-            onChange={(e) => setLogInventarioParams((p) => ({ ...p, coletar_agora: e.target.value }))}
-            size="small"
-            fullWidth
-          >
-            <MenuItem value="false">coletar_agora=false</MenuItem>
-            <MenuItem value="true">coletar_agora=true</MenuItem>
-          </TextField>
+          <Paper variant="outlined" sx={{ p: 1, borderRadius: 2, borderColor: "#dbe5f2", bgcolor: "#f8fbff" }}>
+            <Typography fontSize={12} fontWeight={700} mb={0.35}>
+              Tipos de log
+            </Typography>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={0.5}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={tiposLogInventario.seguranca}
+                    onChange={(e) =>
+                      setTiposLogInventario((p) => ({
+                        ...p,
+                        seguranca: e.target.checked,
+                      }))
+                    }
+                  />
+                }
+                label="Segurança"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={tiposLogInventario.rdp}
+                    onChange={(e) =>
+                      setTiposLogInventario((p) => ({
+                        ...p,
+                        rdp: e.target.checked,
+                      }))
+                    }
+                  />
+                }
+                label="RDP"
+              />
+            </Stack>
+            {!tiposLogInventario.seguranca && !tiposLogInventario.rdp ? (
+              <Typography variant="caption" color="error.main">
+                Seleciona pelo menos um tipo de log.
+              </Typography>
+            ) : null}
+          </Paper>
         </Stack>
       </FormModal>
     </SectionCard>
