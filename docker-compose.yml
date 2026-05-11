@@ -1,10 +1,16 @@
-# Stack completo: PostgreSQL + API FastAPI + frontend (Nginx).
-# O browser chama a API em http://localhost:8000 (porta exposta no host).
-# Nota: scan de rede / logs Windows dependem de PowerShell; num container Linux pode não
-# funcionar como no host Windows — usa o backend no host se precisares disso.
+# Por defeito: só o site (web). A API corre no Windows em localhost:8000 e usa a tua
+# PostgreSQL no PC — assim o login usa os mesmos utilizadores que no pgAdmin.
+#
+# API também em Docker (usa Postgres no PC via host.docker.internal):
+#   docker compose --profile docker-api up -d --build
+#
+# Postgres só em Docker (BD isolada, host porta 5433):
+#   docker compose --profile bundled-db up -d --build
 
 services:
   db:
+    profiles:
+      - bundled-db
     image: postgres:16-alpine
     container_name: inventario-db
     restart: unless-stopped
@@ -13,7 +19,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: inventario-docker
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - inventario_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -23,6 +29,8 @@ services:
       retries: 5
 
   api:
+    profiles:
+      - docker-api
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -30,12 +38,11 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:inventario-docker@db:5432/inventario
-      SECRET_KEY: ${SECRET_KEY:-altera-esta-chave-em-producao}
-    depends_on:
-      db:
-        condition: service_healthy
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://postgres:12345a.@host.docker.internal:5432/inventario}
+      SECRET_KEY: ${SECRET_KEY:-inventario-dev-secret-key-change-in-production}
 
   web:
     build:
@@ -47,8 +54,6 @@ services:
     restart: unless-stopped
     ports:
       - "5173:80"
-    depends_on:
-      - api
 
 volumes:
   inventario_pgdata:

@@ -1,0 +1,135 @@
+================================================================================
+  COMANDOS — Projeto de estágio (Docker + API + base de dados)
+================================================================================
+
+O QUE E O QUE (le isto uma vez)
+
+  • Base de dados     = PostgreSQL no TEU Windows (pgAdmin, porta 5432).
+                        E onde estao os teus utilizadores e dados reais.
+
+  • API (backend)     = FastAPI. Por defeito corre NO PC, nao no Docker,
+                        para ligar a essa BD como sempre (127.0.0.1).
+
+  • Site (frontend)   = Pode correr num container Docker (Nginx) na porta 5173.
+                        O browser fala com a API em http://localhost:8000.
+
+  • docker-compose.yml = Ficheiro na raiz do projeto. Por defeito so define
+                        o servico "web" (site). "api" e "db" sao opcionais
+                        (perfis docker-api e bundled-db).
+
+--------------------------------------------------------------------------------
+  ERRO 401 NO LOGIN (recuperacao rapida)
+--------------------------------------------------------------------------------
+
+Se o site abrir mas o login der "nao autorizado", valida primeiro que a API local
+esta de pe em http://localhost:8000/docs. Se estiver e mesmo assim falhar,
+podes redefinir password temporaria para os utilizadores atuais:
+
+  cd "C:\Users\Jose\Desktop\Projeto de estagio"
+  .\venv\Scripts\python.exe -c "import sys; sys.path.insert(0, r'C:\Users\Jose\Desktop\Projeto de estagio\backend'); from app.database.connection import SessionLocal; from app.models.utilizador_db import UtilizadorDB; from app.core.security import password_hash; db=SessionLocal(); h=password_hash.hash('Temp@1234'); [setattr(u,'palavra_passe_hash',h) for u in db.query(UtilizadorDB).all()]; db.commit(); print('OK'); db.close()"
+
+Utilizadores atuais:
+  - teste1
+  - rui.1.2
+Password temporaria:
+  - Temp@1234
+
+--------------------------------------------------------------------------------
+  COMANDOS UTEIS (o que cada um faz)
+--------------------------------------------------------------------------------
+
+  cd "C:\Users\Jose\Desktop\Projeto de estagio"
+      Mete o terminal na pasta onde esta o docker-compose.yml.
+      O Docker so encontra o ficheiro se estiveres nesta pasta (ou passas -f).
+
+  docker compose down
+      Para e remove os containers deste projeto criados pelo compose.
+      Nao apaga o codigo. Volumes nomeados (ex.: dados do Postgres em Docker)
+      ficam a menos que uses "down -v" (cuidado com -v).
+
+  docker compose up -d --build web
+      - up      = sobe os servicos pedidos.
+      - -d      = em segundo plano ("detached"), o terminal fica livre.
+      - --build = reconstrui a imagem antes de subir (preciso apos mudar
+                  codigo do frontend ou Dockerfile).
+      - web     = so o site em Docker. Nao sobe api nem db por defeito.
+
+  docker compose stop web
+      Para so o container do site, sem o apagar.
+
+  docker compose logs -f
+      Mostra logs de todos os servicos do compose; -f = seguir em tempo real.
+      Ctrl+C para sair (nao para os containers).
+
+  docker compose logs -f web
+      So logs do servico "web".
+
+  docker rm -f inventario-api inventario-db
+      Forca remocao de containers com esses nomes (se ficaram de um teste
+      antigo e ocupam portas ou confundem o ambiente). -f = nao pergunta.
+
+--------------------------------------------------------------------------------
+  FLUXO RECOMENDADO (site Docker + API e BD no Windows)
+--------------------------------------------------------------------------------
+
+  1) Garante que o PostgreSQL no Windows esta a correr (porta 5432).
+
+  2) Num terminal — limpa containers velhos e sobe o site:
+
+       cd "C:\Users\Jose\Desktop\Projeto de estagio"
+       docker compose down
+       docker rm -f inventario-api inventario-db 2>$null
+       docker compose up -d --build web
+
+  3) Noutro terminal — API no PC (usa a BD por defeito do projeto):
+
+       cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
+       .venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
+
+     Se a tua ligacao for outra, antes do uvicorn:
+
+       $env:DATABASE_URL="postgresql+psycopg2://user:pass@127.0.0.1:5432/inventario"
+
+  4) No browser:
+       Site:    http://localhost:5173
+       API:     http://localhost:8000
+       Swagger: http://localhost:8000/docs
+
+--------------------------------------------------------------------------------
+  OPCIONAL — API tambem dentro do Docker (BD continua no Windows)
+--------------------------------------------------------------------------------
+
+  A API no container liga ao Postgres do PC via host.docker.internal.
+  Pode exigir ajustes no pg_hba.conf / listen_addresses do Postgres.
+
+       cd "C:\Users\Jose\Desktop\Projeto de estagio"
+       docker compose --profile docker-api up -d --build
+
+  O browser continua a usar http://localhost:8000 (porta mapeada para o
+  container). Se o login falhar, volta ao fluxo recomendado em cima.
+
+--------------------------------------------------------------------------------
+  OPCIONAL — Postgres so no Docker (BD de teste, nao e a tua BD do Windows)
+--------------------------------------------------------------------------------
+
+  O Postgres do container fica na porta 5433 do PC (para nao disputar a 5432
+  com o Postgres nativo).
+
+       docker compose --profile bundled-db up -d --build
+
+  Para a API nesse Postgres, precisas tambem do perfil docker-api e de
+  DATABASE_URL no ficheiro .env a apontar para @db:5432 (ver .env.example).
+
+--------------------------------------------------------------------------------
+  DESENVOLVIMENTO SEM DOCKER (so npm + uvicorn)
+--------------------------------------------------------------------------------
+
+       cd frontend
+       npm run dev
+
+       cd backend
+       .venv\Scripts\python.exe -m uvicorn app.core.main:app --reload
+
+  Mais detalhes no README.md
+
+================================================================================

@@ -1,6 +1,6 @@
 /* Comentario geral deste ficheiro: contem partes importantes da interface e comportamento. */
 
-const FALLBACK_API_BASE = "http://127.0.0.1:8000";
+const FALLBACK_API_BASE = "http://localhost:8000";
 const ENV_BASE =
   typeof import.meta.env?.VITE_API_BASE === "string" ? import.meta.env.VITE_API_BASE.trim() : "";
 
@@ -8,10 +8,32 @@ function normalizeBase(url) {
   return url.replace(/\/$/, "");
 }
 
+/** Build de producao (Docker): browser em :5173 → API no host :8000. Em `npm run dev` nao forca. */
+function apiBaseParaSiteDocker5173() {
+  if (!import.meta.env.PROD) return null;
+  if (typeof window === "undefined") return null;
+  const { hostname, port } = window.location;
+  if ((hostname === "localhost" || hostname === "127.0.0.1") && port === "5173") {
+    return "http://localhost:8000";
+  }
+  return null;
+}
+
+/** localStorage antigo pode apontar para hostnames que o browser nao resolve (ex.: API só em Docker). */
+function localStorageApiBaseUsavel(saved) {
+  if (!saved?.trim()) return false;
+  const lower = saved.trim().toLowerCase();
+  if (lower.includes("inventario-api")) return false;
+  if (lower.includes("://api:")) return false;
+  return true;
+}
+
 export function getApiBase() {
   if (ENV_BASE) return normalizeBase(ENV_BASE);
+  const dockerHint = apiBaseParaSiteDocker5173();
+  if (dockerHint) return normalizeBase(dockerHint);
   const saved = localStorage.getItem("api_base");
-  if (saved?.trim()) return normalizeBase(saved);
+  if (saved?.trim() && localStorageApiBaseUsavel(saved)) return normalizeBase(saved);
   return FALLBACK_API_BASE;
 }
 
@@ -25,10 +47,20 @@ async function request(path, options = {}, token) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${getApiBase()}${path}`, {
-    ...options,
-    headers,
-  });
+  const base = getApiBase();
+  const url = `${base}${path}`;
+  let response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (err) {
+    const hint =
+      "Sem ligacao a API. Abre http://localhost:8000/docs no browser; se nao abrir, na pasta backend corre: " +
+      ".venv\\Scripts\\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000";
+    throw new Error(`${hint} (URL usada: ${base})`);
+  }
 
   if (response.status === 204) return null;
 

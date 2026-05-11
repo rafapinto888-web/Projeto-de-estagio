@@ -18,7 +18,7 @@ Painel web para gestao de inventario de TI: inventarios, computadores, localizac
 | **Frontend** | SPA React (Vite) com navegação por abas, estado global em `App.jsx` e cliente em `api.js`. |
 | **UX** | Criação/edição de entidades (**Inventários, Computadores, Utilizadores, Perfis, Localizações**) em **modais** com formulário em grelha; evita formulários inline “em linha” na página. Na área **Scan**, o fluxo principal é iniciar scan por modal (com separadores para inventário existente/criar inventário), pedir rede, credenciais e opções de logs. Em **Pesquisa global**, a interface foca resultados e filtros (sem ação de “ver detalhes” nem vista de JSON bruto). Em **Logs**, os filtros (por computador / por inventário) estão em modais e o resultado JSON aparece na página. |
 | **Design** | Tema único (`styles.css`), tipografia definida nos tokens CSS, tabelas, cartões em perfis, feedback global de operações (`StatusAlert`). |
-| **Produção / Docker** | Há **`docker-compose.yml`** na raiz com **PostgreSQL + API + frontend estático (Nginx)**. Para desenvolvimento rápido com hot reload continua válido correr **Vite + Uvicorn** à parte (secção abaixo). |
+| **Produção / Docker** | Há **`docker-compose.yml`** na raiz. Por defeito sobe **apenas o frontend** em container (`web`); `api` e `db` são opcionais via perfis (`docker-api`, `bundled-db`). |
 | **Testes / qualidade** | Sem suíte de testes automatizados documentada aqui; validação feita ao correr backend + frontend manualmente contra a API real. |
 
 **Limitações esperáveis**: dependência de Postgres acessível, credenciais e `DATABASE_URL` corretos, e permissões rede/WMI para scans — falhas são tratidas no cliente com mensagens de erro da API.
@@ -112,32 +112,38 @@ cd frontend
 npm install
 ```
 
-## Execução com Docker (stack completo)
+## Execução com Docker
 
-Na **raiz do repositório** (onde está `docker-compose.yml`). Primeira vez ou após mudar Dockerfile/código incluído na imagem:
+### Modo recomendado (estável)
+
+Por defeito, o Compose sobe só o site (`web`) no Docker. A API continua no Windows em `localhost:8000` e usa a mesma base de dados PostgreSQL que já tinhas.
 
 ```powershell
 cd "caminho\para\Projeto de estagio"
-docker compose up -d --build
-```
-
-Só iniciar (imagens já construídas):
-
-```powershell
-docker compose up -d
-```
-
-Parar os containers:
-
-```powershell
-docker compose stop
-```
-
-Parar e remover containers + rede (mantém o volume da base de dados):
-
-```powershell
 docker compose down
+docker rm -f inventario-api inventario-db 2>$null
+docker compose up -d --build web
 ```
+
+Depois, noutro terminal:
+
+```powershell
+cd "caminho\para\Projeto de estagio\backend"
+.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+URLs:
+- Frontend (Docker): [http://localhost:5173](http://localhost:5173)
+- API (local): [http://localhost:8000](http://localhost:8000)
+- Swagger: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### Modos opcionais
+
+- **API também no Docker**:  
+  `docker compose --profile docker-api up -d --build`
+- **Postgres também no Docker** (isolado para testes):  
+  `docker compose --profile bundled-db up -d --build`  
+  (host `5433 -> container 5432`)
 
 Ver logs:
 
@@ -145,20 +151,13 @@ Ver logs:
 docker compose logs -f
 ```
 
-**URLs com Compose**: frontend servido pelo container em [http://localhost:5173](http://localhost:5173), API em [http://localhost:8000](http://localhost:8000). Postgres exposto em `localhost:5432` (credenciais definidas no `docker-compose.yml`: utilizador `postgres`, password `inventario-docker`, base `inventario`).
-
-Variáveis opcionais no ambiente do host antes do `up`:
-
-- `SECRET_KEY` — chave JWT (por defeito há um valor de exemplo no compose; altera em produção).
-- `VITE_API_BASE` — URL da API embutida no build do frontend (por defeito `http://localhost:8000`, adequada ao browser aceder ao host).
-
-**Após alterar código React** (imagem `web` usa build de produção): reconstrói o serviço frontend:
+Parar tudo do Compose:
 
 ```powershell
-docker compose up -d --build web
+docker compose down
 ```
 
-**Scan de rede / logs Windows**: a API no container Linux **não garante** o mesmo comportamento que no Windows (PowerShell remoto, WMI/CIM). Para testes pesados de scan, continua útil correr o **backend localmente** no Windows contra a mesma base de dados.
+**Nota importante**: para o teu cenário (scan/logs Windows), manter API local no Windows costuma ser o caminho mais previsível.
 
 ---
 
