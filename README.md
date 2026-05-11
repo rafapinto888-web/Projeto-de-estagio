@@ -121,7 +121,7 @@ Por defeito, o Compose sobe só o site (`web`) no Docker. A API continua no Wind
 ```powershell
 cd "caminho\para\Projeto de estagio"
 docker compose down
-docker rm -f inventario-api inventario-db 2>$null
+docker rm -f backend base-de-dados 2>$null
 docker compose up -d --build web
 ```
 
@@ -137,6 +137,11 @@ URLs:
 - API (local): [http://localhost:8000](http://localhost:8000)
 - Swagger: [http://localhost:8000/docs](http://localhost:8000/docs)
 
+Nomes dos containers (quando ativos no Docker Desktop):
+- `frontend`
+- `backend`
+- `base-de-dados`
+
 ### Modos opcionais
 
 - **API também no Docker**:  
@@ -144,6 +149,8 @@ URLs:
 - **Postgres também no Docker** (isolado para testes):  
   `docker compose --profile bundled-db up -d --build`  
   (host `5433 -> container 5432`)
+- **Os 3 em Docker (frontend + backend + base de dados)**:  
+  `docker compose --profile docker-api --profile bundled-db up -d --build`
 
 Ver logs:
 

@@ -23,8 +23,7 @@ function apiBaseParaSiteDocker5173() {
 function localStorageApiBaseUsavel(saved) {
   if (!saved?.trim()) return false;
   const lower = saved.trim().toLowerCase();
-  if (lower.includes("inventario-api")) return false;
-  if (lower.includes("://api:")) return false;
+  if (lower.includes("://backend:")) return false;
   return true;
 }
 

@@ -17,6 +17,11 @@ O QUE E O QUE (le isto uma vez)
                         o servico "web" (site). "api" e "db" sao opcionais
                         (perfis docker-api e bundled-db).
 
+NOMES DOS CONTAINERS (Docker Desktop):
+  - frontend
+  - backend
+  - base-de-dados
+
 --------------------------------------------------------------------------------
   ERRO 401 NO LOGIN (recuperacao rapida)
 --------------------------------------------------------------------------------
@@ -64,7 +69,7 @@ Password temporaria:
   docker compose logs -f web
       So logs do servico "web".
 
-  docker rm -f inventario-api inventario-db
+  docker rm -f backend base-de-dados
       Forca remocao de containers com esses nomes (se ficaram de um teste
       antigo e ocupam portas ou confundem o ambiente). -f = nao pergunta.
 
@@ -78,7 +83,7 @@ Password temporaria:
 
        cd "C:\Users\Jose\Desktop\Projeto de estagio"
        docker compose down
-       docker rm -f inventario-api inventario-db 2>$null
+       docker rm -f backend base-de-dados 2>$null
        docker compose up -d --build web
 
   3) Noutro terminal — API no PC (usa a BD por defeito do projeto):
@@ -107,6 +112,10 @@ Password temporaria:
 
   O browser continua a usar http://localhost:8000 (porta mapeada para o
   container). Se o login falhar, volta ao fluxo recomendado em cima.
+
+  Para subir os 3 (frontend + backend + base-de-dados):
+
+       docker compose --profile docker-api --profile bundled-db up -d --build
 
 --------------------------------------------------------------------------------
   OPCIONAL — Postgres so no Docker (BD de teste, nao e a tua BD do Windows)
