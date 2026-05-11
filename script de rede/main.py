@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from discovery import descobrir_hosts_ativos
 from windows_info import obter_info_completa
+from excel_export import guardar_logs_excel
 from rdp_logs import (
     obter_logs_rdp,
     formatar_log_rdp,
@@ -20,8 +21,8 @@ def obter_pasta_programa():
 
     return Path(__file__).parent
 
-# pedir rede
-rede_texto = input("Indica a rede (ex: 192.168.1.0/24): ").strip()
+# pedir alvo
+alvo_texto = input("Indica um IP ou rede (ex: 192.168.1.10 ou 192.168.1.0/24): ").strip()
 
 # pedir credenciais
 utilizador = input("Utilizador: ").strip()
@@ -31,24 +32,41 @@ password = getpass.getpass("Password: ")
 recolher_logs_rdp = input("Recolher logs RDP? (s/N): ").strip().lower() == "s"
 recolher_logs_seguranca = input("Recolher logs Seguranca? (s/N): ").strip().lower() == "s"
 
-# validar rede
+# validar alvo
 try:
-    # Aceita CIDR e normaliza rede sem exigir strict.
-    rede = ipaddress.ip_network(rede_texto, strict=False)
+    # Se for IP unico, processa apenas esse host sem scan de rede.
+    alvo_ip = ipaddress.ip_address(alvo_texto)
+    modo_ip_unico = True
 except ValueError:
-    print("Rede inválida.")
-    exit()
+    alvo_ip = None
+    modo_ip_unico = False
+
+if not modo_ip_unico:
+    try:
+        # Aceita CIDR e normaliza rede sem exigir strict.
+        rede = ipaddress.ip_network(alvo_texto, strict=False)
+    except ValueError:
+        print("IP ou rede inválida.")
+        exit()
+else:
+    rede = None
 
 # info scan
-print(f"\nA procurar máquinas ativas em {rede}...")
+if modo_ip_unico:
+    print(f"\nA processar IP direto: {alvo_ip}...")
+else:
+    print(f"\nA procurar máquinas ativas em {rede}...")
 
-# descobrir ips
-ativos = descobrir_hosts_ativos(rede)
+if modo_ip_unico:
+    ativos = [str(alvo_ip)]
+else:
+    # descobrir ips
+    ativos = descobrir_hosts_ativos(rede)
 
-# ignorar o primeiro host da rede (normalmente gateway)
-primeiro_host = next(rede.hosts(), None)
-if primeiro_host:
-    ativos = [ip for ip in ativos if ip != str(primeiro_host)]
+    # ignorar o primeiro host da rede (normalmente gateway)
+    primeiro_host = next(rede.hosts(), None)
+    if primeiro_host:
+        ativos = [ip for ip in ativos if ip != str(primeiro_host)]
 
 # mostrar total
 print(f"\nTotal de ativos: {len(ativos)}")
@@ -56,10 +74,26 @@ print("\nInventário:\n")
 
 # guardar ficheiro
 caminho_resultado = obter_pasta_programa() / "resultado.txt"
+caminho_excel = obter_pasta_programa() / "logs.xlsx"
+linhas_logs_excel = [[
+    "IP",
+    "Tipo",
+    "Horario",
+    "Evento ID",
+    "Utilizador",
+    "Origem",
+    "Provider",
+    "Mensagem",
+    "Fonte",
+    "Estado",
+]]
 
 with open(caminho_resultado, "w", encoding="utf-8") as ficheiro:
     # Cabecalho de contexto do scan executado.
-    ficheiro.write(f"Rede: {rede}\n")
+    if modo_ip_unico:
+        ficheiro.write(f"IP: {alvo_ip}\n")
+    else:
+        ficheiro.write(f"Rede: {rede}\n")
     ficheiro.write(f"Total de ativos: {len(ativos)}\n\n")
 
     if not ativos:
@@ -89,7 +123,6 @@ with open(caminho_resultado, "w", encoding="utf-8") as ficheiro:
 
         print(linha, flush=True)
         ficheiro.write(linha + "\n")
-
         if recolher_logs_rdp:
             # Logs RDP sao opcionais para nao penalizar tempo em todos os runs.
             print(f"  A recolher logs RDP de {ip}...", flush=True)
@@ -100,11 +133,27 @@ with open(caminho_resultado, "w", encoding="utf-8") as ficheiro:
                 linha_log = "    Sem registos RDP encontrados."
                 print(linha_log, flush=True)
                 ficheiro.write(linha_log + "\n")
+                linhas_logs_excel.append([ip, "RDP", "", "", "", "", "", "", "", "Sem registos RDP encontrados"])
 
             for log in logs_rdp:
                 linha_log = "    " + formatar_log_rdp(log)
                 print(linha_log, flush=True)
                 ficheiro.write(linha_log + "\n")
+                if log.get("erro"):
+                    linhas_logs_excel.append([ip, "RDP", "", "", "", "", "", "", "", log["erro"]])
+                else:
+                    linhas_logs_excel.append([
+                        ip,
+                        "RDP",
+                        log.get("horario", ""),
+                        log.get("evento_id", ""),
+                        log.get("utilizador", ""),
+                        log.get("origem", ""),
+                        "",
+                        log.get("mensagem", ""),
+                        log.get("fonte", ""),
+                        "",
+                    ])
 
         if recolher_logs_seguranca:
             # Logs de seguranca sao opcionais e podem depender de permissao.
@@ -116,11 +165,30 @@ with open(caminho_resultado, "w", encoding="utf-8") as ficheiro:
                 linha_log = "    Sem registos de seguranca encontrados."
                 print(linha_log, flush=True)
                 ficheiro.write(linha_log + "\n")
+                linhas_logs_excel.append([ip, "Seguranca", "", "", "", "", "", "", "", "Sem registos de seguranca encontrados"])
 
             for log in logs_seg:
                 linha_log = "    " + formatar_log_seguranca(log)
                 print(linha_log, flush=True)
                 ficheiro.write(linha_log + "\n")
+                if log.get("erro"):
+                    linhas_logs_excel.append([ip, "Seguranca", "", "", "", "", "", "", "", log["erro"]])
+                else:
+                    linhas_logs_excel.append([
+                        ip,
+                        "Seguranca",
+                        log.get("horario", ""),
+                        log.get("evento_id", ""),
+                        "",
+                        "",
+                        log.get("provider", ""),
+                        log.get("mensagem", ""),
+                        "",
+                        "",
+                    ])
+
+guardar_logs_excel(caminho_excel, linhas_logs_excel)
 
 print(f"\nResultado guardado em: {caminho_resultado}")
+print(f"Excel guardado em: {caminho_excel}")
 

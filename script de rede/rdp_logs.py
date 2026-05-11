@@ -12,8 +12,8 @@ EVENTO_RDP_AUTH = 1149
 EVENTOS_RDP_LOCAL = [21, 24, 25]
 LOG_SECURITY = "Security"
 EVENTOS_SECURITY = [4624, 4625, 4634]
-TENTATIVAS_LOGS = 2
-TIMEOUT_LOGS_SEGUNDOS = 12
+TENTATIVAS_LOGS = 1
+TIMEOUT_LOGS_SEGUNDOS = 10
 
 
 def _erro_curto(texto):
@@ -76,56 +76,120 @@ $credential = New-Object System.Management.Automation.PSCredential ($env:REDE_SC
 $diag = @()
 $logs = @()
 
+function Get-RdpLogInfo {{
+    param([string]$LogName)
+
+    try {{
+        return Get-WinEvent `
+            -ListLog $LogName `
+            -ComputerName $env:REDE_SCAN_IP `
+            -Credential $credential `
+            -Force `
+            -ErrorAction Stop
+    }} catch {{
+        $diag += ($LogName + " metadata: " + $_.Exception.Message)
+        return $null
+    }}
+}}
+
 try {{
     # Canal de autenticacao remota (eventos de entrada RDP).
-    $l1 = Get-WinEvent `
-        -ComputerName $env:REDE_SCAN_IP `
-        -Credential $credential `
-        -FilterHashtable @{{LogName="{LOG_RDP_REMOTECONN}"; Id={EVENTO_RDP_AUTH}}} `
-        -ErrorAction Stop |
-    ForEach-Object {{
-        $user = ""
-        $domain = ""
-        $origem = ""
-        if ($_.Properties.Count -gt 0) {{ $user = $_.Properties[0].Value }}
-        if ($_.Properties.Count -gt 1) {{ $domain = $_.Properties[1].Value }}
-        if ($_.Properties.Count -gt 2) {{ $origem = $_.Properties[2].Value }}
-        [pscustomobject]@{{
-            Horario = $_.TimeCreated.ToString("yyyy-MM-dd HH:mm:ss")
-            EventoId = $_.Id
-            Utilizador = "$domain\\$user"
-            Origem = $origem
-            Fonte = "{LOG_RDP_REMOTECONN}"
+    $remoteInfo = Get-RdpLogInfo -LogName "{LOG_RDP_REMOTECONN}"
+    if ($remoteInfo) {{
+        if (-not $remoteInfo.IsEnabled) {{
+            $diag += "RDP RemoteConnectionManager: canal desativado"
+        }} else {{
+            try {{
+                $l1 = Get-WinEvent `
+                    -ComputerName $env:REDE_SCAN_IP `
+                    -Credential $credential `
+                    -FilterHashtable @{{LogName="{LOG_RDP_REMOTECONN}"; Id={EVENTO_RDP_AUTH}}} `
+                    -Force `
+                    -ErrorAction Stop
+            }} catch {{
+                $diag += ("RDP RemoteConnectionManager filtro: " + $_.Exception.Message)
+                $l1 = Get-WinEvent `
+                    -ComputerName $env:REDE_SCAN_IP `
+                    -Credential $credential `
+                    -LogName "{LOG_RDP_REMOTECONN}" `
+                    -Force `
+                    -ErrorAction Stop |
+                Where-Object {{ $_.Id -eq {EVENTO_RDP_AUTH} }}
+            }}
+
+            $logs += $l1 | ForEach-Object {{
+                $user = ""
+                $domain = ""
+                $origem = ""
+                $mensagem = ($_.Message -replace "[\\r\\n]+", " ").Trim()
+                if ($_.Properties.Count -gt 0) {{ $user = [string]$_.Properties[0].Value }}
+                if ($_.Properties.Count -gt 1) {{ $domain = [string]$_.Properties[1].Value }}
+                if ($_.Properties.Count -gt 2) {{ $origem = [string]$_.Properties[2].Value }}
+                $utilizador = ""
+                if ($domain -and $user) {{
+                    $utilizador = "$domain\\$user"
+                }} elseif ($user) {{
+                    $utilizador = $user
+                }}
+                [pscustomobject]@{{
+                    Horario = $_.TimeCreated.ToString("yyyy-MM-dd HH:mm:ss")
+                    EventoId = $_.Id
+                    Utilizador = $utilizador
+                    Origem = $origem
+                    Mensagem = $mensagem
+                    Fonte = "{LOG_RDP_REMOTECONN}"
+                }}
+            }}
         }}
     }}
-    $logs += $l1
 }} catch {{
     $diag += ("RDP RemoteConnectionManager: " + $_.Exception.Message)
 }}
 
 try {{
     # Canal de sessao local (conexao/desconexao/sessao).
-    $l2 = Get-WinEvent `
-        -ComputerName $env:REDE_SCAN_IP `
-        -Credential $credential `
-        -FilterHashtable @{{LogName="{LOG_RDP_LOCALSESSION}"; Id=@({ids_local})}} `
-        -ErrorAction Stop |
-    ForEach-Object {{
-        [pscustomobject]@{{
-            Horario = $_.TimeCreated.ToString("yyyy-MM-dd HH:mm:ss")
-            EventoId = $_.Id
-            Utilizador = ""
-            Origem = ""
-            Fonte = "{LOG_RDP_LOCALSESSION}"
+    $localInfo = Get-RdpLogInfo -LogName "{LOG_RDP_LOCALSESSION}"
+    if ($localInfo) {{
+        if (-not $localInfo.IsEnabled) {{
+            $diag += "RDP LocalSessionManager: canal desativado"
+        }} else {{
+            try {{
+                $l2 = Get-WinEvent `
+                    -ComputerName $env:REDE_SCAN_IP `
+                    -Credential $credential `
+                    -FilterHashtable @{{LogName="{LOG_RDP_LOCALSESSION}"; Id=@({ids_local})}} `
+                    -Force `
+                    -ErrorAction Stop
+            }} catch {{
+                $diag += ("RDP LocalSessionManager filtro: " + $_.Exception.Message)
+                $l2 = Get-WinEvent `
+                    -ComputerName $env:REDE_SCAN_IP `
+                    -Credential $credential `
+                    -LogName "{LOG_RDP_LOCALSESSION}" `
+                    -Force `
+                    -ErrorAction Stop |
+                Where-Object {{ $_.Id -in @({ids_local}) }}
+            }}
+
+            $logs += $l2 | ForEach-Object {{
+                $mensagem = ($_.Message -replace "[\\r\\n]+", " ").Trim()
+                [pscustomobject]@{{
+                    Horario = $_.TimeCreated.ToString("yyyy-MM-dd HH:mm:ss")
+                    EventoId = $_.Id
+                    Utilizador = ""
+                    Origem = ""
+                    Mensagem = $mensagem
+                    Fonte = "{LOG_RDP_LOCALSESSION}"
+                }}
+            }}
         }}
     }}
-    $logs += $l2
 }} catch {{
     $diag += ("RDP LocalSessionManager: " + $_.Exception.Message)
 }}
 
 [pscustomobject]@{{
-    logs = $logs | Sort-Object Horario -Descending | Select-Object -First 40
+    logs = $logs | Sort-Object Horario -Descending
     # Junta diagnostico para facilitar debug quando vier vazio.
     diagnostico = ($diag -join " | ")
 }} | ConvertTo-Json -Compress
@@ -147,6 +211,7 @@ try {{
             "evento_id": log.get("EventoId", ""),
             "utilizador": log.get("Utilizador", ""),
             "origem": log.get("Origem", ""),
+            "mensagem": (log.get("Mensagem", "") or "").strip(),
             "fonte": log.get("Fonte", ""),
         }
         for log in logs_raw
@@ -171,6 +236,8 @@ def formatar_log_rdp(log):
         partes.append(f"Utilizador: {log['utilizador']}")
     if log.get("origem"):
         partes.append(f"Origem: {log['origem']}")
+    if log.get("mensagem"):
+        partes.append(f"Msg: {log['mensagem'][:120]}")
     if log.get("fonte"):
         partes.append(f"Fonte: {log['fonte']}")
 
@@ -184,39 +251,60 @@ def obter_logs_seguranca(ip, utilizador, password):
 $securePassword = ConvertTo-SecureString $env:REDE_SCAN_PASSWORD -AsPlainText -Force
 $credential = New-Object System.Management.Automation.PSCredential ($env:REDE_SCAN_USER, $securePassword)
 $ids = @({ids})
+$diag = @()
+$logs = @()
 
-Get-WinEvent `
-    -ComputerName $env:REDE_SCAN_IP `
-    -Credential $credential `
-    -FilterHashtable @{{LogName="{LOG_SECURITY}"; Id=$ids}} `
-    -ErrorAction SilentlyContinue |
-Select-Object -First 30 |
-ForEach-Object {{
-    [pscustomobject]@{{
-        Horario = $_.TimeCreated.ToString("yyyy-MM-dd HH:mm:ss")
-        EventoId = $_.Id
-        Provider = $_.ProviderName
-        Mensagem = $_.Message
+try {{
+    $logs = Get-WinEvent `
+        -ComputerName $env:REDE_SCAN_IP `
+        -Credential $credential `
+        -FilterHashtable @{{LogName="{LOG_SECURITY}"; Id=$ids}} `
+        -ErrorAction Stop |
+    ForEach-Object {{
+        [pscustomobject]@{{
+            Horario = $_.TimeCreated.ToString("yyyy-MM-dd HH:mm:ss")
+            EventoId = $_.Id
+            Provider = $_.ProviderName
+            Mensagem = $_.Message
+        }}
     }}
+}} catch {{
+    $diag += ("Security: " + $_.Exception.Message)
+}}
+
+[pscustomobject]@{{
+    logs = $logs
+    diagnostico = ($diag -join " | ")
 }} | ConvertTo-Json -Compress
 """
-    dados, erro_exec = _executar_ps_logs(ip, utilizador, password, script)
+    payload, erro_exec = _executar_ps_logs(ip, utilizador, password, script)
     if erro_exec:
         return [{"erro": f"Erro logs seguranca: {erro_exec}"}]
 
-    if isinstance(dados, dict):
-        dados = [dados]
+    logs_raw = payload.get("logs") if isinstance(payload, dict) else []
+    if isinstance(logs_raw, dict):
+        logs_raw = [logs_raw]
+    if not isinstance(logs_raw, list):
+        logs_raw = []
 
-    return [
+    logs = [
         {
             "horario": log.get("Horario", ""),
             "evento_id": log.get("EventoId", ""),
             "provider": log.get("Provider", ""),
             "mensagem": (log.get("Mensagem", "") or "").strip(),
         }
-        for log in dados
+        for log in logs_raw
         if isinstance(log, dict)
     ]
+
+    if logs:
+        return logs
+
+    diag = ""
+    if isinstance(payload, dict):
+        diag = str(payload.get("diagnostico") or "").strip()
+    return [{"erro": diag or "Sem registos de seguranca encontrados"}]
 
 
 def formatar_log_seguranca(log):
