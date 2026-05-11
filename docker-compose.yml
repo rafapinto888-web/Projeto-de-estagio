@@ -1,0 +1,54 @@
+# Stack completo: PostgreSQL + API FastAPI + frontend (Nginx).
+# O browser chama a API em http://localhost:8000 (porta exposta no host).
+# Nota: scan de rede / logs Windows dependem de PowerShell; num container Linux pode não
+# funcionar como no host Windows — usa o backend no host se precisares disso.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: inventario-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: inventario
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: inventario-docker
+    ports:
+      - "5432:5432"
+    volumes:
+      - inventario_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d inventario"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: inventario-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:inventario-docker@db:5432/inventario
+      SECRET_KEY: ${SECRET_KEY:-altera-esta-chave-em-producao}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8000}
+    container_name: inventario-web
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  inventario_pgdata:
