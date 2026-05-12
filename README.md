@@ -152,6 +152,31 @@ Nomes dos containers (quando ativos no Docker Desktop):
 - **Os 3 em Docker (frontend + backend + base de dados)**:  
   `docker compose --profile docker-api --profile bundled-db up -d --build`
 
+### Comandos rápidos (sem explicação)
+
+```powershell
+cd "caminho\para\Projeto de estagio"
+
+# ligar só frontend
+docker compose up -d --build web
+
+# ligar os 3
+docker compose --profile docker-api --profile bundled-db up -d --build
+
+# estado
+docker ps
+docker compose ps
+
+# logs
+docker compose logs -f
+
+# desligar
+docker compose stop
+docker compose down
+```
+
+Resumo enxuto também em `comandos.txt`.
+
 Ver logs:
 
 ```powershell

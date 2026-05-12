@@ -45,10 +45,11 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, onNavigate, 
     >
       <Toolbar
         sx={{
-          gap: 1.5,
-          justifyContent: "space-between",
+          gap: 1.1,
           minHeight: "70px !important",
           px: { xs: 1.2, md: 1.8 },
+          py: 1.1,
+          alignItems: "stretch",
         }}
       >
         <Paper
@@ -59,9 +60,7 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, onNavigate, 
             px: 1.25,
             py: 0.6,
             borderRadius: 3,
-            flex: 1,
-            minWidth: 0,
-            maxWidth: 780,
+            width: "100%",
             bgcolor: "#ffffff",
             borderColor: "#dbe5f2",
             boxShadow: "inset 0 0 0 1px rgba(219,229,242,0.55)",
@@ -85,7 +84,12 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, onNavigate, 
           </Typography>
         </Paper>
 
-        <Stack direction="row" spacing={0.6} alignItems="center" sx={{ flexShrink: 0 }}>
+        <Stack
+          direction="row"
+          spacing={0.6}
+          alignItems="center"
+          sx={{ flexShrink: 0, justifyContent: "space-between", width: "100%" }}
+        >
           {showNavToggle ? (
             <IconButton
               title="Abrir menu"
