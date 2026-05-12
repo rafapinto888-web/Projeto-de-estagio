@@ -1,7 +1,7 @@
 /* Cabeçalho superior: pesquisa global, íconos e utilizador atual. */
 
 import { useEffect, useRef } from "react";
-import { AppBar, Avatar, Box, Button, IconButton, InputBase, Paper, Stack, Toolbar, Typography } from "@mui/material";
+import { AppBar, Avatar, Box, Button, InputBase, Paper, Stack, Toolbar, Typography } from "@mui/material";
 
 function initials(user) {
   const base = user?.nome || user?.username || user?.email || "?";
@@ -49,7 +49,8 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, showNavToggl
           minHeight: "64px !important",
           px: { xs: 1.2, md: 1.8 },
           py: 1,
-          alignItems: "stretch",
+          alignItems: "center",
+          flexWrap: "wrap",
         }}
       >
         <Paper
@@ -60,7 +61,8 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, showNavToggl
             px: 1.2,
             py: 0.45,
             borderRadius: 2.5,
-            width: "100%",
+            flex: 1,
+            minWidth: { xs: "100%", md: 280 },
             bgcolor: "#ffffff",
             borderColor: "#dbe5f2",
             boxShadow: "inset 0 0 0 1px rgba(219,229,242,0.55)",
@@ -89,19 +91,23 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, showNavToggl
           direction="row"
           spacing={0.6}
           alignItems="center"
-          sx={{ flexShrink: 0, justifyContent: "flex-end", width: "100%" }}
+          sx={{
+            flexShrink: 0,
+            justifyContent: "flex-end",
+            marginLeft: "auto",
+            width: { xs: "100%", md: "auto" },
+          }}
         >
           {showNavToggle ? (
-            <IconButton
-              title="Abrir menu"
-              aria-label="Abrir menu"
+            <Button
+              type="button"
+              variant="outlined"
+              size="small"
               onClick={onToggleNav}
-              sx={{ border: "1px solid #dbe5f2", bgcolor: "#fff", color: "#334155" }}
+              sx={{ minWidth: 72 }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                menu
-              </span>
-            </IconButton>
+              Menu
+            </Button>
           ) : null}
 
           <Stack direction="row" spacing={1.2} alignItems="center" sx={{ px: 0.6 }}>

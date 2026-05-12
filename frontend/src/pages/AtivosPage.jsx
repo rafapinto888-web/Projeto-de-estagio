@@ -253,6 +253,38 @@ export default function AtivosPage({
             </Paper>
           ))}
         </Box>
+
+        <Paper
+          variant="outlined"
+          sx={{
+            p: { xs: 1, md: 1.1 },
+            borderRadius: 3,
+            borderColor: "#dbe5f2",
+            bgcolor: "#fff",
+          }}
+        >
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }}>
+            <TextField
+              label="Filtro dos ativos"
+              value={ativoPesquisa}
+              onChange={(e) => setAtivoPesquisa(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onPesquisar?.();
+              }}
+              placeholder="Pesquisar por nome, host, IP, MAC ou série"
+              size="small"
+              fullWidth
+            />
+            <Stack direction="row" spacing={0.8} justifyContent="flex-end">
+              <Button type="button" variant="contained" onClick={() => onPesquisar?.()} disabled={loading}>
+                Pesquisar
+              </Button>
+              <Button type="button" variant="outlined" onClick={() => onRecarregarLista?.()} disabled={loading}>
+                Limpar
+              </Button>
+            </Stack>
+          </Stack>
+        </Paper>
       </Stack>
 
       <Paper variant="outlined" sx={{ p: 0.8, borderRadius: 3, borderColor: "#dbe5f2" }}>

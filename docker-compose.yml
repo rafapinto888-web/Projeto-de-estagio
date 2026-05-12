@@ -55,5 +55,24 @@ services:
     ports:
       - "5173:80"
 
+  web-dev:
+    profiles:
+      - dev-live
+    image: node:20-alpine
+    container_name: frontend-dev
+    working_dir: /app
+    restart: unless-stopped
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    environment:
+      VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8000}
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+
 volumes:
   inventario_pgdata:
+  frontend_node_modules:

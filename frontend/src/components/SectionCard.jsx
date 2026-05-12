@@ -42,7 +42,18 @@ export default function SectionCard({ title, subtitle, children, rightAction = n
             </Typography>
           ) : null}
         </Box>
-        {rightAction ? <Box sx={{ width: { xs: "100%", md: "auto" } }}>{rightAction}</Box> : null}
+        {rightAction ? (
+          <Box
+            sx={{
+              width: { xs: "100%", md: "auto" },
+              display: "flex",
+              justifyContent: { xs: "flex-end", md: "flex-start" },
+              alignSelf: { xs: "stretch", md: "auto" },
+            }}
+          >
+            {rightAction}
+          </Box>
+        ) : null}
       </Stack>
       <Box sx={{ position: "relative" }}>{children}</Box>
     </Paper>

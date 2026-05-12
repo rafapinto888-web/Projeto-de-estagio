@@ -144,6 +144,9 @@ Nomes dos containers (quando ativos no Docker Desktop):
 
 ### Modos opcionais
 
+- **Frontend em Docker com auto-atualização (hot reload)**:  
+  `docker compose up -d web-dev`  
+  (edites no Cursor refletem no browser sem `--build`; usa Vite dentro do container)
 - **API também no Docker**:  
   `docker compose --profile docker-api up -d --build`
 - **Postgres também no Docker** (isolado para testes):  
@@ -152,13 +155,16 @@ Nomes dos containers (quando ativos no Docker Desktop):
 - **Os 3 em Docker (frontend + backend + base de dados)**:  
   `docker compose --profile docker-api --profile bundled-db up -d --build`
 
-### Comandos rápidos (sem explicação)
+### Comandos rápidos 
 
 ```powershell
 cd "caminho\para\Projeto de estagio"
 
 # ligar só frontend
 docker compose up -d --build web
+
+# frontend com auto-atualização (dev)
+docker compose up -d web-dev
 
 # ligar os 3
 docker compose --profile docker-api --profile bundled-db up -d --build
