@@ -1248,6 +1248,10 @@ table {
   min-width: 640px;
 }
 
+.table-shell--responsive {
+  max-width: 100%;
+}
+
 .table-shell--responsive table {
   min-width: 720px;
 }
@@ -3620,4 +3624,9 @@ th {
   background: #ffffff;
   border-radius: 12px;
   padding: 6px;
+}
+
+/* Evita overflow horizontal em grelhas/flex (longos URLs, IPs, nomes) */
+.content > * {
+  min-width: 0;
 }

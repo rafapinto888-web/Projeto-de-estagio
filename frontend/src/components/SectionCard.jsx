@@ -33,11 +33,11 @@ export default function SectionCard({ title, subtitle, children, rightAction = n
         sx={{ position: "relative", width: "100%" }}
       >
         <Box sx={{ minWidth: 0, flex: "1 1 auto", width: { xs: "100%", md: "auto" } }}>
-          <Typography variant="h2" sx={{ mb: 0.25 }}>
+          <Typography variant="h2" sx={{ mb: 0.25, wordBreak: "break-word", overflowWrap: "anywhere" }}>
             {title}
           </Typography>
           {subtitle ? (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
               {subtitle}
             </Typography>
           ) : null}
@@ -57,7 +57,7 @@ export default function SectionCard({ title, subtitle, children, rightAction = n
           </Box>
         ) : null}
       </Stack>
-      <Box sx={{ position: "relative" }}>{children}</Box>
+      <Box sx={{ position: "relative", minWidth: 0, width: "100%" }}>{children}</Box>
     </Paper>
   );
 }

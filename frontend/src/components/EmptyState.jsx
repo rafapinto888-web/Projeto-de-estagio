@@ -16,11 +16,11 @@ export default function EmptyState({ title, description }) {
         <span className="material-symbols-outlined" style={{ marginTop: 2, color: "#64748b", fontSize: 18 }}>
           info
         </span>
-        <div>
-          <Typography fontWeight={700} fontSize={15}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <Typography fontWeight={700} fontSize={15} sx={{ wordBreak: "break-word" }}>
             {title}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ wordBreak: "break-word", mt: 0.35 }}>
             {description}
           </Typography>
         </div>

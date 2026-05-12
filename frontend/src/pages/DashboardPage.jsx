@@ -56,6 +56,46 @@ function horaDoEvento(iso, fallback = "—") {
   }
 }
 
+/** Alterações ou remoções de dados (não login, não navegação genérica). */
+function isAlertaEdicaoOuRemocao(ev) {
+  const acao = String(ev?.acao || "").toLowerCase();
+  const desc = String(ev?.descricao || "").toLowerCase();
+  const blob = `${acao} ${desc}`;
+  const removeMatch = /apagad|eliminad|removid|\bdelete\b|deletad|apagou/.test(blob);
+  const editMatch = /atualizad|editad|alterad|modificad|parcial|patch/.test(blob);
+  return removeMatch || editMatch;
+}
+
+function mapHistoricoParaItem(ev, idx) {
+  const acao = String(ev?.acao || "Evento").trim() || "Evento";
+  const descricao = String(ev?.descricao || "").trim() || "—";
+  const txt = `${acao} ${descricao}`.toLowerCase();
+  const tone =
+    txt.includes("erro") || txt.includes("falha")
+      ? "warning"
+      : txt.includes("apag") || txt.includes("delet") || txt.includes("elimin")
+        ? "error"
+        : "success";
+  let icon = "task_alt";
+  if (txt.includes("apag") || txt.includes("delet") || txt.includes("elimin") || txt.includes("remov")) icon = "delete";
+  else if (txt.includes("atualiz") || txt.includes("edit") || txt.includes("alter") || txt.includes("modific") || txt.includes("parcial"))
+    icon = "edit_square";
+  else if (txt.includes("scan") || txt.includes("rede")) icon = "radar";
+  else if (txt.includes("login") || txt.includes("sessao")) icon = "login";
+
+  const titulo = acao === "painel" && descricao !== "—" ? descricao : acao;
+  const detalhe = acao === "painel" && descricao !== "—" ? "Operação no painel" : descricao;
+
+  return {
+    id: ev?.id != null ? `hist-${ev.id}` : `hist-f-${idx}`,
+    titulo,
+    detalhe,
+    hora: horaDoEvento(ev?.data_evento),
+    icon,
+    tone,
+  };
+}
+
 export default function DashboardPage({
   inventarios,
   computadores,
@@ -115,33 +155,23 @@ export default function DashboardPage({
     return stops.join(", ");
   }, [estadoContagens]);
 
-  const atividadeHistorico = useMemo(() => {
-    return (historicoConta || [])
-      .slice(0, 20)
-      .map((ev, idx) => {
-        const acao = String(ev?.acao || "Evento");
-        const descricao = String(ev?.descricao || "Sem descrição");
-        const txt = `${acao} ${descricao}`.toLowerCase();
-        const tone = txt.includes("erro") || txt.includes("falha") ? "warning" : "success";
-        const icon =
-          txt.includes("scan") || txt.includes("rede")
-            ? "radar"
-            : txt.includes("login") || txt.includes("sessao")
-              ? "login"
-              : txt.includes("apagar") || txt.includes("delete")
-                ? "delete"
-                : "task_alt";
-        return {
-          id: ev?.id ? `hist-${ev.id}` : `hist-${idx}`,
-          titulo: acao,
-          detalhe: descricao,
-          hora: horaDoEvento(ev?.data_evento),
-          icon,
-          tone,
-        };
-      })
-      .slice(0, 6);
+  const historicoOrdenado = useMemo(() => {
+    return [...(historicoConta || [])].sort((a, b) => {
+      const ta = a?.data_evento ? new Date(a.data_evento).getTime() : 0;
+      const tb = b?.data_evento ? new Date(b.data_evento).getTime() : 0;
+      return tb - ta;
+    });
   }, [historicoConta]);
+
+  /** Todas as atividades (sessão, painel, operações) — pré-visualização no dashboard. */
+  const atividadeTodas = useMemo(() => {
+    return historicoOrdenado.slice(0, 20).map((ev, idx) => mapHistoricoParaItem(ev, idx));
+  }, [historicoOrdenado]);
+
+  /** Só alterações / remoções de dados para o painel de alertas. */
+  const alertasEdicaoRemocao = useMemo(() => {
+    return historicoOrdenado.filter(isAlertaEdicaoOuRemocao).slice(0, 12).map((ev, idx) => mapHistoricoParaItem(ev, idx));
+  }, [historicoOrdenado]);
 
   const eventosHoje = useMemo(() => {
     const hoje = new Date().toLocaleDateString("pt-PT");
@@ -171,7 +201,7 @@ export default function DashboardPage({
     { key: "logs", label: "Eventos hoje", value: eventosHoje, icon: "receipt_long" },
   ];
 
-  const atividadeRede = atividadeHistorico;
+  const atividadeRede = atividadeTodas;
   const painelSx = {
     p: { xs: 1.5, md: 2 },
     height: "100%",
@@ -398,7 +428,7 @@ export default function DashboardPage({
                   Atividade recente
                 </Typography>
                 <Button variant="text" size="small" onClick={abrirMeuHistorico}>
-                Histórico
+                  Histórico completo
                 </Button>
               </Stack>
               <Divider sx={{ mb: 1 }} />
@@ -486,21 +516,24 @@ export default function DashboardPage({
           </Box>
           <Box>
             <Paper variant="outlined" sx={{ ...painelSx, minHeight: { xs: 250, lg: 315 } }}>
-              <Typography fontWeight={800} fontSize={17} mb={1.25}>
-                Logs e alertas recentes
+              <Typography fontWeight={800} fontSize={17} mb={0.5}>
+                Alertas de alterações
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" mb={1.25}>
+                Edições, atualizações e remoções de dados (inventários, equipamentos, contas…).
               </Typography>
               <Divider sx={{ mb: 1.25 }} />
-              {atividadeHistorico.length === 0 ? (
+              {alertasEdicaoRemocao.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  Sem eventos recentes para mostrar.
+                  Sem alterações ou remoções recentes.
                 </Typography>
               ) : (
                 <Box sx={{ ...listaScrollSx, maxHeight: { xs: 210, lg: 235 } }}>
                   <List disablePadding>
-                    {atividadeHistorico.map((alerta, idx) => (
+                    {alertasEdicaoRemocao.map((alerta, idx) => (
                       <ListItem
                         key={alerta.id}
-                        divider={idx < atividadeHistorico.length - 1}
+                        divider={idx < alertasEdicaoRemocao.length - 1}
                         disableGutters
                         secondaryAction={<Typography variant="caption">{alerta.hora}</Typography>}
                       >
@@ -509,7 +542,14 @@ export default function DashboardPage({
                             className="material-symbols-outlined"
                             style={{
                               fontSize: 18,
-                              color: alerta.tone === "warning" ? "#f59e0b" : alerta.tone === "success" ? "#22c55e" : "#3b82f6",
+                              color:
+                                alerta.tone === "warning"
+                                  ? "#f59e0b"
+                                  : alerta.tone === "error"
+                                    ? "#dc2626"
+                                    : alerta.icon === "edit_square"
+                                      ? "#2563eb"
+                                      : "#22c55e",
                             }}
                           >
                             {alerta.icon}
@@ -526,8 +566,8 @@ export default function DashboardPage({
                   </List>
                 </Box>
               )}
-              <Button variant="text" size="small" sx={{ mt: 1 }} onClick={() => onNavigate("logs")}>
-                Ver todos os logs
+              <Button variant="text" size="small" sx={{ mt: 1 }} onClick={() => onNavigate("historico-conta")}>
+                Ver histórico de alterações
               </Button>
             </Paper>
           </Box>

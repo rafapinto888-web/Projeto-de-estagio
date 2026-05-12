@@ -5,6 +5,10 @@ cd "C:\Users\Jose\Desktop\Projeto de estagio"
 # Subir só frontend (modo recomendado)
 docker compose up -d --build web
 
+# Subir frontend em modo DEV (auto-atualiza ao editar no Cursor)
+# (usa Vite dentro do container, sem rebuild a cada alteração)
+docker compose up -d web-dev
+
 # Subir frontend + backend + base de dados (os 3)
 docker compose --profile docker-api --profile bundled-db up -d --build
 

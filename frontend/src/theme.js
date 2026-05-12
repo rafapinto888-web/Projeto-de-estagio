@@ -55,6 +55,10 @@ const theme = createTheme({
     },
     body2: {
       fontSize: "0.86rem",
+      overflowWrap: "anywhere",
+    },
+    body1: {
+      overflowWrap: "anywhere",
     },
     button: {
       textTransform: "none",
@@ -149,6 +153,11 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderColor: "#e2e8f0",
+          verticalAlign: "top",
+          "&:not(.MuiTableCell-head)": {
+            wordBreak: "break-word",
+            overflowWrap: "anywhere",
+          },
         },
         head: {
           fontWeight: 700,
@@ -156,6 +165,17 @@ const theme = createTheme({
           fontSize: "0.76rem",
           textTransform: "uppercase",
           letterSpacing: "0.04em",
+          verticalAlign: "middle",
+          whiteSpace: "nowrap",
+        },
+      },
+    },
+    MuiTableContainer: {
+      styleOverrides: {
+        root: {
+          maxWidth: "100%",
+          overflowX: "auto",
+          WebkitOverflowScrolling: "touch",
         },
       },
     },
@@ -189,6 +209,15 @@ const theme = createTheme({
         paper: {
           borderRadius: 16,
           border: "1px solid #dbe5f2",
+          maxHeight: "calc(100% - 32px)",
+        },
+      },
+    },
+    MuiDialogContent: {
+      styleOverrides: {
+        root: {
+          overflowY: "auto",
+          overflowX: "hidden",
         },
       },
     },

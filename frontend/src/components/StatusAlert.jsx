@@ -39,12 +39,16 @@ export default function StatusAlert({ type = "ok", message }) {
         variant="filled"
         onClose={() => setOpen(false)}
         sx={{
-          minWidth: 260,
+          minWidth: { xs: "min(100%, 260px)", sm: 260 },
+          maxWidth: { xs: "calc(100vw - 24px)", sm: 420 },
+          wordBreak: "break-word",
+          overflowWrap: "anywhere",
           borderColor: "#dbe5f2",
           backgroundColor: bgBySeverity[severity],
           color: "#0f172a",
           "& .MuiAlert-icon": { color: "#0f172a" },
           "& .MuiAlert-action": { color: "#0f172a" },
+          "& .MuiAlert-message": { flex: 1, minWidth: 0 },
         }}
       >
         {currentMessage}

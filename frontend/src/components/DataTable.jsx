@@ -34,9 +34,11 @@ export default function DataTable({
         borderRadius: 2,
         borderColor: "#dbe5f2",
         bgcolor: "#fff",
+        maxWidth: "100%",
+        overflowX: "auto",
       }}
     >
-      <Table size="small">
+      <Table size="small" sx={{ width: "100%" }}>
         <TableHead>
           <TableRow>
             {columns.map((col) => (
