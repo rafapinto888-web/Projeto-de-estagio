@@ -42,6 +42,24 @@ def get_current_user(
     swagger_credentials: HTTPBasicCredentials | None = Depends(basic_scheme),
     db: Session = Depends(get_db),
 ) -> UtilizadorDB:
+    # No Swagger/ReDoc, permite testar endpoints sem exigir login manual.
+    if _is_swagger_request(request):
+        candidatos = (
+            db.query(UtilizadorDB)
+            .options(joinedload(UtilizadorDB.perfil))
+            .all()
+        )
+        for utilizador in candidatos:
+            if is_admin_user(utilizador):
+                return utilizador
+        if candidatos:
+            return candidatos[0]
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sem utilizadores na base de dados para o modo Swagger",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
     authorization = request.headers.get("Authorization", "").strip()
 
     # Mantem compatibilidade com frontend atual (Bearer JWT).
@@ -86,16 +104,6 @@ def get_current_user(
             palavra_passe = None
 
     if not identificador or palavra_passe is None:
-        if _is_swagger_request(request):
-            # Bypass apenas no Swagger: usa um admin da BD quando nao existe auth explicita.
-            admin_swagger = (
-                db.query(UtilizadorDB)
-                .options(joinedload(UtilizadorDB.perfil))
-                .all()
-            )
-            for utilizador in admin_swagger:
-                if is_admin_user(utilizador):
-                    return utilizador
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Nao autenticado",
