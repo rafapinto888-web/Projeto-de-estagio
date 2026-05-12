@@ -11,7 +11,7 @@ function initials(user) {
   return (a + b).toUpperCase().slice(0, 2) || "?";
 }
 
-export default function Topbar({ user, isAdmin, onLogout, onSearch, onNavigate, showNavToggle = false, onToggleNav }) {
+export default function Topbar({ user, isAdmin, onLogout, onSearch, showNavToggle = false, onToggleNav }) {
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -45,10 +45,10 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, onNavigate, 
     >
       <Toolbar
         sx={{
-          gap: 1.1,
-          minHeight: "70px !important",
+          gap: 1,
+          minHeight: "64px !important",
           px: { xs: 1.2, md: 1.8 },
-          py: 1.1,
+          py: 1,
           alignItems: "stretch",
         }}
       >
@@ -57,9 +57,9 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, onNavigate, 
           sx={{
             display: "flex",
             alignItems: "center",
-            px: 1.25,
-            py: 0.6,
-            borderRadius: 3,
+            px: 1.2,
+            py: 0.45,
+            borderRadius: 2.5,
             width: "100%",
             bgcolor: "#ffffff",
             borderColor: "#dbe5f2",
@@ -78,8 +78,9 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, onNavigate, 
               if (e.key === "Enter") runSearch();
             }}
             inputProps={{ "aria-label": "Pesquisa global" }}
+            sx={{ fontSize: 14 }}
           />
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ display: { xs: "none", sm: "inline" } }}>
             Ctrl + K
           </Typography>
         </Paper>
@@ -88,7 +89,7 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, onNavigate, 
           direction="row"
           spacing={0.6}
           alignItems="center"
-          sx={{ flexShrink: 0, justifyContent: "space-between", width: "100%" }}
+          sx={{ flexShrink: 0, justifyContent: "flex-end", width: "100%" }}
         >
           {showNavToggle ? (
             <IconButton
@@ -102,16 +103,6 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, onNavigate, 
               </span>
             </IconButton>
           ) : null}
-          <IconButton
-            title="Ajuda — abre pesquisa global"
-            aria-label="Ajuda"
-            onClick={() => onNavigate?.("pesquisa")}
-            sx={{ border: "1px solid #dbe5f2", bgcolor: "#fff" }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-              help
-            </span>
-          </IconButton>
 
           <Stack direction="row" spacing={1.2} alignItems="center" sx={{ px: 0.6 }}>
             <Avatar sx={{ width: 34, height: 34, bgcolor: "primary.main", fontSize: 13, fontWeight: 700 }}>
