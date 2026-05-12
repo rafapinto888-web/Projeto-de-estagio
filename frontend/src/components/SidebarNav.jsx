@@ -70,10 +70,13 @@ function MenuContent({ tabs, activeTab, onSelect, mobile = false, onClose }) {
                 bgcolor: "#f1f6ff",
               },
               "&.Mui-selected": {
-                bgcolor: "#eaf1ff",
+                bgcolor: "#dbeafe",
                 color: "#1d4ed8",
-                border: "1px solid #dbeafe",
-                boxShadow: "0 6px 14px rgba(37,99,235,0.12)",
+                border: "1px solid #bfdbfe",
+                boxShadow: "0 6px 14px rgba(59,130,246,0.18)",
+              },
+              "&.Mui-selected:hover": {
+                bgcolor: "#bfdbfe",
               },
               "& .MuiListItemIcon-root": {
                 minWidth: 34,

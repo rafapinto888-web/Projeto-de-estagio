@@ -82,9 +82,11 @@ const theme = createTheme({
       },
       styleOverrides: {
         root: {
-          minHeight: 38,
-          borderRadius: 11,
-          paddingInline: 16,
+          minHeight: 36,
+          borderRadius: 10,
+          paddingInline: 14,
+          lineHeight: 1.15,
+          whiteSpace: "nowrap",
         },
         contained: {
           background: "linear-gradient(180deg, #3b82f6 0%, #2563eb 100%)",
@@ -94,9 +96,20 @@ const theme = createTheme({
           borderColor: "#cfdced",
           color: "#1e3a8a",
           backgroundColor: "#ffffff",
+          "&:hover": {
+            borderColor: "#93b4f0",
+            backgroundColor: "#eef5ff",
+          },
         },
         text: {
           color: "#1d4ed8",
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 10,
         },
       },
     },

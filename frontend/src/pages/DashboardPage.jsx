@@ -191,7 +191,13 @@ export default function DashboardPage({
       title="Dashboard"
       subtitle="Visão geral do inventário e atividade do sistema."
       rightAction={
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          spacing={1}
+          flexWrap="wrap"
+          useFlexGap
+          sx={{ width: { xs: "100%", md: "auto" }, justifyContent: "flex-end", ml: { md: "auto" } }}
+        >
           <Button variant="outlined" size="small" onClick={() => onNavigate("inventarios")}>
           Ver inventários
           </Button>

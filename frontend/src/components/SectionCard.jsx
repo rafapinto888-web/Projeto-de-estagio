@@ -7,6 +7,7 @@ export default function SectionCard({ title, subtitle, children, rightAction = n
       component="section"
       elevation={0}
       sx={{
+        width: "100%",
         border: "1px solid #dbe5f2",
         p: { xs: 1.5, md: 2 },
         borderRadius: 2.5,
@@ -26,13 +27,12 @@ export default function SectionCard({ title, subtitle, children, rightAction = n
       />
       <Stack
         direction={{ xs: "column", md: "row" }}
-        justifyContent="space-between"
-        alignItems={{ xs: "flex-start", md: "center" }}
+        alignItems="flex-start"
         gap={1.2}
         mb={2}
-        sx={{ position: "relative" }}
+        sx={{ position: "relative", width: "100%" }}
       >
-        <Box sx={{ minWidth: 0 }}>
+        <Box sx={{ minWidth: 0, flex: "1 1 auto", width: { xs: "100%", md: "auto" } }}>
           <Typography variant="h2" sx={{ mb: 0.25 }}>
             {title}
           </Typography>
@@ -46,9 +46,11 @@ export default function SectionCard({ title, subtitle, children, rightAction = n
           <Box
             sx={{
               width: { xs: "100%", md: "auto" },
+              flexShrink: 0,
               display: "flex",
-              justifyContent: { xs: "flex-end", md: "flex-start" },
-              alignSelf: { xs: "stretch", md: "auto" },
+              justifyContent: { xs: "flex-end", md: "flex-end" },
+              alignSelf: { xs: "stretch", md: "flex-start" },
+              ml: { md: "auto" },
             }}
           >
             {rightAction}

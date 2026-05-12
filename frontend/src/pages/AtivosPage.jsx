@@ -126,7 +126,13 @@ export default function AtivosPage({
       title="Scan"
       subtitle="Seleciona o inventário e executa descoberta de rede com credenciais reais."
       rightAction={
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          spacing={1}
+          flexWrap="wrap"
+          useFlexGap
+          sx={{ width: { xs: "100%", md: "auto" }, justifyContent: "flex-end" }}
+        >
           {isAdmin ? (
             <Button
               type="button"
@@ -139,14 +145,7 @@ export default function AtivosPage({
                 setScanTab("existente");
                 setModal("scan");
               }}
-              sx={{
-                minWidth: 170,
-                borderRadius: 2.5,
-                fontWeight: 700,
-                borderColor: "#c7d8f8",
-                color: "#1d4ed8",
-                "&:hover": { borderColor: "#93b4f0", bgcolor: "#eef5ff" },
-              }}
+              sx={{ minWidth: 170 }}
             >
               Scan de rede
             </Button>

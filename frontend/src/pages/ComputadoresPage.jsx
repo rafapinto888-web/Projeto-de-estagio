@@ -356,13 +356,6 @@ export default function ComputadoresPage({
             type="button"
             variant="outlined"
             onClick={openCreate}
-            sx={{
-              borderRadius: 2.5,
-              fontWeight: 700,
-              borderColor: "#c7d8f8",
-              color: "#1d4ed8",
-              "&:hover": { borderColor: "#93b4f0", bgcolor: "#eef5ff" },
-            }}
           >
             Novo computador
           </Button>

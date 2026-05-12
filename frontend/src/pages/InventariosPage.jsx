@@ -57,7 +57,7 @@ export default function InventariosPage({
   }
 
   return (
-    <Box sx={{ alignSelf: "start" }}>
+    <Box sx={{ width: "100%", alignSelf: "start" }}>
       <SectionCard
         title="Inventários"
         subtitle="Gerir inventários normais e de sub-rede. Usa o editor para criar ou alterar."

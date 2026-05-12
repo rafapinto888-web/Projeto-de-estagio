@@ -88,16 +88,16 @@ body {
     radial-gradient(ellipse 620px 360px at 92% 0%, rgba(99, 102, 241, 0.05), transparent 50%);
 }
 
-input,
-select,
+input:not(.MuiInputBase-input),
+select:not(.MuiSelect-select):not(.MuiNativeSelect-select),
 textarea,
-button {
+button:not(.MuiButtonBase-root) {
   font-family: inherit;
 }
 
-input,
-select,
-button {
+input:not(.MuiInputBase-input),
+select:not(.MuiSelect-select):not(.MuiNativeSelect-select),
+button:not(.MuiButtonBase-root) {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-strong);
   background: var(--surface);
@@ -116,7 +116,7 @@ select:hover {
 
 input:focus,
 select:focus,
-button:focus-visible {
+button:not(.MuiButtonBase-root):focus-visible {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-ring);
@@ -135,7 +135,7 @@ select {
   padding-right: 36px;
 }
 
-button {
+button:not(.MuiButtonBase-root) {
   cursor: pointer;
   font-weight: 600;
   letter-spacing: -0.015em;
@@ -145,16 +145,16 @@ button {
   box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
 }
 
-button:hover {
+button:not(.MuiButtonBase-root):hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
 }
 
-button:active {
+button:not(.MuiButtonBase-root):active {
   transform: translateY(1px);
 }
 
-button.ghost {
+button.ghost:not(.MuiButtonBase-root) {
   background: #fff;
   border-color: var(--border);
   color: #475569;
@@ -162,7 +162,7 @@ button.ghost {
   letter-spacing: 0;
 }
 
-button.ghost:hover {
+button.ghost:not(.MuiButtonBase-root):hover {
   background: #f8fafc;
   border-color: #cbd5e1;
   color: var(--text);
@@ -206,13 +206,13 @@ button.ghost:hover {
   font-size: 13px;
 }
 
-button.danger {
+button.danger:not(.MuiButtonBase-root) {
   background: var(--danger);
   border-color: var(--danger);
   box-shadow: 0 1px 2px rgba(225, 29, 72, 0.15);
 }
 
-button.danger:hover {
+button.danger:not(.MuiButtonBase-root):hover {
   background: var(--danger-hover);
   border-color: var(--danger-hover);
 }
@@ -227,7 +227,7 @@ button.danger:hover {
   border-radius: var(--radius-sm);
 }
 
-button.table-btn:last-of-type {
+button.table-btn:not(.MuiButtonBase-root):last-of-type {
   margin-right: 0;
 }
 
@@ -280,8 +280,11 @@ button.table-btn:last-of-type {
   padding: 0 32px 36px;
   display: grid;
   gap: 20px;
-  max-width: 1480px;
+  max-width: none;
   width: 100%;
+  min-width: 0;
+  align-self: stretch;
+  justify-items: stretch;
 }
 
 /* --- Topbar (referência administrativa) --- */
@@ -2707,13 +2710,13 @@ body {
   color: #5f6f84;
 }
 
-button,
-input,
-select {
+button:not(.MuiButtonBase-root),
+input:not(.MuiInputBase-input),
+select:not(.MuiSelect-select):not(.MuiNativeSelect-select) {
   font-size: 12.5px;
 }
 
-button {
+button:not(.MuiButtonBase-root) {
   min-height: 34px;
   padding: 7px 11px;
 }
@@ -3574,7 +3577,7 @@ th {
 
 /* Upgrade visual global (stack atual, sem alterar lógica) */
 .content {
-  max-width: 1520px;
+  max-width: none;
   margin: 0;
 }
 
