@@ -32,6 +32,14 @@ function labelAtivo(a) {
   return a.hostname || a.ip || `Scan #${a.id}`;
 }
 
+/** Título na coluna Equipamento: evita repetir o IP quando a coluna IP já o mostra. */
+function tituloColunaEquipamento(a) {
+  if (a.tipo === "computador") return dash(a.nome);
+  const host = a.hostname && String(a.hostname).trim();
+  if (host) return dash(a.hostname);
+  return `Scan #${a.id ?? "?"}`;
+}
+
 function sortByIdentificacao(list) {
   return [...(list || [])].sort((a, b) =>
     labelAtivo(a).localeCompare(labelAtivo(b), "pt", { sensitivity: "base" }),
@@ -793,12 +801,13 @@ export default function ComputadoresPage({
                                   <span className="material-symbols-outlined computadores-cell-equip-ic" aria-hidden>
                                     computer
                                   </span>
-                                  <div>
-                                    <span className="cell-title">
-                                      {a.tipo === "computador" ? dash(a.nome) : labelAtivo(a)}
-                                    </span>
-                                    {a.hostname ? (
+                                  <div className="computadores-cell-equip-text">
+                                    <span className="cell-title">{tituloColunaEquipamento(a)}</span>
+                                    {a.tipo === "computador" && a.hostname ? (
                                       <span className="computadores-cell-equip-sub">{dash(a.hostname)}</span>
+                                    ) : null}
+                                    {a.tipo === "dispositivo_descoberto" && a.hostname && (a.ip || a.endereco_ip) ? (
+                                      <span className="computadores-cell-equip-sub">{dash(a.ip || a.endereco_ip)}</span>
                                     ) : null}
                                   </div>
                                 </td>
