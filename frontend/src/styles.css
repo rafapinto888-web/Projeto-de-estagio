@@ -2280,10 +2280,15 @@ pre {
 .computadores-por-inv-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.25rem;
+  gap: 1.5rem;
   align-items: stretch;
   width: 100%;
   min-width: 0;
+}
+
+.computadores-por-inv-grid > .computadores-inv-card {
+  align-self: stretch;
+  min-height: 0;
 }
 
 @media (min-width: 1200px) {
@@ -2375,7 +2380,7 @@ pre {
   min-width: 4.5rem;
 }
 
-.computadores-inv-card-link {
+.computadores-inv-card-export {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2383,9 +2388,9 @@ pre {
   padding: 0.4rem 0.65rem;
   font-size: 0.82rem;
   font-weight: 600;
-  color: var(--accent);
-  background: transparent;
-  border: 1px solid rgba(37, 99, 235, 0.25);
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid rgba(22, 101, 52, 0.35);
   border-radius: var(--radius-md);
   cursor: pointer;
   font-family: var(--font-sans);
@@ -2393,12 +2398,23 @@ pre {
   flex-shrink: 0;
   transition:
     background 0.15s,
-    border-color 0.15s;
+    border-color 0.15s,
+    color 0.15s,
+    opacity 0.15s;
 }
 
-.computadores-inv-card-link:hover {
-  background: var(--accent-soft);
-  border-color: rgba(37, 99, 235, 0.45);
+.computadores-inv-card-export:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: #64748b;
+  background: #f8fafc;
+  border-color: rgba(100, 116, 139, 0.25);
+}
+
+.computadores-inv-card-export:not(:disabled):hover {
+  background: #dcfce7;
+  border-color: rgba(22, 101, 52, 0.55);
+  color: #14532d;
 }
 
 @media (max-width: 480px) {
@@ -2406,12 +2422,12 @@ pre {
     grid-template-columns: 1fr;
   }
 
-  .computadores-inv-card-link {
+  .computadores-inv-card-export {
     justify-self: start;
   }
 }
 
-.computadores-inv-card-link .material-symbols-outlined {
+.computadores-inv-card-export .material-symbols-outlined {
   font-size: 1.05rem;
 }
 
@@ -2452,14 +2468,29 @@ pre {
   min-width: 0;
   min-height: 0;
   width: 100%;
-  max-height: min(52vh, 400px);
+  max-height: min(56vh, 440px);
   overflow: auto;
+  scrollbar-gutter: stable;
   -webkit-overflow-scrolling: touch;
   border-radius: 0;
   border-left: none;
   border-right: none;
   border-bottom: none;
   box-shadow: none;
+}
+
+.computadores-inv-table-scroll--empty {
+  min-height: 11rem;
+}
+
+.computadores-inv-table-empty {
+  text-align: center;
+  vertical-align: middle;
+  padding: 2.25rem 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--text-soft);
+  background: rgba(248, 250, 252, 0.85);
 }
 
 .computadores-inv-table-scroll thead th {
@@ -2475,6 +2506,36 @@ pre {
   width: max-content;
   min-width: 1020px;
   max-width: none;
+}
+
+/* Legibilidade — tabela dentro do cartão (tipografia e alternância de linhas) */
+.computadores-inv-card .computadores-detalhe-table {
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.computadores-inv-card .computadores-detalhe-table th {
+  font-size: 0.72rem;
+  letter-spacing: 0.035em;
+  padding: 0.52rem 0.58rem;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.computadores-inv-card .computadores-detalhe-table td {
+  padding: 0.52rem 0.58rem;
+}
+
+.computadores-inv-card .computadores-detalhe-table tbody tr:nth-child(even) {
+  background: rgba(241, 245, 249, 0.92);
+}
+
+.computadores-inv-card .computadores-detalhe-table tbody tr:hover {
+  background: rgba(219, 234, 254, 0.55);
+}
+
+.computadores-inv-card .computadores-detalhe-table tbody tr:nth-child(even):hover {
+  background: rgba(219, 234, 254, 0.65);
 }
 
 .computadores-cell-equip {

@@ -14,6 +14,7 @@ import {
 import { api } from "../api";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
+import { exportInventarioComputadoresParaExcel } from "../utils/exportInventarioComputadores.js";
 
 function tipoInvLabel(t) {
   if (t === "sub_rede") return "Sub-rede";
@@ -160,6 +161,8 @@ function estadoPillClass(estadoRaw) {
 }
 
 const LINHAS_POR_PAGINA = 10;
+/** Colunas da tabela unificada por inventário (ID … Ações). */
+const COLUNAS_TABELA_INVENTARIO = 17;
 
 export default function ComputadoresPage({
   isAdmin,
@@ -180,7 +183,6 @@ export default function ComputadoresPage({
   onDeleteRow,
   token,
   withPanelAction,
-  onNavigateTab,
 }) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState("create");
@@ -674,20 +676,23 @@ export default function ComputadoresPage({
                     </div>
                     <button
                       type="button"
-                      className="computadores-inv-card-link"
-                      onClick={() => onNavigateTab?.("inventarios")}
+                      className="computadores-inv-card-export"
+                      disabled={linhasUnificadas.length === 0}
+                      title={
+                        linhasUnificadas.length === 0
+                          ? "Sem linhas para exportar com os filtros atuais"
+                          : "Descarregar CSV para abrir no Excel (UTF-8)"
+                      }
+                      onClick={() => exportInventarioComputadoresParaExcel(grupo, linhasUnificadas)}
                     >
-                      Abrir inventários
+                      Exportar para Excel
                       <span className="material-symbols-outlined" aria-hidden>
-                        open_in_new
+                        download
                       </span>
                     </button>
                   </header>
 
-                  {nTot === 0 ? (
-                    <p className="cell-muted computadores-inv-empty">Nenhum equipamento neste inventário.</p>
-                  ) : (
-                    <div className="computadores-inv-card-body">
+                  <div className="computadores-inv-card-body">
                       <div className="computadores-inv-card-toolbar">
                         <TextField
                           type="search"
@@ -700,6 +705,7 @@ export default function ComputadoresPage({
                             setInvQ((p) => ({ ...p, [k]: v }));
                             setInvPage((p) => ({ ...p, [k]: 1 }));
                           }}
+                          disabled={nTot === 0}
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
@@ -720,6 +726,7 @@ export default function ComputadoresPage({
                             setInvEst((p) => ({ ...p, [k]: e.target.value }));
                             setInvPage((p) => ({ ...p, [k]: 1 }));
                           }}
+                          disabled={nTot === 0}
                           sx={{ minWidth: 140, flex: "0 0 auto", maxWidth: "100%" }}
                         >
                           <MenuItem value="">Todos</MenuItem>
@@ -734,7 +741,11 @@ export default function ComputadoresPage({
                         </IconButton>
                       </div>
 
-                      <div className="table-shell computadores-detalhe-table computadores-detalhe-table--unified computadores-inv-table-scroll">
+                      <div
+                        className={`table-shell computadores-detalhe-table computadores-detalhe-table--unified computadores-inv-table-scroll${
+                          totalLinhas === 0 ? " computadores-inv-table-scroll--empty" : ""
+                        }`}
+                      >
                         <table>
                           <thead>
                             <tr>
@@ -758,7 +769,17 @@ export default function ComputadoresPage({
                             </tr>
                           </thead>
                           <tbody>
-                            {linhasPagina.map((a) => (
+                            {nTot === 0 || totalLinhas === 0 ? (
+                              <tr>
+                                <td colSpan={COLUNAS_TABELA_INVENTARIO} className="computadores-inv-table-empty">
+                                  {nTot === 0
+                                    ? "Nenhum equipamento neste inventário."
+                                    : "Nenhum resultado com a pesquisa ou o estado selecionado neste inventário."}
+                                </td>
+                              </tr>
+                            ) : null}
+                            {nTot > 0 && totalLinhas > 0
+                              ? linhasPagina.map((a) => (
                               <tr
                                 key={a.tipo === "computador" ? `pc-${a.id}` : `scan-${a.id}`}
                                 className={
@@ -860,26 +881,32 @@ export default function ComputadoresPage({
                                   )}
                                 </td>
                               </tr>
-                            ))}
+                            ))
+                            : null}
                           </tbody>
                         </table>
                       </div>
 
-                      {totalLinhas > 0 ? (
-                        <footer className="computadores-inv-pagination">
+                      <footer className="computadores-inv-pagination">
                           <Typography variant="caption" color="text.secondary">
-                            Linhas por página {LINHAS_POR_PAGINA} ·{" "}
-                            {totalLinhas === 0
-                              ? "0"
-                              : `${inicio + 1}-${Math.min(inicio + LINHAS_POR_PAGINA, totalLinhas)}`}{" "}
-                            de {totalLinhas}
+                            {totalLinhas === 0 ? (
+                              <>
+                                Linhas por página {LINHAS_POR_PAGINA} · <strong>0</strong> linhas neste inventário
+                              </>
+                            ) : (
+                              <>
+                                Linhas por página {LINHAS_POR_PAGINA} ·{" "}
+                                {`${inicio + 1}-${Math.min(inicio + LINHAS_POR_PAGINA, totalLinhas)}`} de{" "}
+                                {totalLinhas}
+                              </>
+                            )}
                           </Typography>
                           <Box sx={{ display: "flex", gap: 0.75, alignItems: "center" }}>
                             <Button
                               type="button"
                               size="small"
                               variant="outlined"
-                              disabled={pagAtual <= 1}
+                              disabled={totalLinhas === 0 || pagAtual <= 1}
                               onClick={() => setInvPage((p) => ({ ...p, [k]: Math.max(1, (p[k] || 1) - 1) }))}
                             >
                               Anterior
@@ -888,14 +915,11 @@ export default function ComputadoresPage({
                               type="button"
                               size="small"
                               variant="outlined"
-                              disabled={pagAtual >= Math.ceil(totalLinhas / LINHAS_POR_PAGINA)}
+                              disabled={totalLinhas === 0 || pagAtual >= maxPag}
                               onClick={() =>
                                 setInvPage((p) => ({
                                   ...p,
-                                  [k]: Math.min(
-                                    Math.max(1, Math.ceil(totalLinhas / LINHAS_POR_PAGINA)),
-                                    (p[k] || 1) + 1,
-                                  ),
+                                  [k]: Math.min(maxPag, (p[k] || 1) + 1),
                                 }))
                               }
                             >
@@ -903,9 +927,7 @@ export default function ComputadoresPage({
                             </Button>
                           </Box>
                         </footer>
-                      ) : null}
                     </div>
-                  )}
                 </article>
               );
               })
