@@ -2,11 +2,14 @@
 
 import { useCallback, useMemo, useState } from "react";
 import {
+  Box,
   Button,
+  IconButton,
   InputAdornment,
   MenuItem,
   Stack,
   TextField,
+  Typography,
 } from "@mui/material";
 import { api } from "../api";
 import FormModal from "../components/FormModal";
@@ -134,6 +137,30 @@ function inventarioTemAtivoCoincidente(grupo, qLimpa) {
   return (grupo.ativos || []).some((a) => textoAtivoBusca(a).includes(qLimpa));
 }
 
+function invKey(grupo) {
+  return String(grupo?.inventario_id ?? "");
+}
+
+function estadosUnicosDeAtivos(ativos) {
+  const s = new Set();
+  (ativos || []).forEach((a) => {
+    const e = String(a?.estado || "").trim();
+    if (e) s.add(e);
+  });
+  return [...s].sort((a, b) => a.localeCompare(b, "pt", { sensitivity: "base" }));
+}
+
+function estadoPillClass(estadoRaw) {
+  const e = String(estadoRaw || "").toLowerCase();
+  if (e.includes("ativ")) return "computadores-estado-pill--ok";
+  if (e.includes("inativ")) return "computadores-estado-pill--warn";
+  if (e.includes("manut") || e.includes("pend")) return "computadores-estado-pill--pend";
+  if (e.includes("erro") || e.includes("offline")) return "computadores-estado-pill--off";
+  return "computadores-estado-pill--muted";
+}
+
+const LINHAS_POR_PAGINA = 10;
+
 export default function ComputadoresPage({
   isAdmin,
   computadorForm,
@@ -153,6 +180,7 @@ export default function ComputadoresPage({
   onDeleteRow,
   token,
   withPanelAction,
+  onNavigateTab,
 }) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState("create");
@@ -160,6 +188,10 @@ export default function ComputadoresPage({
   const [scanForm, setScanForm] = useState(emptyScanForm);
   const [pesquisaLista, setPesquisaLista] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("todos"); // todos | manuais | scan
+  const [filtroEstadoGlobal, setFiltroEstadoGlobal] = useState("");
+  const [invQ, setInvQ] = useState({});
+  const [invEst, setInvEst] = useState({});
+  const [invPage, setInvPage] = useState({});
 
   /** Inventários com mais equipamentos primeiro; depois nome A–Z. */
   const gruposOrdenados = useMemo(() => {
@@ -195,25 +227,46 @@ export default function ComputadoresPage({
     };
   }, [gruposOrdenados]);
 
+  const estadosGlobaisOpcoes = useMemo(() => {
+    const s = new Set();
+    for (const g of gruposOrdenados) {
+      (g.ativos || []).forEach((a) => {
+        const e = String(a?.estado || "").trim();
+        if (e) s.add(e);
+      });
+    }
+    return [...s].sort((a, b) => a.localeCompare(b, "pt", { sensitivity: "base" }));
+  }, [gruposOrdenados]);
+
   const qLista = pesquisaLista.trim().toLowerCase();
 
   const gruposExibicao = useMemo(() => {
     return gruposOrdenados.filter((g) => {
-      const todosAt = g.ativos || [];
+      const todosBase = g.ativos || [];
+      const todosAt = filtroEstadoGlobal
+        ? todosBase.filter(
+            (x) => String(x.estado || "").toLowerCase() === filtroEstadoGlobal.toLowerCase(),
+          )
+        : todosBase;
       const nReg = todosAt.filter((x) => x.tipo === "computador").length;
       const nScan = todosAt.filter((x) => x.tipo === "dispositivo_descoberto").length;
       if (filtroTipo === "manuais" && nReg === 0) return false;
       if (filtroTipo === "scan" && nScan === 0) return false;
       if (qLista === "") return true;
-      return inventarioCoincideNome(g, qLista) || inventarioTemAtivoCoincidente(g, qLista);
+      return inventarioCoincideNome(g, qLista) || inventarioTemAtivoCoincidente({ ...g, ativos: todosAt }, qLista);
     });
-  }, [gruposOrdenados, filtroTipo, qLista]);
+  }, [gruposOrdenados, filtroTipo, qLista, filtroEstadoGlobal]);
 
   const totaisFiltrados = useMemo(() => {
     let registos = 0;
     let scan = 0;
     for (const g of gruposExibicao) {
-      const at = g.ativos || [];
+      const todosBase = g.ativos || [];
+      const at = filtroEstadoGlobal
+        ? todosBase.filter(
+            (x) => String(x.estado || "").toLowerCase() === filtroEstadoGlobal.toLowerCase(),
+          )
+        : todosBase;
       let rs = at.filter((x) => x.tipo === "computador");
       let sc = at.filter((x) => x.tipo === "dispositivo_descoberto");
       if (qLista && !inventarioCoincideNome(g, qLista)) {
@@ -231,26 +284,23 @@ export default function ComputadoresPage({
       total: registos + scan,
       inventarios: gruposExibicao.length,
     };
-  }, [gruposExibicao, qLista, filtroTipo]);
+  }, [gruposExibicao, qLista, filtroTipo, filtroEstadoGlobal]);
 
-  const filtroActivo = qLista !== "" || filtroTipo !== "todos";
-
-  function expandirTodosBlocos(abrir) {
-    document.querySelectorAll(".computadores-inv-collapsible").forEach((el) => {
-      el.open = abrir;
-    });
-  }
+  const filtroActivo = qLista !== "" || filtroTipo !== "todos" || Boolean(filtroEstadoGlobal);
 
   function irParaInventario(id) {
     if (!id) return;
-    const el = document.getElementById(`computadores-inv-${id}`);
+    const el = document.getElementById(`computadores-inv-card-${id}`);
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
-    if (el && "open" in el) el.open = true;
   }
 
   function limparFiltrosLista() {
     setPesquisaLista("");
     setFiltroTipo("todos");
+    setFiltroEstadoGlobal("");
+    setInvQ({});
+    setInvEst({});
+    setInvPage({});
   }
 
   const closeEditor = useCallback(() => {
@@ -352,12 +402,14 @@ export default function ComputadoresPage({
   return (
     <SectionCard
       title="Computadores"
-      subtitle="Por inventário: uma única lista; a coluna Origem indica se o registo é manual ou do scan."
+      subtitle="Equipamentos agrupados por inventário — dados da base (manual e scan)."
       rightAction={
         isAdmin ? (
           <Button
             type="button"
-            variant="outlined"
+            variant="contained"
+            color="primary"
+            startIcon={<span className="material-symbols-outlined" style={{ fontSize: 20 }} aria-hidden>add</span>}
             onClick={openCreate}
           >
             Novo computador
@@ -383,7 +435,7 @@ export default function ComputadoresPage({
                     type="search"
                     size="small"
                     fullWidth
-                    placeholder="Pesquisar inventário ou equipamento (IP, hostname, série…)"
+                    placeholder="Pesquisar por nome, hostname, IP, MAC ou série…"
                     value={pesquisaLista}
                     onChange={(e) => setPesquisaLista(e.target.value)}
                     autoComplete="off"
@@ -436,6 +488,22 @@ export default function ComputadoresPage({
                   </div>
                 </div>
                 <div className="computadores-toolbar-merge-right">
+                  <TextField
+                    select
+                    size="small"
+                    label="Estado"
+                    value={filtroEstadoGlobal}
+                    onChange={(e) => setFiltroEstadoGlobal(e.target.value)}
+                    disabled={gruposOrdenados.length === 0}
+                    sx={{ minWidth: 160 }}
+                  >
+                    <MenuItem value="">Todos</MenuItem>
+                    {estadosGlobaisOpcoes.map((est) => (
+                      <MenuItem key={est} value={est}>
+                        {est}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                   <label className="computadores-jump-compact">
                     <span className="computadores-jump-compact-label">Ir para</span>
                     <TextField
@@ -458,24 +526,6 @@ export default function ComputadoresPage({
                       ))}
                     </TextField>
                   </label>
-                  <div className="computadores-toolbar-actions">
-                    <button
-                      type="button"
-                      className="ghost ghost-sm"
-                      onClick={() => expandirTodosBlocos(true)}
-                      disabled={gruposExibicao.length === 0}
-                    >
-                      Expandir todos
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost ghost-sm"
-                      onClick={() => expandirTodosBlocos(false)}
-                      disabled={gruposExibicao.length === 0}
-                    >
-                      Recolher todos
-                    </button>
-                  </div>
                 </div>
               </div>
             </section>
@@ -526,7 +576,7 @@ export default function ComputadoresPage({
             </div>
           </div>
 
-          <div className="computadores-por-inv-stack">
+          <div className="computadores-por-inv-grid">
             {gruposExibicao.length === 0 ? (
               <div className="computadores-empty-filtros" role="status">
                 <div className="computadores-empty-filtros-inner">
@@ -546,7 +596,14 @@ export default function ComputadoresPage({
               </div>
             ) : (
               gruposExibicao.map((grupo, idxInv) => {
-              const todos = grupo.ativos || [];
+              const k = invKey(grupo);
+              let todosBase = grupo.ativos || [];
+              if (filtroEstadoGlobal) {
+                todosBase = todosBase.filter(
+                  (x) => String(x.estado || "").toLowerCase() === filtroEstadoGlobal.toLowerCase(),
+                );
+              }
+              const todos = todosBase;
               const nomeInvMatch = qLista !== "" && inventarioCoincideNome(grupo, qLista);
               let registos = sortByIdentificacao(todos.filter((a) => a.tipo === "computador"));
               let scans = sortByIdentificacao(todos.filter((a) => a.tipo === "dispositivo_descoberto"));
@@ -559,65 +616,130 @@ export default function ComputadoresPage({
               const nReg = registos.length;
               const nScan = scans.length;
               const nTot = nReg + nScan;
-              const linhasUnificadas = linhasEquipamentosUnificadas(registos, scans);
+              const linhasBaseCard = linhasEquipamentosUnificadas(registos, scans);
+              const estadosCard = estadosUnicosDeAtivos(linhasBaseCard);
+              let linhasUnificadas = linhasBaseCard;
+              const qInv = (invQ[k] || "").trim().toLowerCase();
+              const estInv = invEst[k] || "";
+              if (qInv) {
+                linhasUnificadas = linhasUnificadas.filter((a) => textoAtivoBusca(a).includes(qInv));
+              }
+              if (estInv) {
+                linhasUnificadas = linhasUnificadas.filter(
+                  (a) => String(a.estado || "").toLowerCase() === estInv.toLowerCase(),
+                );
+              }
+              const totalLinhas = linhasUnificadas.length;
+              const maxPag = Math.max(1, Math.ceil(totalLinhas / LINHAS_POR_PAGINA) || 1);
+              let pagAtual = invPage[k] || 1;
+              if (pagAtual > maxPag) pagAtual = maxPag;
+              if (pagAtual < 1) pagAtual = 1;
+              const inicio = (pagAtual - 1) * LINHAS_POR_PAGINA;
+              const linhasPagina = linhasUnificadas.slice(inicio, inicio + LINHAS_POR_PAGINA);
               const tipoInv =
                 grupo.tipo_inventario === "sub_rede" ? "sub_rede" : "normal";
 
               return (
-                <details
+                <article
                   key={grupo.inventario_id}
-                  id={`computadores-inv-${grupo.inventario_id}`}
-                  className={`computadores-inv-collapsible computadores-inv-block computadores-inv-block--${tipoInv}`}
+                  id={`computadores-inv-card-${grupo.inventario_id}`}
+                  className={`computadores-inv-card computadores-inv-card--${tipoInv}`}
                 >
-                  <summary className="computadores-inv-summary">
-                    <span className="computadores-inv-summary-grip" aria-hidden title="Expandir ou recolher">
-                      <span className="material-symbols-outlined">expand_more</span>
-                    </span>
-                    <span className="computadores-inv-summary-main">
-                      <span className="computadores-inv-index">#{idxInv + 1}</span>
-                      <div className="computadores-inv-head-text">
-                        <h3 className="computadores-inv-title">{grupo.inventario_nome}</h3>
-                        <span className="pill badge-info">{tipoInvLabel(grupo.tipo_inventario)}</span>
+                  <header className="computadores-inv-card-header">
+                    <div className="computadores-inv-card-head-main">
+                      <span className="computadores-inv-card-folder material-symbols-outlined" aria-hidden>
+                        folder
+                      </span>
+                      <div className="computadores-inv-card-head-text">
+                        <div className="computadores-inv-card-title-row">
+                          <h3 className="computadores-inv-card-title">{grupo.inventario_nome}</h3>
+                          <span className="pill badge-info">{tipoInvLabel(grupo.tipo_inventario)}</span>
+                          <span className="computadores-inv-card-index">#{idxInv + 1}</span>
+                        </div>
+                        <dl className="computadores-inv-kpis computadores-inv-kpis--inline">
+                          <div className="computadores-inv-kpi">
+                            <dt>Total</dt>
+                            <dd>{nTot}</dd>
+                          </div>
+                          <div className="computadores-inv-kpi computadores-inv-kpi--manual">
+                            <dt>Manuais</dt>
+                            <dd>{nReg}</dd>
+                          </div>
+                          <div className="computadores-inv-kpi computadores-inv-kpi--scan">
+                            <dt>Scan</dt>
+                            <dd>{nScan}</dd>
+                          </div>
+                        </dl>
                       </div>
-                    </span>
-                    <dl className="computadores-inv-kpis">
-                      <div className="computadores-inv-kpi">
-                        <dt>Total</dt>
-                        <dd>{nTot}</dd>
-                      </div>
-                      <div className="computadores-inv-kpi computadores-inv-kpi--manual">
-                        <dt>Manuais</dt>
-                        <dd>{nReg}</dd>
-                      </div>
-                      <div className="computadores-inv-kpi computadores-inv-kpi--scan">
-                        <dt>Scan</dt>
-                        <dd>{nScan}</dd>
-                      </div>
-                    </dl>
-                  </summary>
+                    </div>
+                    <button
+                      type="button"
+                      className="computadores-inv-card-link"
+                      onClick={() => onNavigateTab?.("inventarios")}
+                    >
+                      Abrir inventários
+                      <span className="material-symbols-outlined" aria-hidden>
+                        open_in_new
+                      </span>
+                    </button>
+                  </header>
 
-                  <div className="computadores-inv-body">
                   {nTot === 0 ? (
                     <p className="cell-muted computadores-inv-empty">Nenhum equipamento neste inventário.</p>
                   ) : (
-                    <section className="computadores-subsection computadores-subsection-card computadores-unified-card">
-                      <h4 className="computadores-subsection-title">
-                        <span className="material-symbols-outlined" aria-hidden>
-                          devices
-                        </span>
-                        Equipamentos
-                        <span className="computadores-subsection-count">{nTot}</span>
-                      </h4>
-                      <div className="table-shell computadores-table-wrap computadores-detalhe-table computadores-detalhe-table--unified">
+                    <div className="computadores-inv-card-body">
+                      <div className="computadores-inv-card-toolbar">
+                        <TextField
+                          type="search"
+                          size="small"
+                          fullWidth
+                          placeholder="Pesquisar neste inventário…"
+                          value={invQ[k] || ""}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setInvQ((p) => ({ ...p, [k]: v }));
+                            setInvPage((p) => ({ ...p, [k]: 1 }));
+                          }}
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <span className="material-symbols-outlined computadores-search-field-icon" aria-hidden>
+                                  search
+                                </span>
+                              </InputAdornment>
+                            ),
+                          }}
+                          sx={{ flex: "1 1 200px", minWidth: 0, maxWidth: "100%" }}
+                        />
+                        <TextField
+                          select
+                          size="small"
+                          label="Estado"
+                          value={estInv}
+                          onChange={(e) => {
+                            setInvEst((p) => ({ ...p, [k]: e.target.value }));
+                            setInvPage((p) => ({ ...p, [k]: 1 }));
+                          }}
+                          sx={{ minWidth: 140, flex: "0 0 auto", maxWidth: "100%" }}
+                        >
+                          <MenuItem value="">Todos</MenuItem>
+                          {estadosCard.map((est) => (
+                            <MenuItem key={est} value={est}>
+                              {est}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                        <IconButton size="small" aria-label="Filtros do inventário" disabled title="Filtro local">
+                          <span className="material-symbols-outlined">filter_list</span>
+                        </IconButton>
+                      </div>
+
+                      <div className="table-shell computadores-detalhe-table computadores-detalhe-table--unified computadores-inv-table-scroll">
                         <table>
                           <thead>
                             <tr>
                               <th>ID</th>
-                              <th>Inventário</th>
-                              <th>Origem</th>
-                              <th>Origem registo (BD)</th>
-                              <th>Primeira vista</th>
-                              <th>Nome / identif.</th>
+                              <th>Equipamento</th>
                               <th>Hostname</th>
                               <th>IP</th>
                               <th>MAC</th>
@@ -625,15 +747,18 @@ export default function ComputadoresPage({
                               <th>Modelo</th>
                               <th>N.º série</th>
                               <th>Sistema</th>
+                              <th>Origem</th>
+                              <th>Origem registo</th>
+                              <th>Primeira vista</th>
                               <th>Estado</th>
                               <th>Localiz.</th>
                               <th>Resp.</th>
-                              <th>Última atividade</th>
+                              <th>Última atualização</th>
                               <th className="th-actions">Ações</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {linhasUnificadas.map((a) => (
+                            {linhasPagina.map((a) => (
                               <tr
                                 key={a.tipo === "computador" ? `pc-${a.id}` : `scan-${a.id}`}
                                 className={
@@ -643,7 +768,26 @@ export default function ComputadoresPage({
                                 }
                               >
                                 <td className="cell-mono">{a.id != null ? String(a.id) : "—"}</td>
-                                <td>{dash(grupo.inventario_nome)}</td>
+                                <td className="computadores-cell-equip">
+                                  <span className="material-symbols-outlined computadores-cell-equip-ic" aria-hidden>
+                                    computer
+                                  </span>
+                                  <div>
+                                    <span className="cell-title">
+                                      {a.tipo === "computador" ? dash(a.nome) : labelAtivo(a)}
+                                    </span>
+                                    {a.hostname ? (
+                                      <span className="computadores-cell-equip-sub">{dash(a.hostname)}</span>
+                                    ) : null}
+                                  </div>
+                                </td>
+                                <td className="cell-mono">{dash(a.hostname)}</td>
+                                <td className="cell-mono">{dash(a.ip || a.endereco_ip)}</td>
+                                <td className="cell-mono">{dash(a.mac_address)}</td>
+                                <td>{dash(a.marca)}</td>
+                                <td>{dash(a.modelo)}</td>
+                                <td className="cell-mono">{dash(a.numero_serie)}</td>
+                                <td>{dash(a.sistema_operativo)}</td>
                                 <td>
                                   <span
                                     className={
@@ -662,18 +806,11 @@ export default function ComputadoresPage({
                                   {a.tipo === "dispositivo_descoberto" ? fmtUltimaSinc(a.criado_em) : "—"}
                                 </td>
                                 <td>
-                                  <span className="cell-title">
-                                    {a.tipo === "computador" ? dash(a.nome) : labelAtivo(a)}
+                                  <span className={`computadores-estado-pill ${estadoPillClass(a.estado)}`}>
+                                    <span className="computadores-estado-dot" aria-hidden />
+                                    {dash(a.estado)}
                                   </span>
                                 </td>
-                                <td className="cell-mono">{dash(a.hostname)}</td>
-                                <td className="cell-mono">{dash(a.ip)}</td>
-                                <td className="cell-mono">{dash(a.mac_address)}</td>
-                                <td>{dash(a.marca)}</td>
-                                <td>{dash(a.modelo)}</td>
-                                <td className="cell-mono">{dash(a.numero_serie)}</td>
-                                <td>{dash(a.sistema_operativo)}</td>
-                                <td>{dash(a.estado)}</td>
                                 <td>{a.tipo === "computador" ? dash(a.localizacao_nome) : "—"}</td>
                                 <td>{a.tipo === "computador" ? dash(a.utilizador_responsavel_nome) : "—"}</td>
                                 <td className="cell-muted cell-nowrap">
@@ -727,10 +864,49 @@ export default function ComputadoresPage({
                           </tbody>
                         </table>
                       </div>
-                    </section>
+
+                      {totalLinhas > 0 ? (
+                        <footer className="computadores-inv-pagination">
+                          <Typography variant="caption" color="text.secondary">
+                            Linhas por página {LINHAS_POR_PAGINA} ·{" "}
+                            {totalLinhas === 0
+                              ? "0"
+                              : `${inicio + 1}-${Math.min(inicio + LINHAS_POR_PAGINA, totalLinhas)}`}{" "}
+                            de {totalLinhas}
+                          </Typography>
+                          <Box sx={{ display: "flex", gap: 0.75, alignItems: "center" }}>
+                            <Button
+                              type="button"
+                              size="small"
+                              variant="outlined"
+                              disabled={pagAtual <= 1}
+                              onClick={() => setInvPage((p) => ({ ...p, [k]: Math.max(1, (p[k] || 1) - 1) }))}
+                            >
+                              Anterior
+                            </Button>
+                            <Button
+                              type="button"
+                              size="small"
+                              variant="outlined"
+                              disabled={pagAtual >= Math.ceil(totalLinhas / LINHAS_POR_PAGINA)}
+                              onClick={() =>
+                                setInvPage((p) => ({
+                                  ...p,
+                                  [k]: Math.min(
+                                    Math.max(1, Math.ceil(totalLinhas / LINHAS_POR_PAGINA)),
+                                    (p[k] || 1) + 1,
+                                  ),
+                                }))
+                              }
+                            >
+                              Seguinte
+                            </Button>
+                          </Box>
+                        </footer>
+                      ) : null}
+                    </div>
                   )}
-                  </div>
-                </details>
+                </article>
               );
               })
             )}

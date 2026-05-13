@@ -795,6 +795,7 @@ export default function App() {
               }
               token={token}
               withPanelAction={withAction}
+              onNavigateTab={(tabId) => setActiveTab(tabId)}
             />
           )}
 
