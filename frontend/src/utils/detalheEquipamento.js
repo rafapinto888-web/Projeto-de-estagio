@@ -25,24 +25,6 @@ export function origemDispositivo(a) {
   return "scan";
 }
 
-export function situacaoScan(a) {
-  const c = a?.criado_em;
-  const u = a?.ultima_vez_ativo_em;
-  if (!c && !u) return "desconhecido";
-  const tc = c ? new Date(c).getTime() : NaN;
-  const tu = u ? new Date(u).getTime() : NaN;
-  if (!Number.isFinite(tc) || !Number.isFinite(tu)) return "desconhecido";
-  if (tu > tc + 3000) return "atualizado";
-  return "primeira_vez";
-}
-
-export function etiquetaSituacaoScan(a) {
-  const s = situacaoScan(a);
-  if (s === "atualizado") return "Actualizado no scan";
-  if (s === "primeira_vez") return "Primeira deteção";
-  return "Desconhecido";
-}
-
 /**
  * Linhas [rótulo, valor] para painel de detalhe — alinha inventário manual e dispositivo do scan.
  * @param {object} item
@@ -71,7 +53,6 @@ export function linhasDetalheEquipamento(item, opts = {}) {
 
   if (isDesc) {
     linhas.push(
-      ["Deteção (scan)", etiquetaSituacaoScan(item)],
       ["Primeira vista (BD)", formatarDataPt(item?.criado_em)],
       ["Última vista (scan)", formatarDataPt(item?.ultima_vez_ativo_em)],
       ["Origem registo (BD)", txtBd(item?.origem_registo)],
@@ -104,7 +85,6 @@ export function celulasGrelhaPesquisaGlobal(r) {
 
   if (secaoPesquisaEhEquipamento(r.secao)) {
     const ip = ipEquipamento(item);
-    const det = item.tipo === "dispositivo_descoberto" ? etiquetaSituacaoScan(item) : "—";
     return {
       kind: "equipamento",
       id: item.id != null ? String(item.id) : "—",
@@ -120,7 +100,6 @@ export function celulasGrelhaPesquisaGlobal(r) {
       localizacao: z(item.localizacao_nome),
       responsavel: z(item.utilizador_responsavel_nome || item.utilizador_nome),
       estado: z(item.estado),
-      deteccao: det,
       extra: item.tipo === "dispositivo_descoberto" ? z(item.origem_registo) : "—",
     };
   }
@@ -142,7 +121,6 @@ export function celulasGrelhaPesquisaGlobal(r) {
       localizacao: "—",
       responsavel: "—",
       estado: "—",
-      deteccao: "—",
       extra: z(item.descricao),
     };
   }
@@ -163,7 +141,6 @@ export function celulasGrelhaPesquisaGlobal(r) {
       localizacao: "—",
       responsavel: z(item.nome),
       estado: "—",
-      deteccao: "—",
       extra: z(item.email),
     };
   }
@@ -184,7 +161,6 @@ export function celulasGrelhaPesquisaGlobal(r) {
       localizacao: z(item.nome),
       responsavel: "—",
       estado: "—",
-      deteccao: "—",
       extra: z(item.descricao),
     };
   }
@@ -204,7 +180,6 @@ export function celulasGrelhaPesquisaGlobal(r) {
     localizacao: z(r.localizacao),
     responsavel: z(r.utilizador),
     estado: z(r.estado),
-    deteccao: "—",
     extra: z(r.desc || r.detalhes),
   };
 }

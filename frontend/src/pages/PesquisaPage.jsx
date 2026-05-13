@@ -636,7 +636,7 @@ export default function PesquisaPage({
                   },
                 }}
               >
-                <Table size="small" sx={{ minWidth: 1320 }}>
+                <Table size="small" sx={{ minWidth: 1240 }}>
                   <TableHead>
                     <TableRow>
                       <TableCell>Tipo</TableCell>
@@ -653,7 +653,6 @@ export default function PesquisaPage({
                       <TableCell>Localização</TableCell>
                       <TableCell>Responsável</TableCell>
                       <TableCell>Estado</TableCell>
-                      <TableCell>Deteção</TableCell>
                       <TableCell>Extra</TableCell>
                     </TableRow>
                   </TableHead>
@@ -690,7 +689,6 @@ export default function PesquisaPage({
                               "—"
                             )}
                           </TableCell>
-                          <TableCell>{c.deteccao}</TableCell>
                           <TableCell>{c.extra}</TableCell>
                         </TableRow>
                       );

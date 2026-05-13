@@ -25,7 +25,7 @@ import {
 } from "@mui/material";
 import MiniSparkline from "../components/MiniSparkline";
 import SectionCard from "../components/SectionCard";
-import { etiquetaSituacaoScan, ipEquipamento, txtBd } from "../utils/detalheEquipamento";
+import { ipEquipamento, txtBd } from "../utils/detalheEquipamento";
 
 function tipoLabel(inv) {
   if (inv.tipo_inventario === "sub_rede") return "Sub-rede";
@@ -531,7 +531,7 @@ export default function DashboardPage({
               </Stack>
               <Divider sx={{ mb: 1 }} />
               <TableContainer sx={{ overflowX: "auto", maxWidth: "100%" }}>
-                <Table size="small" sx={{ minWidth: 980 }}>
+                <Table size="small" sx={{ minWidth: 900 }}>
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
@@ -546,13 +546,12 @@ export default function DashboardPage({
                       <TableCell sx={{ fontWeight: 700 }}>SO</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Inventário</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Estado</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Deteção</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {equipamentosRecentesPainel.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={13}>
+                        <TableCell colSpan={12}>
                           <Typography variant="body2" color="text.secondary">
                             Sem equipamentos para mostrar.
                           </Typography>
@@ -574,9 +573,6 @@ export default function DashboardPage({
                           <TableCell>{txtBd(row.inventario_nome)}</TableCell>
                           <TableCell>
                             <Chip size="small" label={txtBd(row.estado)} color={estadoPcColor(row.estado)} />
-                          </TableCell>
-                          <TableCell sx={{ fontSize: 11 }}>
-                            {row.tipo === "dispositivo_descoberto" ? etiquetaSituacaoScan(row) : "—"}
                           </TableCell>
                         </TableRow>
                       ))

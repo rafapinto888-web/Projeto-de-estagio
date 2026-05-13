@@ -29,10 +29,8 @@ import {
 } from "@mui/material";
 import FormModal from "../components/FormModal";
 import {
-  etiquetaSituacaoScan,
   linhasDetalheEquipamento,
   origemDispositivo,
-  situacaoScan,
   txtBd,
 } from "../utils/detalheEquipamento";
 
@@ -83,7 +81,6 @@ function exportCsvRows(rows, filename = "ativos-scan.csv") {
     "Serie",
     "SO",
     "Estado",
-    "Deteccao",
     "Criado_em",
     "Ultima_vista",
     "Origem_registo",
@@ -104,7 +101,6 @@ function exportCsvRows(rows, filename = "ativos-scan.csv") {
         q(a?.numero_serie || ""),
         q(a?.sistema_operativo || ""),
         a?.estado || "",
-        etiquetaSituacaoScan(a),
         a?.criado_em != null ? String(a.criado_em) : "",
         a?.ultima_vez_ativo_em != null ? String(a.ultima_vez_ativo_em) : "",
         q(a?.origem_registo || ""),
@@ -204,7 +200,9 @@ export default function AtivosPage({
   }, [selectedInventarioId]);
 
   useEffect(() => {
-    setTabLista((prev) => (prev === "manual" || prev === "por_scan" ? "todos" : prev));
+    setTabLista((prev) =>
+      ["manual", "por_scan", "primeira_vez", "atualizado"].includes(prev) ? "todos" : prev,
+    );
   }, []);
 
   const listaScan = useMemo(() => (ativos || []).filter((a) => origemDispositivo(a) === "scan"), [ativos]);
@@ -212,8 +210,6 @@ export default function AtivosPage({
   const contagens = useMemo(() => {
     const base = listaScan;
     const totalScan = base.length;
-    const primeiraDetecao = base.filter((a) => situacaoScan(a) === "primeira_vez").length;
-    const atualizadoNoScan = base.filter((a) => situacaoScan(a) === "atualizado").length;
     const comMac = base.filter((a) => String(a?.mac_address || "").trim()).length;
     const semHost = base.filter((a) => !(a?.nome || a?.hostname)?.toString()?.trim()).length;
     const inativos = base.filter((a) =>
@@ -223,19 +219,13 @@ export default function AtivosPage({
     ).length;
     const semInfo = base.filter(semDadosCompleto).length;
 
-    return { totalScan, primeiraDetecao, atualizadoNoScan, comMac, semHost, inativos, semInfo };
+    return { totalScan, comMac, semHost, inativos, semInfo };
   }, [listaScan]);
 
   const listaFiltrada = useMemo(() => {
     let out = [...listaScan];
 
     switch (tabLista) {
-      case "primeira_vez":
-        out = out.filter((a) => situacaoScan(a) === "primeira_vez");
-        break;
-      case "atualizado":
-        out = out.filter((a) => situacaoScan(a) === "atualizado");
-        break;
       case "sem_dados":
         out = out.filter(semDadosCompleto);
         break;
@@ -400,10 +390,10 @@ export default function AtivosPage({
           >
             {[
               { k: "scanBd", label: "Dispositivos (scan)", v: contagens.totalScan, icon: "radar" },
-              { k: "primeira", label: "Primeira deteção", v: contagens.primeiraDetecao, icon: "fiber_new" },
-              { k: "atual", label: "Actualizados no scan", v: contagens.atualizadoNoScan, icon: "update" },
               { k: "mac", label: "Com MAC", v: contagens.comMac, icon: "fingerprint" },
               { k: "sh", label: "Sem hostname", v: contagens.semHost, icon: "help" },
+              { k: "in", label: "Inativos", v: contagens.inativos, icon: "bedtime" },
+              { k: "sd", label: "Sem dados", v: contagens.semInfo, icon: "help_outline" },
               { k: "ult", label: "Último scan", v: ultimoScanLinha, icon: "schedule" },
             ].map((c) => (
               <Stack key={c.k} direction="row" spacing={1.2} alignItems="center">
@@ -498,8 +488,6 @@ export default function AtivosPage({
             }}
           >
             <Tab value="todos" label={`Todos (${contagens.totalScan})`} />
-            <Tab value="primeira_vez" label={`Primeira deteção (${contagens.primeiraDetecao})`} />
-            <Tab value="atualizado" label={`Actualizados (${contagens.atualizadoNoScan})`} />
             <Tab value="sem_dados" label={`Sem dados (${contagens.semInfo})`} />
             <Tab value="inativos" label={`Inativos (${contagens.inativos})`} />
           </Tabs>
@@ -565,7 +553,7 @@ export default function AtivosPage({
               overflowX: "auto",
             }}
           >
-            <Table size="small" stickyHeader sx={{ minWidth: 1100, "& .MuiTableCell-root": { fontSize: 13 } }}>
+            <Table size="small" stickyHeader sx={{ minWidth: 1000, "& .MuiTableCell-root": { fontSize: 13 } }}>
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ fontWeight: 700 }}>Nome</TableCell>
@@ -576,14 +564,13 @@ export default function AtivosPage({
                   <TableCell sx={{ fontWeight: 700 }}>Modelo</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Nº série</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>SO</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Deteção</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Estado</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={10}>
+                    <TableCell colSpan={9}>
                       <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
                         A carregar…
                       </Typography>
@@ -591,7 +578,7 @@ export default function AtivosPage({
                   </TableRow>
                 ) : listaFiltrada.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10}>
+                    <TableCell colSpan={9}>
                       <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
                         Sem dispositivos para mostrar nesta vista.
                       </Typography>
@@ -628,20 +615,6 @@ export default function AtivosPage({
                         <TableCell sx={cellSx}>{txtBd(a.modelo)}</TableCell>
                         <TableCell sx={{ ...cellSx, fontFamily: "monospace", fontSize: "0.75rem" }}>{txtBd(a.numero_serie)}</TableCell>
                         <TableCell sx={cellSx}>{txtBd(a.sistema_operativo)}</TableCell>
-                        <TableCell sx={{ verticalAlign: "middle" }}>
-                          <Chip
-                            size="small"
-                            label={etiquetaSituacaoScan(a)}
-                            color={
-                              situacaoScan(a) === "atualizado"
-                                ? "success"
-                                : situacaoScan(a) === "primeira_vez"
-                                  ? "info"
-                                  : "default"
-                            }
-                            variant="outlined"
-                          />
-                        </TableCell>
                         <TableCell sx={{ verticalAlign: "middle" }}>
                           <Chip size="small" label={txtBd(a.estado)} color={estadoChipColor(a.estado)} />
                         </TableCell>
