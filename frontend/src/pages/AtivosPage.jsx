@@ -33,14 +33,7 @@ import {
   origemDispositivo,
   txtBd,
 } from "../utils/detalheEquipamento";
-
-function estadoChipColor(estado) {
-  const e = String(estado || "").toLowerCase();
-  if (e.includes("ativo") || e.includes("conclu")) return "success";
-  if (e.includes("manut") || e.includes("pend")) return "warning";
-  if (e.includes("inativ") || e.includes("erro")) return "error";
-  return "default";
-}
+import { estadoChipMuiColor } from "../utils/estadoMuiColor";
 
 function semDadosCompleto(a) {
   const semNome = !(a?.nome || a?.hostname)?.toString()?.trim();
@@ -588,7 +581,21 @@ export default function AtivosPage({
                   listaFiltrada.map((a, idx) => {
                     const id = linhaScanKey(a, idx);
                     const selected = selectedRowKey === id;
-                    const cellSx = { verticalAlign: "top", maxWidth: 200, wordBreak: "break-word" };
+                    const cellWrap = {
+                      verticalAlign: "top",
+                      maxWidth: 220,
+                      wordBreak: "break-word",
+                      overflowWrap: "break-word",
+                    };
+                    const cellMono = (minW) => ({
+                      verticalAlign: "top",
+                      whiteSpace: "nowrap",
+                      wordBreak: "normal",
+                      overflowWrap: "normal",
+                      minWidth: minW,
+                      fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                      fontSize: "0.8125rem",
+                    });
                     return (
                       <TableRow
                         key={id}
@@ -600,7 +607,7 @@ export default function AtivosPage({
                         }}
                         sx={{ cursor: "pointer", "&:last-child td": { borderBottom: 0 } }}
                       >
-                        <TableCell sx={{ ...cellSx, verticalAlign: "middle" }}>
+                        <TableCell sx={{ ...cellWrap, verticalAlign: "middle" }}>
                           <Stack direction="row" spacing={1} alignItems="center">
                             <span className="material-symbols-outlined" style={{ fontSize: 20, color: "#64748b" }} aria-hidden>
                               computer
@@ -608,15 +615,15 @@ export default function AtivosPage({
                             <Typography fontWeight={600}>{txtBd(a.nome || a.hostname)}</Typography>
                           </Stack>
                         </TableCell>
-                        <TableCell sx={{ ...cellSx, fontSize: "0.8125rem" }}>{txtBd(a.hostname)}</TableCell>
-                        <TableCell sx={{ ...cellSx, fontFamily: "monospace", fontSize: "0.8125rem" }}>{txtBd(a.ip)}</TableCell>
-                        <TableCell sx={{ ...cellSx, fontFamily: "monospace", fontSize: "0.8125rem" }}>{txtBd(a.mac_address)}</TableCell>
-                        <TableCell sx={cellSx}>{txtBd(a.marca)}</TableCell>
-                        <TableCell sx={cellSx}>{txtBd(a.modelo)}</TableCell>
-                        <TableCell sx={{ ...cellSx, fontFamily: "monospace", fontSize: "0.75rem" }}>{txtBd(a.numero_serie)}</TableCell>
-                        <TableCell sx={cellSx}>{txtBd(a.sistema_operativo)}</TableCell>
+                        <TableCell sx={cellMono(120)}>{txtBd(a.hostname)}</TableCell>
+                        <TableCell sx={cellMono(118)}>{txtBd(a.ip)}</TableCell>
+                        <TableCell sx={cellMono(132)}>{txtBd(a.mac_address)}</TableCell>
+                        <TableCell sx={cellWrap}>{txtBd(a.marca)}</TableCell>
+                        <TableCell sx={cellWrap}>{txtBd(a.modelo)}</TableCell>
+                        <TableCell sx={{ ...cellMono(100), fontSize: "0.75rem" }}>{txtBd(a.numero_serie)}</TableCell>
+                        <TableCell sx={cellWrap}>{txtBd(a.sistema_operativo)}</TableCell>
                         <TableCell sx={{ verticalAlign: "middle" }}>
-                          <Chip size="small" label={txtBd(a.estado)} color={estadoChipColor(a.estado)} />
+                          <Chip size="small" label={txtBd(a.estado)} color={estadoChipMuiColor(a.estado)} />
                         </TableCell>
                       </TableRow>
                     );
@@ -645,7 +652,7 @@ export default function AtivosPage({
                     </Typography>
                   </Box>
                 </Stack>
-                <Chip size="small" label={txtBd(selectedAtivo.estado)} color={estadoChipColor(selectedAtivo.estado)} />
+                <Chip size="small" label={txtBd(selectedAtivo.estado)} color={estadoChipMuiColor(selectedAtivo.estado)} />
               </Stack>
               <Divider sx={{ mb: 2 }} />
               <Stack spacing={1.25}>

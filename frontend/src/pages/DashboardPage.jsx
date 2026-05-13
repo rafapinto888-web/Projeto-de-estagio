@@ -26,19 +26,25 @@ import {
 import MiniSparkline from "../components/MiniSparkline";
 import SectionCard from "../components/SectionCard";
 import { ipEquipamento, txtBd } from "../utils/detalheEquipamento";
+import { estadoChipMuiColor } from "../utils/estadoMuiColor";
 
 function tipoLabel(inv) {
   if (inv.tipo_inventario === "sub_rede") return "Sub-rede";
   return "Normal";
 }
 
-function estadoPcColor(estado) {
-  const e = String(estado || "").toLowerCase();
-  if (e.includes("ativo") || e.includes("conclu")) return "success";
-  if (e.includes("manut") || e.includes("pend")) return "warning";
-  if (e.includes("inativ") || e.includes("erro")) return "error";
-  return "default";
-}
+/** Células que não devem partir ao meio (IP, MAC, IDs, etc.) */
+const dashCellNowrap = {
+  whiteSpace: "nowrap",
+  wordBreak: "normal",
+  overflowWrap: "normal",
+};
+
+const dashCellMono = {
+  ...dashCellNowrap,
+  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+  fontSize: 12,
+};
 
 function horaDoEvento(iso, fallback = "—") {
   if (!iso) return fallback;
@@ -531,7 +537,18 @@ export default function DashboardPage({
               </Stack>
               <Divider sx={{ mb: 1 }} />
               <TableContainer sx={{ overflowX: "auto", maxWidth: "100%" }}>
-                <Table size="small" sx={{ minWidth: 900 }}>
+                <Table
+                  size="small"
+                  sx={{
+                    minWidth: 1080,
+                    "& .MuiTableCell-root": { fontSize: 13, verticalAlign: "middle" },
+                    "& .MuiTableCell-head": { whiteSpace: "nowrap" },
+                    "& tbody .MuiTableCell-root": {
+                      wordBreak: "break-word",
+                      overflowWrap: "break-word",
+                    },
+                  }}
+                >
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
@@ -559,20 +576,20 @@ export default function DashboardPage({
                       </TableRow>
                     ) : (
                       equipamentosRecentesPainel.map((row) => (
-                        <TableRow key={`${row.linha}-${row.id}`}>
-                          <TableCell>{row.linha === "manual" ? "Manual" : "Scan"}</TableCell>
-                          <TableCell sx={{ fontFamily: "monospace", fontSize: 12 }}>{row.id}</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>{txtBd(row.nome)}</TableCell>
-                          <TableCell>{txtBd(row.hostname)}</TableCell>
-                          <TableCell sx={{ fontFamily: "monospace", fontSize: 12 }}>{txtBd(row.ip)}</TableCell>
-                          <TableCell sx={{ fontFamily: "monospace", fontSize: 11 }}>{txtBd(row.mac_address)}</TableCell>
-                          <TableCell>{txtBd(row.marca)}</TableCell>
-                          <TableCell>{txtBd(row.modelo)}</TableCell>
-                          <TableCell sx={{ fontFamily: "monospace", fontSize: 11 }}>{txtBd(row.numero_serie)}</TableCell>
-                          <TableCell>{txtBd(row.sistema_operativo)}</TableCell>
-                          <TableCell>{txtBd(row.inventario_nome)}</TableCell>
-                          <TableCell>
-                            <Chip size="small" label={txtBd(row.estado)} color={estadoPcColor(row.estado)} />
+                        <TableRow key={`${row.linha}-${row.id}`} hover>
+                          <TableCell sx={{ ...dashCellNowrap, minWidth: 72 }}>{row.linha === "manual" ? "Manual" : "Scan"}</TableCell>
+                          <TableCell sx={{ ...dashCellMono, minWidth: 44, fontVariantNumeric: "tabular-nums" }}>{row.id}</TableCell>
+                          <TableCell sx={{ ...dashCellNowrap, fontWeight: 600, minWidth: 120 }}>{txtBd(row.nome)}</TableCell>
+                          <TableCell sx={{ ...dashCellMono, minWidth: 110 }}>{txtBd(row.hostname)}</TableCell>
+                          <TableCell sx={{ ...dashCellMono, minWidth: 118 }}>{txtBd(row.ip)}</TableCell>
+                          <TableCell sx={{ ...dashCellMono, minWidth: 132, fontSize: 11 }}>{txtBd(row.mac_address)}</TableCell>
+                          <TableCell sx={{ minWidth: 88 }}>{txtBd(row.marca)}</TableCell>
+                          <TableCell sx={{ minWidth: 88 }}>{txtBd(row.modelo)}</TableCell>
+                          <TableCell sx={{ ...dashCellMono, minWidth: 100, fontSize: 11 }}>{txtBd(row.numero_serie)}</TableCell>
+                          <TableCell sx={{ minWidth: 100 }}>{txtBd(row.sistema_operativo)}</TableCell>
+                          <TableCell sx={{ minWidth: 120 }}>{txtBd(row.inventario_nome)}</TableCell>
+                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                            <Chip size="small" label={txtBd(row.estado)} color={estadoChipMuiColor(row.estado)} />
                           </TableCell>
                         </TableRow>
                       ))

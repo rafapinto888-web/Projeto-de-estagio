@@ -25,6 +25,7 @@ import {
 } from "@mui/material";
 import SectionCard from "../components/SectionCard";
 import { celulasGrelhaPesquisaGlobal } from "../utils/detalheEquipamento";
+import { estadoChipMuiColor } from "../utils/estadoMuiColor";
 
 function tituloSecao(chave) {
   return String(chave || "")
@@ -105,14 +106,6 @@ function normalizarTexto(v) {
 function instanteOrdenacaoRow(row) {
   const id = Number(row?.item?.id);
   return Number.isFinite(id) ? id : 0;
-}
-
-function estadoChipColor(estado) {
-  const e = String(estado || "").toLowerCase();
-  if (e.includes("ativo") || e.includes("conclu")) return "success";
-  if (e.includes("manut") || e.includes("pend")) return "warning";
-  if (e.includes("inativ") || e.includes("erro")) return "error";
-  return "default";
 }
 
 function itemCorrespondeTermo(item, termoNormalizado) {
@@ -665,8 +658,6 @@ export default function PesquisaPage({
                   },
                   "& .MuiTableBody-root .MuiTableCell-root": {
                     py: 1.1,
-                    maxWidth: 200,
-                    wordBreak: "break-word",
                     fontSize: 12,
                   },
                 }}
@@ -701,30 +692,86 @@ export default function PesquisaPage({
                               {secaoVisual(r.secao).icon}
                             </span>
                           </TableCell>
-                          <TableCell sx={{ fontFamily: "monospace", fontSize: 11 }}>{c.id}</TableCell>
-                          <TableCell>
+                          <TableCell
+                            sx={{
+                              fontFamily: "ui-monospace, Menlo, Monaco, Consolas, monospace",
+                              fontSize: 11,
+                              whiteSpace: "nowrap",
+                              wordBreak: "normal",
+                              overflowWrap: "normal",
+                              minWidth: 44,
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {c.id}
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 240, wordBreak: "break-word", overflowWrap: "break-word" }}>
                             <Typography fontSize={12.5} fontWeight={700}>
                               {c.nome}
                             </Typography>
                           </TableCell>
-                          <TableCell>{c.hostname}</TableCell>
-                          <TableCell sx={{ fontFamily: "monospace", fontSize: 11 }}>{c.ip}</TableCell>
-                          <TableCell sx={{ fontFamily: "monospace", fontSize: 11 }}>{c.mac}</TableCell>
-                          <TableCell>{c.marca}</TableCell>
-                          <TableCell>{c.modelo}</TableCell>
-                          <TableCell sx={{ fontFamily: "monospace", fontSize: 11 }}>{c.serie}</TableCell>
-                          <TableCell>{c.so}</TableCell>
-                          <TableCell>{c.inventario}</TableCell>
-                          <TableCell>{c.localizacao}</TableCell>
-                          <TableCell>{c.responsavel}</TableCell>
+                          <TableCell
+                            sx={{
+                              fontFamily: "ui-monospace, Menlo, Monaco, Consolas, monospace",
+                              fontSize: 11,
+                              whiteSpace: "nowrap",
+                              wordBreak: "normal",
+                              overflowWrap: "normal",
+                              minWidth: 120,
+                            }}
+                          >
+                            {c.hostname}
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              fontFamily: "ui-monospace, Menlo, Monaco, Consolas, monospace",
+                              fontSize: 11,
+                              whiteSpace: "nowrap",
+                              wordBreak: "normal",
+                              overflowWrap: "normal",
+                              minWidth: 118,
+                            }}
+                          >
+                            {c.ip}
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              fontFamily: "ui-monospace, Menlo, Monaco, Consolas, monospace",
+                              fontSize: 11,
+                              whiteSpace: "nowrap",
+                              wordBreak: "normal",
+                              overflowWrap: "normal",
+                              minWidth: 132,
+                            }}
+                          >
+                            {c.mac}
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 160, wordBreak: "break-word" }}>{c.marca}</TableCell>
+                          <TableCell sx={{ maxWidth: 160, wordBreak: "break-word" }}>{c.modelo}</TableCell>
+                          <TableCell
+                            sx={{
+                              fontFamily: "ui-monospace, Menlo, Monaco, Consolas, monospace",
+                              fontSize: 11,
+                              whiteSpace: "nowrap",
+                              wordBreak: "normal",
+                              overflowWrap: "normal",
+                              minWidth: 100,
+                            }}
+                          >
+                            {c.serie}
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 180, wordBreak: "break-word" }}>{c.so}</TableCell>
+                          <TableCell sx={{ maxWidth: 200, wordBreak: "break-word" }}>{c.inventario}</TableCell>
+                          <TableCell sx={{ maxWidth: 180, wordBreak: "break-word" }}>{c.localizacao}</TableCell>
+                          <TableCell sx={{ maxWidth: 180, wordBreak: "break-word" }}>{c.responsavel}</TableCell>
                           <TableCell>
                             {c.estado !== "—" ? (
-                              <Chip label={c.estado} size="small" color={estadoChipColor(c.estado)} />
+                              <Chip label={c.estado} size="small" color={estadoChipMuiColor(c.estado)} />
                             ) : (
                               "—"
                             )}
                           </TableCell>
-                          <TableCell>{c.extra}</TableCell>
+                          <TableCell sx={{ maxWidth: 220, wordBreak: "break-word" }}>{c.extra}</TableCell>
                         </TableRow>
                       );
                     })}

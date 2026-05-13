@@ -55,10 +55,10 @@ const theme = createTheme({
     },
     body2: {
       fontSize: "0.86rem",
-      overflowWrap: "anywhere",
+      overflowWrap: "break-word",
     },
     body1: {
-      overflowWrap: "anywhere",
+      overflowWrap: "break-word",
     },
     button: {
       textTransform: "none",
@@ -156,7 +156,7 @@ const theme = createTheme({
           verticalAlign: "top",
           "&:not(.MuiTableCell-head)": {
             wordBreak: "break-word",
-            overflowWrap: "anywhere",
+            overflowWrap: "break-word",
           },
         },
         head: {

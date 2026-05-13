@@ -4,10 +4,17 @@ import { useCallback, useMemo, useState } from "react";
 import {
   Box,
   Button,
+  Chip,
   IconButton,
   InputAdornment,
   MenuItem,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
@@ -15,6 +22,7 @@ import { api } from "../api";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
 import { exportInventarioComputadoresParaExcel } from "../utils/exportInventarioComputadores.js";
+import { estadoChipMuiColor } from "../utils/estadoMuiColor";
 
 function tipoInvLabel(t) {
   if (t === "sub_rede") return "Sub-rede";
@@ -159,14 +167,13 @@ function estadosUnicosDeAtivos(ativos) {
   return [...s].sort((a, b) => a.localeCompare(b, "pt", { sensitivity: "base" }));
 }
 
-function estadoPillClass(estadoRaw) {
-  const e = String(estadoRaw || "").toLowerCase();
-  if (e.includes("ativ")) return "computadores-estado-pill--ok";
-  if (e.includes("inativ")) return "computadores-estado-pill--warn";
-  if (e.includes("manut") || e.includes("pend")) return "computadores-estado-pill--pend";
-  if (e.includes("erro") || e.includes("offline")) return "computadores-estado-pill--off";
-  return "computadores-estado-pill--muted";
-}
+const TABLE_CELL_MONO = {
+  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+  fontSize: "0.8125rem",
+  whiteSpace: "nowrap",
+  wordBreak: "normal",
+  overflowWrap: "normal",
+};
 
 const LINHAS_POR_PAGINA = 10;
 /** Colunas da tabela unificada por inventário (ID … Ações). */
@@ -749,163 +756,218 @@ export default function ComputadoresPage({
                         </IconButton>
                       </div>
 
-                      <div
-                        className={`table-shell computadores-detalhe-table computadores-detalhe-table--unified computadores-inv-table-scroll${
-                          totalLinhas === 0 ? " computadores-inv-table-scroll--empty" : ""
-                        }`}
+                      <TableContainer
+                        sx={{
+                          flex: "1 1 auto",
+                          minWidth: 0,
+                          minHeight: 0,
+                          width: "100%",
+                          maxHeight: "min(56vh, 440px)",
+                          overflow: "auto",
+                          scrollbarGutter: "stable",
+                          border: "none",
+                          borderRadius: 0,
+                          boxShadow: "none",
+                          borderTop: "1px solid",
+                          borderColor: "divider",
+                          ...(totalLinhas === 0 ? { minHeight: "11rem" } : {}),
+                        }}
                       >
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>ID</th>
-                              <th>Equipamento</th>
-                              <th>Hostname</th>
-                              <th>IP</th>
-                              <th>MAC</th>
-                              <th>Marca</th>
-                              <th>Modelo</th>
-                              <th>N.º série</th>
-                              <th>Sistema</th>
-                              <th>Origem</th>
-                              <th>Origem registo</th>
-                              <th>Primeira vista</th>
-                              <th>Estado</th>
-                              <th>Localiz.</th>
-                              <th>Resp.</th>
-                              <th>Última atualização</th>
-                              <th className="th-actions">Ações</th>
-                            </tr>
-                          </thead>
-                          <tbody>
+                        <Table
+                          size="small"
+                          stickyHeader
+                          sx={{
+                            minWidth: 1320,
+                            "& .MuiTableCell-root": { fontSize: 13 },
+                            "& .MuiTableCell-head": { whiteSpace: "nowrap" },
+                            /* Sobrepõe theme global (overflowWrap: anywhere) só nesta tabela */
+                            "& tbody .MuiTableCell-root": {
+                              wordBreak: "break-word",
+                              overflowWrap: "break-word",
+                            },
+                          }}
+                        >
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>ID</TableCell>
+                              <TableCell>Equipamento</TableCell>
+                              <TableCell>Hostname</TableCell>
+                              <TableCell>IP</TableCell>
+                              <TableCell>MAC</TableCell>
+                              <TableCell>Marca</TableCell>
+                              <TableCell>Modelo</TableCell>
+                              <TableCell>N.º série</TableCell>
+                              <TableCell>Sistema</TableCell>
+                              <TableCell>Origem</TableCell>
+                              <TableCell>Origem registo</TableCell>
+                              <TableCell>Primeira vista</TableCell>
+                              <TableCell>Estado</TableCell>
+                              <TableCell>Localiz.</TableCell>
+                              <TableCell>Resp.</TableCell>
+                              <TableCell>Última atualização</TableCell>
+                              <TableCell align="right">Ações</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
                             {nTot === 0 || totalLinhas === 0 ? (
-                              <tr>
-                                <td colSpan={COLUNAS_TABELA_INVENTARIO} className="computadores-inv-table-empty">
-                                  {nTot === 0
-                                    ? "Nenhum equipamento neste inventário."
-                                    : "Nenhum resultado com a pesquisa ou o estado selecionado neste inventário."}
-                                </td>
-                              </tr>
+                              <TableRow>
+                                <TableCell colSpan={COLUNAS_TABELA_INVENTARIO} align="center" sx={{ py: 4 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {nTot === 0
+                                      ? "Nenhum equipamento neste inventário."
+                                      : "Nenhum resultado com a pesquisa ou o estado selecionado neste inventário."}
+                                  </Typography>
+                                </TableCell>
+                              </TableRow>
                             ) : null}
                             {nTot > 0 && totalLinhas > 0
-                              ? linhasPagina.map((a) => (
-                              <tr
-                                key={a.tipo === "computador" ? `pc-${a.id}` : `scan-${a.id}`}
-                                className={
-                                  origemRegistoVisual(a) === "manual"
-                                    ? "computadores-row--manual"
-                                    : "computadores-row--scan"
-                                }
-                              >
-                                <td className="cell-mono">{a.id != null ? String(a.id) : "—"}</td>
-                                <td className="computadores-cell-equip">
-                                  <span className="material-symbols-outlined computadores-cell-equip-ic" aria-hidden>
-                                    computer
-                                  </span>
-                                  <div className="computadores-cell-equip-text">
-                                    <span className="cell-title">{tituloColunaEquipamento(a)}</span>
-                                    {a.tipo === "computador" && a.hostname ? (
-                                      <span className="computadores-cell-equip-sub">{dash(a.hostname)}</span>
-                                    ) : null}
-                                    {a.tipo === "dispositivo_descoberto" && a.hostname && (a.ip || a.endereco_ip) ? (
-                                      <span className="computadores-cell-equip-sub">{dash(a.ip || a.endereco_ip)}</span>
-                                    ) : null}
-                                  </div>
-                                </td>
-                                <td className="cell-mono">{dash(a.hostname)}</td>
-                                <td className="cell-mono">{dash(a.ip || a.endereco_ip)}</td>
-                                <td className="cell-mono">{dash(a.mac_address)}</td>
-                                <td>{dash(a.marca)}</td>
-                                <td>{dash(a.modelo)}</td>
-                                <td className="cell-mono">{dash(a.numero_serie)}</td>
-                                <td>{dash(a.sistema_operativo)}</td>
-                                <td>
-                                  <span
-                                    className={
-                                      origemRegistoVisual(a) === "manual"
-                                        ? "computadores-origem computadores-origem--manual"
-                                        : "computadores-origem computadores-origem--scan"
-                                    }
-                                  >
-                                    {etiquetaOrigemAmigavel(a)}
-                                  </span>
-                                </td>
-                                <td className="cell-muted cell-mono">
-                                  {a.tipo === "dispositivo_descoberto" ? dash(a.origem_registo) : "—"}
-                                </td>
-                                <td className="cell-muted cell-nowrap">
-                                  {a.tipo === "dispositivo_descoberto" ? fmtUltimaSinc(a.criado_em) : "—"}
-                                </td>
-                                <td>
-                                  <span className={`computadores-estado-pill ${estadoPillClass(a.estado)}`}>
-                                    <span className="computadores-estado-dot" aria-hidden />
-                                    {dash(a.estado)}
-                                  </span>
-                                </td>
-                                <td>{a.tipo === "computador" ? dash(a.localizacao_nome) : "—"}</td>
-                                <td>{a.tipo === "computador" ? dash(a.utilizador_responsavel_nome) : "—"}</td>
-                                <td className="cell-muted cell-nowrap">
-                                  {a.tipo === "dispositivo_descoberto"
-                                    ? fmtUltimaSinc(a.ultima_vez_ativo_em)
-                                    : "—"}
-                                </td>
-                                <td>
-                                  {isAdmin ? (
-                                    a.tipo === "computador" ? (
-                                      <>
-                                        <button
-                                          type="button"
-                                          className="ghost table-btn"
-                                          onClick={() => handleRowEdit(a)}
-                                        >
-                                          Editar
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="danger table-btn"
-                                          onClick={() => onDeleteRow?.(a)}
-                                        >
-                                          Apagar
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <button
-                                          type="button"
-                                          className="ghost table-btn"
-                                          onClick={() => openScanEdit(a, grupo.inventario_id)}
-                                        >
-                                          Editar
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="danger table-btn"
-                                          onClick={() => handleScanDeleteRow(a, grupo.inventario_id)}
-                                        >
-                                          Apagar
-                                        </button>
-                                      </>
-                                    )
-                                  ) : (
-                                    <span className="cell-muted">—</span>
-                                  )}
-                                </td>
-                              </tr>
-                            ))
-                            : null}
-                          </tbody>
-                        </table>
-                      </div>
+                              ? linhasPagina.map((a) => {
+                                  const manualRow = origemRegistoVisual(a) === "manual";
+                                  return (
+                                    <TableRow
+                                      hover
+                                      key={a.tipo === "computador" ? `pc-${a.id}` : `scan-${a.id}`}
+                                      sx={{
+                                        "& > .MuiTableCell-root:first-of-type": {
+                                          borderLeftStyle: "solid",
+                                          borderLeftWidth: 3,
+                                          borderLeftColor: (theme) =>
+                                            manualRow ? theme.palette.primary.main : theme.palette.info.main,
+                                        },
+                                      }}
+                                    >
+                                      <TableCell
+                                        sx={{
+                                          ...TABLE_CELL_MONO,
+                                          minWidth: 52,
+                                          fontVariantNumeric: "tabular-nums",
+                                        }}
+                                      >
+                                        {a.id != null ? String(a.id) : "—"}
+                                      </TableCell>
+                                      <TableCell sx={{ minWidth: 176, maxWidth: 280 }}>
+                                        <Stack direction="row" spacing={1} alignItems="flex-start">
+                                          <span
+                                            className="material-symbols-outlined"
+                                            style={{ fontSize: 20, color: "#64748b", flexShrink: 0 }}
+                                            aria-hidden
+                                          >
+                                            computer
+                                          </span>
+                                          <Box sx={{ minWidth: 0 }}>
+                                            <Typography variant="body2" fontWeight={700} display="block" lineHeight={1.35}>
+                                              {tituloColunaEquipamento(a)}
+                                            </Typography>
+                                            {a.tipo === "computador" && a.hostname ? (
+                                              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
+                                                {dash(a.hostname)}
+                                              </Typography>
+                                            ) : null}
+                                            {a.tipo === "dispositivo_descoberto" && a.hostname && (a.ip || a.endereco_ip) ? (
+                                              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
+                                                {dash(a.ip || a.endereco_ip)}
+                                              </Typography>
+                                            ) : null}
+                                          </Box>
+                                        </Stack>
+                                      </TableCell>
+                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 120 }}>{dash(a.hostname)}</TableCell>
+                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 118 }}>{dash(a.ip || a.endereco_ip)}</TableCell>
+                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 132 }}>{dash(a.mac_address)}</TableCell>
+                                      <TableCell>{dash(a.marca)}</TableCell>
+                                      <TableCell>{dash(a.modelo)}</TableCell>
+                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 100 }}>{dash(a.numero_serie)}</TableCell>
+                                      <TableCell>{dash(a.sistema_operativo)}</TableCell>
+                                      <TableCell>
+                                        <Chip
+                                          size="small"
+                                          variant="outlined"
+                                          label={etiquetaOrigemAmigavel(a)}
+                                          color={manualRow ? "primary" : "info"}
+                                        />
+                                      </TableCell>
+                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 88 }}>
+                                        <Typography variant="body2" color="text.secondary" component="span" noWrap>
+                                          {a.tipo === "dispositivo_descoberto" ? dash(a.origem_registo) : "—"}
+                                        </Typography>
+                                      </TableCell>
+                                      <TableCell sx={{ whiteSpace: "nowrap" }}>
+                                        <Typography variant="body2" color="text.secondary" component="span">
+                                          {a.tipo === "dispositivo_descoberto" ? fmtUltimaSinc(a.criado_em) : "—"}
+                                        </Typography>
+                                      </TableCell>
+                                      <TableCell>
+                                        <Chip size="small" label={dash(a.estado)} color={estadoChipMuiColor(a.estado)} />
+                                      </TableCell>
+                                      <TableCell>{a.tipo === "computador" ? dash(a.localizacao_nome) : "—"}</TableCell>
+                                      <TableCell>{a.tipo === "computador" ? dash(a.utilizador_responsavel_nome) : "—"}</TableCell>
+                                      <TableCell sx={{ whiteSpace: "nowrap" }}>
+                                        <Typography variant="body2" color="text.secondary" component="span">
+                                          {a.tipo === "dispositivo_descoberto"
+                                            ? fmtUltimaSinc(a.ultima_vez_ativo_em)
+                                            : "—"}
+                                        </Typography>
+                                      </TableCell>
+                                      <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                                        {isAdmin ? (
+                                          <Stack direction="row" spacing={0.5} justifyContent="flex-end" flexWrap="wrap" useFlexGap>
+                                            {a.tipo === "computador" ? (
+                                              <>
+                                                <Button size="small" variant="text" onClick={() => handleRowEdit(a)}>
+                                                  Editar
+                                                </Button>
+                                                <Button
+                                                  size="small"
+                                                  variant="text"
+                                                  color="error"
+                                                  onClick={() => onDeleteRow?.(a)}
+                                                >
+                                                  Apagar
+                                                </Button>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Button size="small" variant="text" onClick={() => openScanEdit(a, grupo.inventario_id)}>
+                                                  Editar
+                                                </Button>
+                                                <Button
+                                                  size="small"
+                                                  variant="text"
+                                                  color="error"
+                                                  onClick={() => handleScanDeleteRow(a, grupo.inventario_id)}
+                                                >
+                                                  Apagar
+                                                </Button>
+                                              </>
+                                            )}
+                                          </Stack>
+                                        ) : (
+                                          <Typography variant="body2" color="text.secondary">
+                                            —
+                                          </Typography>
+                                        )}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })
+                              : null}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
 
                       <footer className="computadores-inv-pagination">
                           <Typography variant="caption" color="text.secondary">
                             {totalLinhas === 0 ? (
                               <>
-                                Linhas por página {LINHAS_POR_PAGINA} · <strong>0</strong> linhas neste inventário
+                                {LINHAS_POR_PAGINA} linhas por página · <strong>0</strong> linhas neste inventário
                               </>
                             ) : (
                               <>
-                                Linhas por página {LINHAS_POR_PAGINA} ·{" "}
-                                {`${inicio + 1}-${Math.min(inicio + LINHAS_POR_PAGINA, totalLinhas)}`} de{" "}
+                                <strong>
+                                  Página {pagAtual} de {maxPag}
+                                </strong>
+                                {" · "}
+                                Linhas {inicio + 1}–{Math.min(inicio + LINHAS_POR_PAGINA, totalLinhas)} de{" "}
                                 {totalLinhas}
                               </>
                             )}
