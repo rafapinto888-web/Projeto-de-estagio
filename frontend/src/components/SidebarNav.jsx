@@ -7,7 +7,6 @@ const NAV_ICONS = {
   ativos: "radar",
   computadores: "computer",
   utilizadores: "group",
-  perfis: "badge",
   localizacoes: "pin_drop",
   pesquisa: "manage_search",
   "historico-conta": "history",

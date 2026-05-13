@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
 
 # Modelo ORM dos dispositivos descobertos pelo scan.
 from __future__ import annotations

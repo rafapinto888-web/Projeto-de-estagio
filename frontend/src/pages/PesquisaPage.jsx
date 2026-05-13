@@ -50,6 +50,24 @@ function parseOutput(raw) {
   }
 }
 
+/** Itens para a barra de páginas: números e intervalos "…" quando há muitas páginas. */
+function indicadoresPagina(atual, total) {
+  if (total <= 1) return [{ type: "page", n: 1 }];
+  if (total <= 9) {
+    return Array.from({ length: total }, (_, i) => ({ type: "page", n: i + 1 }));
+  }
+  const lado = 1;
+  const inicio = Math.max(2, atual - lado);
+  const fim = Math.min(total - 1, atual + lado);
+  /** @type {Array<{ type: "page"; n: number } | { type: "gap" }>} */
+  const out = [{ type: "page", n: 1 }];
+  if (inicio > 2) out.push({ type: "gap" });
+  for (let i = inicio; i <= fim; i += 1) out.push({ type: "page", n: i });
+  if (fim < total - 1) out.push({ type: "gap" });
+  out.push({ type: "page", n: total });
+  return out;
+}
+
 function toSections(parsed) {
   if (!parsed) return [];
   if (Array.isArray(parsed)) return [{ key: "resultados", value: parsed }];
@@ -701,10 +719,45 @@ export default function PesquisaPage({
                   Mostrando {rowsPaginadas.length === 0 ? 0 : (paginaAtual - 1) * porPagina + 1} a{" "}
                   {(paginaAtual - 1) * porPagina + rowsPaginadas.length} de {rowsOrdenadas.length} resultado(s)
                 </Typography>
-                <Stack direction="row" spacing={0.75}>
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  flexWrap="wrap"
+                  useFlexGap
+                  justifyContent={{ xs: "flex-start", sm: "flex-end" }}
+                  alignItems="center"
+                >
                   <Button type="button" size="small" variant="outlined" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={paginaAtual <= 1}>
                     Anterior
                   </Button>
+                  {totalPaginas > 1
+                    ? indicadoresPagina(paginaAtual, totalPaginas).map((it, idx) =>
+                        it.type === "gap" ? (
+                          <Typography
+                            key={`gap-${idx}`}
+                            component="span"
+                            variant="body2"
+                            sx={{ px: 0.35, color: "text.disabled", userSelect: "none", lineHeight: 1 }}
+                          >
+                            …
+                          </Typography>
+                        ) : (
+                          <Button
+                            key={`p-${it.n}`}
+                            type="button"
+                            size="small"
+                            variant={it.n === paginaAtual ? "contained" : "outlined"}
+                            disabled={it.n === paginaAtual}
+                            onClick={() => setPagina(it.n)}
+                            aria-label={`Ir para página ${it.n}`}
+                            aria-current={it.n === paginaAtual ? "page" : undefined}
+                            sx={{ minWidth: 36, px: 0.75 }}
+                          >
+                            {it.n}
+                          </Button>
+                        ),
+                      )
+                    : null}
                   <Button type="button" size="small" variant="outlined" onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))} disabled={paginaAtual >= totalPaginas}>
                     Seguinte
                   </Button>

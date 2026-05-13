@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
 
 # Schemas dos dispositivos descobertos no scan de rede.
 from datetime import datetime

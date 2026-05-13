@@ -14,7 +14,6 @@ import DashboardPage from "./pages/DashboardPage";
 import InventariosPage from "./pages/InventariosPage";
 import LocalizacoesPage from "./pages/LocalizacoesPage";
 import LogsPage from "./pages/LogsPage";
-import PerfisPage from "./pages/PerfisPage";
 import HistoricoContaPage from "./pages/HistoricoContaPage";
 import PesquisaPage from "./pages/PesquisaPage";
 import UtilizadoresPage from "./pages/UtilizadoresPage";
@@ -25,7 +24,6 @@ const TABS = [
   { id: "ativos", label: "Scan" },
   { id: "computadores", label: "Computadores" },
   { id: "utilizadores", label: "Utilizadores" },
-  { id: "perfis", label: "Perfis" },
   { id: "localizacoes", label: "Localizações" },
   { id: "pesquisa", label: "Pesquisa global" },
   { id: "historico-conta", label: "Histórico" },
@@ -195,7 +193,6 @@ export default function App() {
   const [inventarioForm, setInventarioForm] = useState(emptyInventarioForm());
   const [computadorForm, setComputadorForm] = useState(emptyComputerForm());
   const [utilizadorForm, setUtilizadorForm] = useState(emptyUserForm());
-  const [perfilForm, setPerfilForm] = useState({ id: "", nome: "" });
   const [localizacaoForm, setLocalizacaoForm] = useState({ id: "", nome: "", descricao: "" });
 
   const [scanRede, setScanRede] = useState("");
@@ -890,37 +887,6 @@ export default function App() {
                 if (!window.confirm(`Confirmar apagar utilizador "${u.username}"?`)) return;
                 withAction(() => api.utilizadores.apagar(u.id, token), "Utilizador apagado");
               }}
-            />
-          )}
-
-          {activeTab === "perfis" && (
-            <PerfisPage
-              isAdmin={isAdmin}
-              utilizadores={utilizadores}
-              perfilForm={perfilForm}
-              setPerfilForm={setPerfilForm}
-              onCreate={() =>
-                withAction(() => api.perfis.criar({ nome: perfilForm.nome }, token), "Perfil criado")
-              }
-              onUpdate={() =>
-                withAction(
-                  () => api.perfis.atualizar(perfilForm.id, { nome: perfilForm.nome }, token),
-                  "Perfil atualizado",
-                )
-              }
-              onDeleteByForm={async () => {
-                if (!window.confirm("Confirmar apagar perfil?")) return false;
-                return withAction(() => api.perfis.apagar(perfilForm.id, token), "Perfil apagado");
-              }}
-              onCancel={() => setPerfilForm({ id: "", nome: "" })}
-              perfis={perfis}
-              loading={loading}
-              onPick={(p) => setPerfilForm({ id: String(p.id), nome: p.nome || "" })}
-              onDeleteRow={(p) =>
-                window.confirm(`Confirmar apagar perfil "${p.nome}"?`)
-                  ? withAction(() => api.perfis.apagar(p.id, token), "Perfil apagado")
-                  : null
-              }
             />
           )}
 
