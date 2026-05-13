@@ -25,6 +25,7 @@ import {
 } from "@mui/material";
 import MiniSparkline from "../components/MiniSparkline";
 import SectionCard from "../components/SectionCard";
+import { etiquetaSituacaoScan, ipEquipamento, txtBd } from "../utils/detalheEquipamento";
 
 function tipoLabel(inv) {
   if (inv.tipo_inventario === "sub_rede") return "Sub-rede";
@@ -112,7 +113,6 @@ export default function DashboardPage({
 
   const recentInventarios = (inventarios || []).slice(0, 5);
   const latestUsers = (utilizadores || []).slice(0, 5);
-  const recentComputadores = (computadores || []).slice(0, 6);
   const dispositivosScan = useMemo(
     () =>
       (ativosPorInventario || []).flatMap((grupo) =>
@@ -120,6 +120,49 @@ export default function DashboardPage({
       ),
     [ativosPorInventario],
   );
+
+  /** Amostra recente: manuais + descobertos, com inventário para coluna. */
+  const equipamentosRecentesPainel = useMemo(() => {
+    const manual = (computadores || []).slice(0, 5).map((pc) => ({
+      linha: "manual",
+      id: pc.id,
+      nome: pc.nome || pc.hostname,
+      hostname: pc.hostname,
+      ip: ipEquipamento(pc),
+      mac_address: pc.mac_address,
+      marca: pc.marca,
+      modelo: pc.modelo,
+      numero_serie: pc.numero_serie,
+      sistema_operativo: pc.sistema_operativo,
+      estado: pc.estado,
+      inventario_nome: pc.inventario_nome,
+      tipo: "computador",
+      criado_em: null,
+      ultima_vez_ativo_em: null,
+    }));
+    const scan = (ativosPorInventario || []).flatMap((grupo) =>
+      (grupo?.ativos || [])
+        .filter((item) => item?.tipo === "dispositivo_descoberto")
+        .map((item) => ({
+          linha: "scan",
+          id: item.id,
+          nome: item.hostname || item.ip || `Scan #${item.id}`,
+          hostname: item.hostname,
+          ip: item.ip,
+          mac_address: item.mac_address,
+          marca: item.marca,
+          modelo: item.modelo,
+          numero_serie: item.numero_serie,
+          sistema_operativo: item.sistema_operativo,
+          estado: item.estado,
+          inventario_nome: grupo?.inventario_nome,
+          tipo: "dispositivo_descoberto",
+          criado_em: item.criado_em,
+          ultima_vez_ativo_em: item.ultima_vez_ativo_em,
+        })),
+    );
+    return [...manual, ...scan.slice(0, 5)];
+  }, [computadores, ativosPorInventario]);
   const totalScan = (inventarios || []).reduce((acc, inv) => acc + (inv.total_dispositivos_scan ?? 0), 0);
   const totalAtivos = (computadores || []).length + totalScan;
 
@@ -477,35 +520,67 @@ export default function DashboardPage({
           }}
         >
           <Box>
-            <Paper variant="outlined" sx={{ ...painelSx, minHeight: { xs: 250, lg: 315 } }}>
+            <Paper variant="outlined" sx={{ ...painelSx, minHeight: { xs: 250, lg: 340 } }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.25}>
                 <Typography fontWeight={800} fontSize={17}>
-                  Computadores recentes
+                  Equipamentos recentes
                 </Typography>
                 <Button variant="text" size="small" onClick={() => onNavigate("computadores")}>
-                Ver todos
+                  Ver todos
                 </Button>
               </Stack>
               <Divider sx={{ mb: 1 }} />
-              <TableContainer>
-                <Table size="small">
+              <TableContainer sx={{ overflowX: "auto", maxWidth: "100%" }}>
+                <Table size="small" sx={{ minWidth: 980 }}>
                   <TableHead>
                     <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>ID</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Nome</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Hostname</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>IP</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>MAC</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Marca</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Modelo</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Série</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>SO</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Inventário</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Estado</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Deteção</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {recentComputadores.map((pc) => (
-                      <TableRow key={pc.id}>
-                        <TableCell sx={{ fontWeight: 600 }}>{pc.nome || pc.hostname || "—"}</TableCell>
-                        <TableCell sx={{ fontFamily: "monospace" }}>{pc.endereco_ip || pc.ip || "—"}</TableCell>
-                        <TableCell>
-                          <Chip size="small" label={pc.estado || "—"} color={estadoPcColor(pc.estado)} />
+                    {equipamentosRecentesPainel.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={13}>
+                          <Typography variant="body2" color="text.secondary">
+                            Sem equipamentos para mostrar.
+                          </Typography>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      equipamentosRecentesPainel.map((row) => (
+                        <TableRow key={`${row.linha}-${row.id}`}>
+                          <TableCell>{row.linha === "manual" ? "Manual" : "Scan"}</TableCell>
+                          <TableCell sx={{ fontFamily: "monospace", fontSize: 12 }}>{row.id}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{txtBd(row.nome)}</TableCell>
+                          <TableCell>{txtBd(row.hostname)}</TableCell>
+                          <TableCell sx={{ fontFamily: "monospace", fontSize: 12 }}>{txtBd(row.ip)}</TableCell>
+                          <TableCell sx={{ fontFamily: "monospace", fontSize: 11 }}>{txtBd(row.mac_address)}</TableCell>
+                          <TableCell>{txtBd(row.marca)}</TableCell>
+                          <TableCell>{txtBd(row.modelo)}</TableCell>
+                          <TableCell sx={{ fontFamily: "monospace", fontSize: 11 }}>{txtBd(row.numero_serie)}</TableCell>
+                          <TableCell>{txtBd(row.sistema_operativo)}</TableCell>
+                          <TableCell>{txtBd(row.inventario_nome)}</TableCell>
+                          <TableCell>
+                            <Chip size="small" label={txtBd(row.estado)} color={estadoPcColor(row.estado)} />
+                          </TableCell>
+                          <TableCell sx={{ fontSize: 11 }}>
+                            {row.tipo === "dispositivo_descoberto" ? etiquetaSituacaoScan(row) : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>

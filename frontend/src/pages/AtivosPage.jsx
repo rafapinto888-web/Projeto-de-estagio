@@ -28,19 +28,13 @@ import {
   Typography,
 } from "@mui/material";
 import FormModal from "../components/FormModal";
-
-/** Origem na BD: manual = tabela computadores; scan = tabela dispositivos descobertos (também persistido). */
-function origemDispositivo(a) {
-  const t = String(a?.tipo || "").toLowerCase();
-  if (t === "computador") return "manual";
-  if (t === "dispositivo_descoberto") return "scan";
-  if (a?.numero_serie) return "manual";
-  return "scan";
-}
-
-function etiquetaOrigem(a) {
-  return origemDispositivo(a) === "manual" ? "Registo manual" : "Via scan";
-}
+import {
+  etiquetaSituacaoScan,
+  linhasDetalheEquipamento,
+  origemDispositivo,
+  situacaoScan,
+  txtBd,
+} from "../utils/detalheEquipamento";
 
 function estadoChipColor(estado) {
   const e = String(estado || "").toLowerCase();
@@ -77,18 +71,43 @@ function linhaScanKey(a, idx) {
 }
 
 function exportCsvRows(rows, filename = "ativos-scan.csv") {
-  const headers = ["Nome", "IP", "MAC", "Origem", "Estado", "SO", "Série"];
+  const headers = [
+    "Id",
+    "Inventario_id",
+    "Nome",
+    "Hostname",
+    "IP",
+    "MAC",
+    "Marca",
+    "Modelo",
+    "Serie",
+    "SO",
+    "Estado",
+    "Deteccao",
+    "Criado_em",
+    "Ultima_vista",
+    "Origem_registo",
+  ];
+  const q = (s) => `"${String(s ?? "").replace(/"/g, '""')}"`;
   const lines = [
     headers.join(";"),
     ...rows.map((a) =>
       [
-        `"${String(a?.nome || a?.hostname || "").replace(/"/g, '""')}"`,
+        a?.id ?? "",
+        a?.inventario_id ?? "",
+        q(a?.nome || ""),
+        q(a?.hostname || ""),
         a?.ip || "",
         a?.mac_address || "",
-        etiquetaOrigem(a),
+        q(a?.marca || ""),
+        q(a?.modelo || ""),
+        q(a?.numero_serie || ""),
+        q(a?.sistema_operativo || ""),
         a?.estado || "",
-        `"${String(a?.sistema_operativo || "").replace(/"/g, '""')}"`,
-        a?.numero_serie || "",
+        etiquetaSituacaoScan(a),
+        a?.criado_em != null ? String(a.criado_em) : "",
+        a?.ultima_vez_ativo_em != null ? String(a.ultima_vez_ativo_em) : "",
+        q(a?.origem_registo || ""),
       ].join(";"),
     ),
   ];
@@ -170,7 +189,6 @@ export default function AtivosPage({
     }
   }
 
-  const lista = ativos || [];
   const inventariosSubRede = (inventarios || []).filter(
     (inv) => String(inv?.tipo_inventario || "").toLowerCase() === "sub_rede",
   );
@@ -185,31 +203,38 @@ export default function AtivosPage({
     setSelectedRowKey(null);
   }, [selectedInventarioId]);
 
+  useEffect(() => {
+    setTabLista((prev) => (prev === "manual" || prev === "por_scan" ? "todos" : prev));
+  }, []);
+
+  const listaScan = useMemo(() => (ativos || []).filter((a) => origemDispositivo(a) === "scan"), [ativos]);
+
   const contagens = useMemo(() => {
-    const totalAtivos = lista.length;
-    const totalRegistosManual = lista.filter((a) => origemDispositivo(a) === "manual").length;
-    const totalDescobertosScan = lista.filter((a) => origemDispositivo(a) === "scan").length;
-    const comMac = lista.filter((a) => String(a?.mac_address || "").trim()).length;
-    const semHost = lista.filter((a) => !(a?.nome || a?.hostname)?.toString()?.trim()).length;
-    const inativos = lista.filter((a) =>
+    const base = listaScan;
+    const totalScan = base.length;
+    const primeiraDetecao = base.filter((a) => situacaoScan(a) === "primeira_vez").length;
+    const atualizadoNoScan = base.filter((a) => situacaoScan(a) === "atualizado").length;
+    const comMac = base.filter((a) => String(a?.mac_address || "").trim()).length;
+    const semHost = base.filter((a) => !(a?.nome || a?.hostname)?.toString()?.trim()).length;
+    const inativos = base.filter((a) =>
       String(a?.estado || "")
         .toLowerCase()
         .includes("inativ"),
     ).length;
-    const semInfo = lista.filter(semDadosCompleto).length;
+    const semInfo = base.filter(semDadosCompleto).length;
 
-    return { totalAtivos, totalRegistosManual, totalDescobertosScan, comMac, semHost, inativos, semInfo };
-  }, [lista]);
+    return { totalScan, primeiraDetecao, atualizadoNoScan, comMac, semHost, inativos, semInfo };
+  }, [listaScan]);
 
   const listaFiltrada = useMemo(() => {
-    let out = [...lista];
+    let out = [...listaScan];
 
     switch (tabLista) {
-      case "por_scan":
-        out = out.filter((a) => origemDispositivo(a) === "scan");
+      case "primeira_vez":
+        out = out.filter((a) => situacaoScan(a) === "primeira_vez");
         break;
-      case "manual":
-        out = out.filter((a) => origemDispositivo(a) === "manual");
+      case "atualizado":
+        out = out.filter((a) => situacaoScan(a) === "atualizado");
         break;
       case "sem_dados":
         out = out.filter(semDadosCompleto);
@@ -230,13 +255,13 @@ export default function AtivosPage({
       .toLowerCase();
     if (q) {
       out = out.filter((a) => {
-        const blob = `${a?.nome || ""} ${a?.hostname || ""} ${a?.ip || ""} ${a?.mac_address || ""} ${a?.numero_serie || ""}`.toLowerCase();
+        const blob = `${a?.nome || ""} ${a?.hostname || ""} ${a?.ip || ""} ${a?.mac_address || ""} ${a?.numero_serie || ""} ${a?.marca || ""} ${a?.modelo || ""} ${a?.sistema_operativo || ""}`.toLowerCase();
         return blob.includes(q);
       });
     }
 
     return out;
-  }, [lista, tabLista, ativoPesquisa]);
+  }, [listaScan, tabLista, ativoPesquisa]);
 
   const nomeInventario = useMemo(() => {
     const inv = (inventarios || []).find((x) => String(x.id) === String(selectedInventarioId || ""));
@@ -374,14 +399,9 @@ export default function AtivosPage({
             }}
           >
             {[
-              { k: "encontrados", label: "Total no inventário", v: contagens.totalAtivos, icon: "devices" },
-              {
-                k: "scanBd",
-                label: "Via scan de rede",
-                v: contagens.totalDescobertosScan,
-                icon: "radar",
-              },
-              { k: "reg", label: "Registo manual", v: contagens.totalRegistosManual, icon: "computer" },
+              { k: "scanBd", label: "Dispositivos (scan)", v: contagens.totalScan, icon: "radar" },
+              { k: "primeira", label: "Primeira deteção", v: contagens.primeiraDetecao, icon: "fiber_new" },
+              { k: "atual", label: "Actualizados no scan", v: contagens.atualizadoNoScan, icon: "update" },
               { k: "mac", label: "Com MAC", v: contagens.comMac, icon: "fingerprint" },
               { k: "sh", label: "Sem hostname", v: contagens.semHost, icon: "help" },
               { k: "ult", label: "Último scan", v: ultimoScanLinha, icon: "schedule" },
@@ -477,9 +497,9 @@ export default function AtivosPage({
               "& .MuiTab-root": { minHeight: 40, py: 0.5, textTransform: "none", fontWeight: 600, fontSize: 13 },
             }}
           >
-            <Tab value="todos" label={`Todos (${contagens.totalAtivos})`} />
-            <Tab value="por_scan" label={`Via scan (${contagens.totalDescobertosScan})`} />
-            <Tab value="manual" label={`Registo manual (${contagens.totalRegistosManual})`} />
+            <Tab value="todos" label={`Todos (${contagens.totalScan})`} />
+            <Tab value="primeira_vez" label={`Primeira deteção (${contagens.primeiraDetecao})`} />
+            <Tab value="atualizado" label={`Actualizados (${contagens.atualizadoNoScan})`} />
             <Tab value="sem_dados" label={`Sem dados (${contagens.semInfo})`} />
             <Tab value="inativos" label={`Inativos (${contagens.inativos})`} />
           </Tabs>
@@ -537,21 +557,33 @@ export default function AtivosPage({
             </Stack>
           </Stack>
 
-          <TableContainer sx={{ borderRadius: 2, border: "1px solid #e2e8f0", maxHeight: { xs: 480, lg: "min(560px, 55vh)" } }}>
-            <Table size="small" stickyHeader sx={{ "& .MuiTableCell-root": { fontSize: 13 } }}>
+          <TableContainer
+            sx={{
+              borderRadius: 2,
+              border: "1px solid #e2e8f0",
+              maxHeight: { xs: 480, lg: "min(560px, 55vh)" },
+              overflowX: "auto",
+            }}
+          >
+            <Table size="small" stickyHeader sx={{ minWidth: 1100, "& .MuiTableCell-root": { fontSize: 13 } }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>Dispositivo</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Nome</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Hostname</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>IP</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>MAC</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Origem</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Marca</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Modelo</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Nº série</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>SO</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Deteção</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Estado</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={10}>
                       <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
                         A carregar…
                       </Typography>
@@ -559,7 +591,7 @@ export default function AtivosPage({
                   </TableRow>
                 ) : listaFiltrada.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={10}>
                       <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
                         Sem dispositivos para mostrar nesta vista.
                       </Typography>
@@ -569,6 +601,7 @@ export default function AtivosPage({
                   listaFiltrada.map((a, idx) => {
                     const id = linhaScanKey(a, idx);
                     const selected = selectedRowKey === id;
+                    const cellSx = { verticalAlign: "top", maxWidth: 200, wordBreak: "break-word" };
                     return (
                       <TableRow
                         key={id}
@@ -580,26 +613,37 @@ export default function AtivosPage({
                         }}
                         sx={{ cursor: "pointer", "&:last-child td": { borderBottom: 0 } }}
                       >
-                        <TableCell sx={{ verticalAlign: "middle" }}>
+                        <TableCell sx={{ ...cellSx, verticalAlign: "middle" }}>
                           <Stack direction="row" spacing={1} alignItems="center">
-                            <span className="material-symbols-outlined" style={{ fontSize: 20, color: "#64748b" }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 20, color: "#64748b" }} aria-hidden>
                               computer
                             </span>
-                            <Typography fontWeight={600}>{a.nome || a.hostname || "—"}</Typography>
+                            <Typography fontWeight={600}>{txtBd(a.nome || a.hostname)}</Typography>
                           </Stack>
                         </TableCell>
-                        <TableCell sx={{ fontFamily: "monospace", fontSize: "0.8125rem" }}>{a.ip || "—"}</TableCell>
-                        <TableCell sx={{ fontFamily: "monospace", fontSize: "0.8125rem" }}>{a.mac_address || "—"}</TableCell>
-                        <TableCell>
+                        <TableCell sx={{ ...cellSx, fontSize: "0.8125rem" }}>{txtBd(a.hostname)}</TableCell>
+                        <TableCell sx={{ ...cellSx, fontFamily: "monospace", fontSize: "0.8125rem" }}>{txtBd(a.ip)}</TableCell>
+                        <TableCell sx={{ ...cellSx, fontFamily: "monospace", fontSize: "0.8125rem" }}>{txtBd(a.mac_address)}</TableCell>
+                        <TableCell sx={cellSx}>{txtBd(a.marca)}</TableCell>
+                        <TableCell sx={cellSx}>{txtBd(a.modelo)}</TableCell>
+                        <TableCell sx={{ ...cellSx, fontFamily: "monospace", fontSize: "0.75rem" }}>{txtBd(a.numero_serie)}</TableCell>
+                        <TableCell sx={cellSx}>{txtBd(a.sistema_operativo)}</TableCell>
+                        <TableCell sx={{ verticalAlign: "middle" }}>
                           <Chip
                             size="small"
-                            label={etiquetaOrigem(a)}
-                            color={origemDispositivo(a) === "scan" ? "info" : "primary"}
+                            label={etiquetaSituacaoScan(a)}
+                            color={
+                              situacaoScan(a) === "atualizado"
+                                ? "success"
+                                : situacaoScan(a) === "primeira_vez"
+                                  ? "info"
+                                  : "default"
+                            }
                             variant="outlined"
                           />
                         </TableCell>
-                        <TableCell>
-                          <Chip size="small" label={a.estado || "—"} color={estadoChipColor(a.estado)} />
+                        <TableCell sx={{ verticalAlign: "middle" }}>
+                          <Chip size="small" label={txtBd(a.estado)} color={estadoChipColor(a.estado)} />
                         </TableCell>
                       </TableRow>
                     );
@@ -610,7 +654,7 @@ export default function AtivosPage({
           </TableContainer>
         </Paper>
 
-        <Paper sx={{ ...CARD_SX, p: 2.5, flex: { lg: 1 }, minWidth: { lg: 260 }, alignSelf: { lg: "flex-start" } }}>
+        <Paper sx={{ ...CARD_SX, p: 2.5, flex: { lg: 1 }, minWidth: { lg: 300 }, maxWidth: { lg: 420 }, alignSelf: { lg: "flex-start" } }}>
           {!selectedAtivo ? (
             <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
               Seleciona um dispositivo na lista para ver detalhes.
@@ -624,28 +668,17 @@ export default function AtivosPage({
                   </span>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography fontWeight={800} fontSize={16} sx={{ wordBreak: "break-word" }}>
-                      {selectedAtivo.nome || selectedAtivo.hostname || "Dispositivo"}
+                      {txtBd(selectedAtivo.nome || selectedAtivo.hostname)}
                     </Typography>
                   </Box>
                 </Stack>
-                <Chip size="small" label={selectedAtivo.estado || "—"} color={estadoChipColor(selectedAtivo.estado)} />
+                <Chip size="small" label={txtBd(selectedAtivo.estado)} color={estadoChipColor(selectedAtivo.estado)} />
               </Stack>
               <Divider sx={{ mb: 2 }} />
               <Stack spacing={1.25}>
-                {[
-                  ["IP", selectedAtivo.ip || "—"],
-                  ["MAC", selectedAtivo.mac_address || "—"],
-                  ["Origem", etiquetaOrigem(selectedAtivo)],
-                  ["Hostname", selectedAtivo.hostname || "—"],
-                  ["SO", selectedAtivo.sistema_operativo || "—"],
-                  ["Série", selectedAtivo.numero_serie || "—"],
-                  ["Marca", selectedAtivo.marca || "—"],
-                  ["Modelo", selectedAtivo.modelo || "—"],
-                  ["Estado", selectedAtivo.estado || "—"],
-                  ["Inventário", nomeInventario],
-                ].map(([label, val]) => (
+                {linhasDetalheEquipamento(selectedAtivo, { nomeInventario }).map(([label, val]) => (
                   <Stack key={label} direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
-                    <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0, width: 90 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0, width: 150 }}>
                       {label}
                     </Typography>
                     <Typography variant="body2" sx={{ textAlign: "right", wordBreak: "break-word", minWidth: 0 }}>

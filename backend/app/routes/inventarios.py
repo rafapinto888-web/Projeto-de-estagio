@@ -268,6 +268,7 @@ def _ativos_unificados_do_inventario(
             localizacao_nome=c.localizacao_nome,
             utilizador_responsavel_nome=c.utilizador_responsavel_nome,
             ultima_vez_ativo_em=None,
+            criado_em=None,
             origem_registo=None,
         )
         for c in computadores
@@ -289,6 +290,7 @@ def _ativos_unificados_do_inventario(
             localizacao_nome=None,
             utilizador_responsavel_nome=None,
             ultima_vez_ativo_em=d.ultima_vez_ativo_em,
+            criado_em=d.criado_em,
             origem_registo=d.origem_registo,
         )
         for d in dispositivos
@@ -606,12 +608,17 @@ def executar_scan_do_inventario(
                     numero_serie=dados_scan.get("numero_serie"),
                     sistema_operativo=dados_scan.get("sistema_operativo"),
                     origem_registo="scan",
+                    criado_em=instante_scan,
                     ultima_vez_ativo_em=instante_scan,
                 )
                 db.add(dispositivo)
                 existentes_por_ip[ip] = dispositivo
             else:
                 # IP já existe: marca ativo e atualiza campos sem apagar valores antigos.
+                if dispositivo.criado_em is None:
+                    dispositivo.criado_em = (
+                        dispositivo.ultima_vez_ativo_em or instante_scan
+                    )
                 dispositivo.estado = "ativo"
                 dispositivo.ultima_vez_ativo_em = instante_scan
                 dispositivo.mac_address = dados_scan.get("mac_address") or dispositivo.mac_address

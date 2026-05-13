@@ -84,6 +84,7 @@ class DispositivoDescobertoResponse(BaseSchema):
     origem_registo: str | None = None
     estado: str | None = None
     ultima_vez_ativo_em: datetime | None = None
+    criado_em: datetime | None = None
 
     @model_validator(mode="after")
     def mostrar_ultima_vez_ativo_apenas_offline(self):
@@ -95,6 +96,12 @@ class DispositivoDescobertoResponse(BaseSchema):
     @field_serializer("ultima_vez_ativo_em", when_used="json")
     def formatar_ultima_vez_ativo_em(self, valor: datetime | None):
         # Formata a data para um formato mais legível no JSON.
+        if valor is None:
+            return None
+        return valor.strftime("%Y-%m-%d %H:%M:%S")
+
+    @field_serializer("criado_em", when_used="json")
+    def formatar_criado_em(self, valor: datetime | None):
         if valor is None:
             return None
         return valor.strftime("%Y-%m-%d %H:%M:%S")

@@ -24,6 +24,7 @@ import {
   Typography,
 } from "@mui/material";
 import SectionCard from "../components/SectionCard";
+import { celulasGrelhaPesquisaGlobal } from "../utils/detalheEquipamento";
 
 function tituloSecao(chave) {
   return String(chave || "")
@@ -76,11 +77,6 @@ function secaoAccent(secao) {
   return { bg: "#f8fafc", border: "#64748b", icon: "#475569" };
 }
 
-function valorHumano(v) {
-  if (v == null || String(v).trim() === "") return "—";
-  return String(v);
-}
-
 function normalizarTexto(v) {
   return String(v == null ? "" : v)
     .trim()
@@ -113,6 +109,9 @@ function itemCorrespondeTermo(item, termoNormalizado) {
     item?.sistema_operativo,
     item?.marca,
     item?.modelo,
+    item?.mac_address,
+    item?.origem_registo,
+    item?.inventario_nome,
   ]
     .filter((x) => x != null && String(x).trim() !== "")
     .join(" ")
@@ -413,7 +412,7 @@ export default function PesquisaPage({
                   Dicas de pesquisa
                 </Typography>
                 <Typography fontSize={11} color="text.secondary">
-                  Pesquisa por nome do ativo, IP, número de série, utilizador, inventário e localização.
+                  Pesquisa por nome, hostname, IP, MAC, marca, modelo, série, inventário, localização e responsável.
                 </Typography>
               </Box>
             </Stack>
@@ -614,12 +613,14 @@ export default function PesquisaPage({
                 sx={{
                   borderRadius: 3,
                   borderColor: "#dbe5f2",
+                  overflowX: "auto",
                   "& .MuiTableHead-root .MuiTableCell-root": {
                     fontSize: 11,
                     textTransform: "uppercase",
                     letterSpacing: "0.05em",
                     color: "#e2e8f0",
                     bgcolor: "#0f172a",
+                    whiteSpace: "nowrap",
                   },
                   "& .MuiTableBody-root .MuiTableRow-root:hover": {
                     bgcolor: "#eff6ff",
@@ -629,44 +630,71 @@ export default function PesquisaPage({
                   },
                   "& .MuiTableBody-root .MuiTableCell-root": {
                     py: 1.1,
+                    maxWidth: 200,
+                    wordBreak: "break-word",
+                    fontSize: 12,
                   },
                 }}
               >
-                <Table size="small">
+                <Table size="small" sx={{ minWidth: 1320 }}>
                   <TableHead>
                     <TableRow>
                       <TableCell>Tipo</TableCell>
-                      <TableCell>Nome / Descrição</TableCell>
-                      <TableCell>Detalhes</TableCell>
+                      <TableCell>ID</TableCell>
+                      <TableCell>Nome</TableCell>
+                      <TableCell>Hostname</TableCell>
+                      <TableCell>IP / rede</TableCell>
+                      <TableCell>MAC</TableCell>
+                      <TableCell>Marca</TableCell>
+                      <TableCell>Modelo</TableCell>
+                      <TableCell>Nº série</TableCell>
+                      <TableCell>SO</TableCell>
+                      <TableCell>Inventário</TableCell>
                       <TableCell>Localização</TableCell>
-                      <TableCell>Utilizador</TableCell>
+                      <TableCell>Responsável</TableCell>
                       <TableCell>Estado</TableCell>
+                      <TableCell>Deteção</TableCell>
+                      <TableCell>Extra</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {rowsPaginadas.map((r) => (
-                      <TableRow key={r.key}>
-                        <TableCell>
-                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                            {secaoVisual(r.secao).icon}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Typography fontSize={12.5} fontWeight={700}>
-                            {r.nome}
-                          </Typography>
-                          <Typography fontSize={11} color="text.secondary">
-                            {r.desc || "—"}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>{r.detalhes || "—"}</TableCell>
-                        <TableCell>{valorHumano(r.localizacao)}</TableCell>
-                        <TableCell>{valorHumano(r.utilizador)}</TableCell>
-                        <TableCell>
-                          <Chip label={valorHumano(r.estado)} size="small" color={estadoChipColor(r.estado)} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {rowsPaginadas.map((r) => {
+                      const c = celulasGrelhaPesquisaGlobal(r);
+                      return (
+                        <TableRow key={r.key}>
+                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 18, verticalAlign: "middle" }}>
+                              {secaoVisual(r.secao).icon}
+                            </span>
+                          </TableCell>
+                          <TableCell sx={{ fontFamily: "monospace", fontSize: 11 }}>{c.id}</TableCell>
+                          <TableCell>
+                            <Typography fontSize={12.5} fontWeight={700}>
+                              {c.nome}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>{c.hostname}</TableCell>
+                          <TableCell sx={{ fontFamily: "monospace", fontSize: 11 }}>{c.ip}</TableCell>
+                          <TableCell sx={{ fontFamily: "monospace", fontSize: 11 }}>{c.mac}</TableCell>
+                          <TableCell>{c.marca}</TableCell>
+                          <TableCell>{c.modelo}</TableCell>
+                          <TableCell sx={{ fontFamily: "monospace", fontSize: 11 }}>{c.serie}</TableCell>
+                          <TableCell>{c.so}</TableCell>
+                          <TableCell>{c.inventario}</TableCell>
+                          <TableCell>{c.localizacao}</TableCell>
+                          <TableCell>{c.responsavel}</TableCell>
+                          <TableCell>
+                            {c.estado !== "—" ? (
+                              <Chip label={c.estado} size="small" color={estadoChipColor(c.estado)} />
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell>{c.deteccao}</TableCell>
+                          <TableCell>{c.extra}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>

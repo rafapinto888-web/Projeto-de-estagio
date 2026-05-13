@@ -31,6 +31,8 @@ class DispositivoDescobertoDB(Base):
     origem_registo: Mapped[str] = mapped_column(String(30), nullable=False, default="scan")
     estado: Mapped[str] = mapped_column(String(50), nullable=False)
     ultima_vez_ativo_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Primeira vez que este IP foi visto neste inventário (não altera em updates do scan).
+    criado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     inventario: Mapped["InventarioDB"] = relationship(
         back_populates="dispositivos_descobertos"

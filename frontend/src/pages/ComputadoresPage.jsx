@@ -103,9 +103,11 @@ function payloadScanDispositivo(form) {
 /** Texto pesquisável de um ativo (manual ou scan). */
 function textoAtivoBusca(a) {
   const partes = [
+    a.id,
     a.nome,
     a.hostname,
     a.ip,
+    a.endereco_ip,
     a.mac_address,
     a.numero_serie,
     a.marca,
@@ -115,6 +117,7 @@ function textoAtivoBusca(a) {
     a.localizacao_nome,
     a.utilizador_responsavel_nome,
     a.origem_registo,
+    a.criado_em,
   ];
   return partes
     .filter((x) => x != null && String(x).trim() !== "")
@@ -609,7 +612,11 @@ export default function ComputadoresPage({
                         <table>
                           <thead>
                             <tr>
+                              <th>ID</th>
+                              <th>Inventário</th>
                               <th>Origem</th>
+                              <th>Origem registo (BD)</th>
+                              <th>Primeira vista</th>
                               <th>Nome / identif.</th>
                               <th>Hostname</th>
                               <th>IP</th>
@@ -635,6 +642,8 @@ export default function ComputadoresPage({
                                     : "computadores-row--scan"
                                 }
                               >
+                                <td className="cell-mono">{a.id != null ? String(a.id) : "—"}</td>
+                                <td>{dash(grupo.inventario_nome)}</td>
                                 <td>
                                   <span
                                     className={
@@ -645,6 +654,12 @@ export default function ComputadoresPage({
                                   >
                                     {etiquetaOrigemAmigavel(a)}
                                   </span>
+                                </td>
+                                <td className="cell-muted cell-mono">
+                                  {a.tipo === "dispositivo_descoberto" ? dash(a.origem_registo) : "—"}
+                                </td>
+                                <td className="cell-muted cell-nowrap">
+                                  {a.tipo === "dispositivo_descoberto" ? fmtUltimaSinc(a.criado_em) : "—"}
                                 </td>
                                 <td>
                                   <span className="cell-title">
