@@ -32,6 +32,29 @@ const TABS = [
   { id: "logs", label: "Logs" },
 ];
 
+const TAB_IDS = new Set(TABS.map((t) => t.id));
+
+/** Lê `#tabId` na URL (ex.: `#computadores`) para manter a aba após F5. */
+function tabIdFromLocation() {
+  try {
+    const raw = decodeURIComponent((window.location.hash || "").replace(/^#/, "").trim());
+    if (!raw) return "dashboard";
+    return TAB_IDS.has(raw) ? raw : "dashboard";
+  } catch {
+    return "dashboard";
+  }
+}
+
+/** Atualiza o hash sem recarregar a página (compatível com F5 e partilha de link). */
+function syncLocationHash(tabId) {
+  const path = `${window.location.pathname}${window.location.search}`;
+  const next = tabId === "dashboard" ? path : `${path}#${tabId}`;
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (current !== next) {
+    window.history.replaceState(null, "", next);
+  }
+}
+
 function emptyComputerForm() {
   return {
     id: "",
@@ -153,7 +176,7 @@ export default function App() {
   const theme = useTheme();
   const isMobileNav = useMediaQuery(theme.breakpoints.down("lg"));
   const [status, setStatus] = useState({ type: "ok", message: "" });
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState(() => tabIdFromLocation());
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [token, setToken] = useState(localStorage.getItem("access_token") || "");
   const [user, setUser] = useState(null);
@@ -371,6 +394,18 @@ export default function App() {
     const redePadrao = String(inv?.rede || inv?.ip_rede || "").trim();
     setScanRede(redePadrao);
   }, [selectedInventarioId, inventarios]);
+
+  useEffect(() => {
+    syncLocationHash(activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      setActiveTab(tabIdFromLocation());
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
