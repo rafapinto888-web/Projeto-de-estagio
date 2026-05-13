@@ -681,7 +681,7 @@ export default function ComputadoresPage({
                       title={
                         linhasUnificadas.length === 0
                           ? "Sem linhas para exportar com os filtros atuais"
-                          : "Descarregar CSV para abrir no Excel (UTF-8)"
+                          : "CSV para Excel (UTF-8, separador ;, datas e cabeçalhos em português)"
                       }
                       onClick={() => exportInventarioComputadoresParaExcel(grupo, linhasUnificadas)}
                     >
