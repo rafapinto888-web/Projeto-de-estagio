@@ -6,6 +6,16 @@ import DataTable from "../components/DataTable";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
 
+/** Nome do perfil na tabela: a lista de utilizadores só traz `perfil_id`; cruza com `perfis`. */
+function nomePerfilParaExibir(utilizador, perfis) {
+  const direto = utilizador?.perfil_nome;
+  if (direto && String(direto).trim()) return String(direto).trim();
+  const id = utilizador?.perfil_id;
+  if (id == null || id === "") return "—";
+  const p = (perfis || []).find((x) => String(x.id) === String(id));
+  return p?.nome && String(p.nome).trim() ? String(p.nome).trim() : "—";
+}
+
 export default function UtilizadoresPage({
   isAdmin,
   utilizadorForm,
@@ -82,7 +92,7 @@ export default function UtilizadoresPage({
             <TableCell>{u.nome}</TableCell>
             <TableCell>{u.username}</TableCell>
             <TableCell>{u.email}</TableCell>
-            <TableCell>{u.perfil_nome || u.perfil_id}</TableCell>
+            <TableCell>{nomePerfilParaExibir(u, perfis)}</TableCell>
             <TableCell>
               {isAdmin ? (
                 <>

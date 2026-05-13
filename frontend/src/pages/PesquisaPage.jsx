@@ -101,6 +101,12 @@ function normalizarTexto(v) {
     .toLowerCase();
 }
 
+/** Ordenação “quando foi adicionado”: a API não envia data de criação para todos os tipos; usamos o `id` (ordem típica na BD). */
+function instanteOrdenacaoRow(row) {
+  const id = Number(row?.item?.id);
+  return Number.isFinite(id) ? id : 0;
+}
+
 function estadoChipColor(estado) {
   const e = String(estado || "").toLowerCase();
   if (e.includes("ativo") || e.includes("conclu")) return "success";
@@ -179,7 +185,7 @@ export default function PesquisaPage({
   const [filtroSecao, setFiltroSecao] = useState("todas");
   const [filtroEstado, setFiltroEstado] = useState("todos");
   const [filtroLocalizacao, setFiltroLocalizacao] = useState("todas");
-  const [ordem, setOrdem] = useState("relevancia");
+  const [ordem, setOrdem] = useState("novo_antigo");
   const [mostrarAvancados, setMostrarAvancados] = useState(false);
   const [pagina, setPagina] = useState(1);
   const porPagina = 10;
@@ -307,8 +313,14 @@ export default function PesquisaPage({
   }, [rowsBase, filtroSecao, filtroEstado, filtroLocalizacao]);
 
   const rowsOrdenadas = useMemo(() => {
-    if (ordem === "relevancia") return rowsFiltradas;
-    return [...rowsFiltradas].sort((a, b) => a.nome.localeCompare(b.nome, "pt"));
+    const arr = [...rowsFiltradas];
+    arr.sort((a, b) => {
+      const ta = instanteOrdenacaoRow(a);
+      const tb = instanteOrdenacaoRow(b);
+      if (ta !== tb) return ordem === "antigo_novo" ? ta - tb : tb - ta;
+      return String(a.nome || "").localeCompare(String(b.nome || ""), "pt");
+    });
+    return arr;
   }, [rowsFiltradas, ordem]);
 
   const totalPaginas = Math.max(1, Math.ceil(rowsOrdenadas.length / porPagina));
@@ -508,7 +520,7 @@ export default function PesquisaPage({
                 setFiltroSecao("todas");
                 setFiltroEstado("todos");
                 setFiltroLocalizacao("todas");
-                setOrdem("relevancia");
+                setOrdem("novo_antigo");
               }}
             >
               Limpar filtros
@@ -594,10 +606,15 @@ export default function PesquisaPage({
                   <Tab value="resultados" label="Resultados" />
                 </Tabs>
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <FormControl size="small">
-                    <Select value={ordem} onChange={(e) => setOrdem(e.target.value)}>
-                      <MenuItem value="relevancia">Ordenar por Relevância</MenuItem>
-                      <MenuItem value="nome">Nome (A-Z)</MenuItem>
+                  <FormControl size="small" sx={{ minWidth: 220 }}>
+                    <Select
+                      value={ordem}
+                      onChange={(e) => setOrdem(e.target.value)}
+                      displayEmpty
+                      aria-label="Ordenação dos resultados"
+                    >
+                      <MenuItem value="antigo_novo">Do mais antigo ao mais novo</MenuItem>
+                      <MenuItem value="novo_antigo">Do mais novo ao mais antigo</MenuItem>
                     </Select>
                   </FormControl>
                 </Stack>
