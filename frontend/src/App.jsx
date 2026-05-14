@@ -1,4 +1,4 @@
-/* Comentario geral deste ficheiro: orquestra estado global e navegacao entre paginas. */
+// Raiz da app: sessão (token), dados partilhados e troca de abas do painel.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, useMediaQuery } from "@mui/material";
@@ -18,6 +18,7 @@ import HistoricoContaPage from "./pages/HistoricoContaPage";
 import PesquisaPage from "./pages/PesquisaPage";
 import UtilizadoresPage from "./pages/UtilizadoresPage";
 
+// Itens do menu lateral (id = chave da aba e do hash na URL).
 const TABS = [
   { id: "dashboard", label: "Dashboard" },
   { id: "inventarios", label: "Inventários" },
@@ -32,7 +33,7 @@ const TABS = [
 
 const TAB_IDS = new Set(TABS.map((t) => t.id));
 
-/** Lê `#tabId` na URL (ex.: `#computadores`) para manter a aba após F5. */
+// Aba ativa a partir do fragmento da URL (ex. #computadores).
 function tabIdFromLocation() {
   try {
     const raw = decodeURIComponent((window.location.hash || "").replace(/^#/, "").trim());
@@ -43,7 +44,7 @@ function tabIdFromLocation() {
   }
 }
 
-/** Atualiza o hash sem recarregar a página (compatível com F5 e partilha de link). */
+// Escreve o hash (#aba) sem recarregar a página.
 function syncLocationHash(tabId) {
   const path = `${window.location.pathname}${window.location.search}`;
   const next = tabId === "dashboard" ? path : `${path}#${tabId}`;
@@ -53,6 +54,7 @@ function syncLocationHash(tabId) {
   }
 }
 
+// Valores iniciais do formulário de computador (CRUD).
 function emptyComputerForm() {
   return {
     id: "",
@@ -71,6 +73,7 @@ function emptyComputerForm() {
   };
 }
 
+// Corpo JSON para criar/atualizar computador a partir do form.
 function payloadComputadorRegisto(form) {
   return {
     nome: form.nome.trim(),
@@ -90,14 +93,17 @@ function payloadComputadorRegisto(form) {
   };
 }
 
+// Form utilizador vazio.
 function emptyUserForm() {
   return { id: "", nome: "", username: "", email: "", perfil_id: "", palavra_passe: "" };
 }
 
+// Form inventário vazio.
 function emptyInventarioForm() {
   return { id: "", nome: "", tipo_inventario: "normal", ip_rede: "", descricao: "" };
 }
 
+// Remove chaves com string vazia ou null (útil em query strings de logs).
 function limparQueryVazia(params) {
   return Object.fromEntries(
     Object.entries(params || {}).filter(([, value]) => {
@@ -108,6 +114,7 @@ function limparQueryVazia(params) {
   );
 }
 
+// Parse de IPv4 para array de 4 números; inválido => null.
 function parseIPv4(ip) {
   const txt = String(ip || "").trim();
   const parts = txt.split(".");
@@ -117,6 +124,7 @@ function parseIPv4(ip) {
   return nums;
 }
 
+// Compara dois IPv4 já parseados.
 function compareIPv4(a, b) {
   for (let i = 0; i < 4; i += 1) {
     if (a[i] !== b[i]) return a[i] - b[i];
@@ -124,6 +132,7 @@ function compareIPv4(a, b) {
   return 0;
 }
 
+// Texto do campo rede do scan -> CIDR/rede aceite pela API ou erro.
 function normalizarRedeScan(rawValue) {
   const input = String(rawValue || "").trim();
   if (!input) {
@@ -172,44 +181,49 @@ function normalizarRedeScan(rawValue) {
 
 export default function App() {
   const theme = useTheme();
-  const isMobileNav = useMediaQuery(theme.breakpoints.down("lg"));
-  const [status, setStatus] = useState({ type: "ok", message: "" });
+  const isMobileNav = useMediaQuery(theme.breakpoints.down("lg")); // menu lateral em drawer no telemóvel
+  const [status, setStatus] = useState({ type: "ok", message: "" }); // mensagens ok / erro na StatusAlert
   const [activeTab, setActiveTab] = useState(() => tabIdFromLocation());
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [token, setToken] = useState(localStorage.getItem("access_token") || "");
-  const [user, setUser] = useState(null);
-  const [dataLoading, setDataLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [token, setToken] = useState(localStorage.getItem("access_token") || ""); // JWT da sessão
+  const [user, setUser] = useState(null); // /auth/me
+  const [dataLoading, setDataLoading] = useState(false); // loadAllData inicial / refresh
+  const [actionLoading, setActionLoading] = useState(false); // botões CRUD, login, pesquisa…
 
+  // Listas vindas da API (painel inteiro).
   const [inventarios, setInventarios] = useState([]);
   const [computadores, setComputadores] = useState([]);
   const [ativosPorInventario, setAtivosPorInventario] = useState([]);
   const [utilizadores, setUtilizadores] = useState([]);
   const [perfis, setPerfis] = useState([]);
   const [localizacoes, setLocalizacoes] = useState([]);
-  const [ativos, setAtivos] = useState([]);
+  const [ativos, setAtivos] = useState([]); // lista do inventário selecionado na aba Scan
 
+  // Formulários e inventário ativo (Scan + várias páginas).
   const [selectedInventarioId, setSelectedInventarioId] = useState("");
   const [inventarioForm, setInventarioForm] = useState(emptyInventarioForm());
   const [computadorForm, setComputadorForm] = useState(emptyComputerForm());
   const [utilizadorForm, setUtilizadorForm] = useState(emptyUserForm());
   const [localizacaoForm, setLocalizacaoForm] = useState({ id: "", nome: "", descricao: "" });
 
+  // Credenciais e opções do scan de rede (aba Scan).
   const [scanRede, setScanRede] = useState("");
   const [scanUser, setScanUser] = useState("");
   const [scanPass, setScanPass] = useState("");
   const [scanLogsRdp, setScanLogsRdp] = useState(true);
   const [scanLogsSeguranca, setScanLogsSeguranca] = useState(true);
   const [scanInfo, setScanInfo] = useState("");
-  const [ativoPesquisa, setAtivoPesquisa] = useState("");
+  const [ativoPesquisa, setAtivoPesquisa] = useState(""); // filtro texto na lista de ativos do Scan
 
+  // Pesquisa global (termo + JSON devolvido pela API).
   const [globalTermo, setGlobalTermo] = useState("");
   const [globalOutput, setGlobalOutput] = useState("");
-  const [globalSearchRequestId, setGlobalSearchRequestId] = useState(0);
+  const [globalSearchRequestId, setGlobalSearchRequestId] = useState(0); // força reação na Pesquisa ao vir da topbar
   const [logsOutput, setLogsOutput] = useState("Seleciona filtros para consultar logs.");
   const [historicoConta, setHistoricoConta] = useState([]);
-  const lastInventarioIdForScanRef = useRef("");
+  const lastInventarioIdForScanRef = useRef(""); // evita repor scanRede ao mudar só outros estados
 
+  // Filtros dos modais de logs.
   const [logComputadorParams, setLogComputadorParams] = useState({
     computador_id: "",
     nome: "",
@@ -222,12 +236,14 @@ export default function App() {
     dispositivo_id: "",
   });
 
+  // Admin se o perfil do /me corresponder ou flag is_admin.
   const isAdmin = useMemo(() => {
     const nomePerfil =
       user?.perfil_nome || user?.perfil || user?.perfil_nome_utilizador || user?.role || "";
     return isAdminProfileName(nomePerfil) || user?.is_admin === true;
   }, [user]);
 
+  // Carrega todas as listas em paralelo (após login ou refresh).
   async function loadAllData(currentToken, options = {}) {
     const tk = currentToken || token;
     if (!tk) return;
@@ -265,6 +281,7 @@ export default function App() {
     }
   }
 
+  // Atualiza lista de ativos do inventário na aba Scan (com ou sem termo de pesquisa).
   async function refreshAtivos(invId, searchTerm = "") {
     if (!invId) {
       setAtivos([]);
@@ -286,6 +303,7 @@ export default function App() {
     }
   }
 
+  // Submissão do ecrã de login: token + utilizador + dados iniciais.
   async function handleLogin(event) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -307,6 +325,7 @@ export default function App() {
     }
   }
 
+  // Termina sessão e limpa estado local.
   function handleLogout() {
     localStorage.removeItem("access_token");
     setToken("");
@@ -322,6 +341,7 @@ export default function App() {
     setStatus({ type: "ok", message: "Sessao terminada" });
   }
 
+  // Executa uma mutação API, recarrega listas, regista histórico opcional.
   async function withAction(action, successMessage) {
     setActionLoading(true);
     try {
@@ -354,6 +374,7 @@ export default function App() {
     }
   }
 
+  // Com token guardado: valida sessão e carrega dados; token inválido => logout silencioso.
   useEffect(() => {
     async function bootstrap() {
       if (!token) {
@@ -374,6 +395,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  // Ao mudar inventário ou voltar a logar: recarrega ativos do Scan para esse inventário.
   useEffect(() => {
     if (token && selectedInventarioId) {
       refreshAtivos(selectedInventarioId).catch(() =>
@@ -383,6 +405,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedInventarioId, token]);
 
+  // Preenche campo "rede" do scan quando escolhes outro inventário (uma vez por id).
   useEffect(() => {
     const invId = String(selectedInventarioId || "");
     if (!invId || lastInventarioIdForScanRef.current === invId) return;
@@ -392,10 +415,12 @@ export default function App() {
     setScanRede(redePadrao);
   }, [selectedInventarioId, inventarios]);
 
+  // Mantém URL (#aba) alinhada com a aba ativa.
   useEffect(() => {
     syncLocationHash(activeTab);
   }, [activeTab]);
 
+  // Voltar atrás / editar hash manualmente: sincroniza aba.
   useEffect(() => {
     const onHashChange = () => {
       setActiveTab(tabIdFromLocation());
@@ -404,10 +429,12 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
+  // UX: ao mudar de aba, scroll do conteúdo para o topo.
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeTab]);
 
+  // Dashboard aberto: atualiza dados em background a cada 30s (sem spinner principal).
   useEffect(() => {
     if (!token || activeTab !== "dashboard") return undefined;
     const timer = setInterval(() => {
@@ -419,16 +446,18 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, activeTab]);
 
-  const loading = dataLoading || actionLoading;
+  const loading = dataLoading || actionLoading; // spinner geral (dados + ações)
 
   function handleSelectTab(tabId) {
     setActiveTab(tabId);
     if (isMobileNav) setMobileNavOpen(false);
   }
 
+  // Sem sessão: só ecrã de autenticação.
   if (!token) {
     return (
       <main className="auth-screen">
+        {/* POST /auth/login via handleLogin */}
         <form className="auth-card" onSubmit={handleLogin}>
           <div className="brand-mini">
             <span className="topbar-logo" aria-hidden style={{ width: 40, height: 40 }}>
@@ -454,6 +483,7 @@ export default function App() {
     );
   }
 
+  // Com sessão: layout com sidebar, topbar e conteúdo por aba.
   return (
     <Box
       sx={{
@@ -482,15 +512,16 @@ export default function App() {
           showNavToggle={isMobileNav}
           onToggleNav={() => setMobileNavOpen(true)}
           onSearch={(q) => {
-            setGlobalTermo(q);
-            handleSelectTab("pesquisa");
-            setGlobalSearchRequestId((n) => n + 1);
+            setGlobalTermo(q); // termo da pesquisa rápida
+            handleSelectTab("pesquisa"); // abre Pesquisa global
+            setGlobalSearchRequestId((n) => n + 1); // dispara efeitos na página se precisarem
           }}
         />
 
         <main className="content" style={{ marginTop: 0, width: "100%" }}>
           <StatusAlert type={status.type} message={status.message} />
 
+          {/* --- Páginas por aba --- */}
           {activeTab === "dashboard" && (
             <DashboardPage
               inventarios={inventarios}
