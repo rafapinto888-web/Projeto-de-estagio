@@ -26,12 +26,8 @@ import AtivosPorEstadoChart from "../components/AtivosPorEstadoChart";
 import MiniSparkline from "../components/MiniSparkline";
 import SectionCard from "../components/SectionCard";
 import { ipEquipamento, txtBd } from "../utils/detalheEquipamento";
+import { tipoInventarioLabel } from "../domain/inventario/index.js";
 import { estadoChipMuiColor } from "../utils/estadoMuiColor";
-
-function tipoLabel(inv) {
-  if (inv.tipo_inventario === "sub_rede") return "Sub-rede";
-  return "Normal";
-}
 
 /** Células que não devem partir ao meio (IP, MAC, IDs, etc.) */
 const dashCellNowrap = {
@@ -380,7 +376,7 @@ export default function DashboardPage({
                       <ListItem key={inv.id} divider disableGutters>
                         <ListItemText
                           primary={inv.nome}
-                          secondary={`${tipoLabel(inv)} · ${(inv.total_computadores ?? 0) + (inv.total_dispositivos_scan ?? 0)} ativos`}
+                          secondary={`${tipoInventarioLabel(inv.tipo_inventario)} · ${(inv.total_computadores ?? 0) + (inv.total_dispositivos_scan ?? 0)} ativos`}
                           primaryTypographyProps={{ fontSize: 14, fontWeight: 700 }}
                           secondaryTypographyProps={{ fontSize: 12 }}
                         />

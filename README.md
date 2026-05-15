@@ -114,6 +114,25 @@ npm install
 
 ## Execução com Docker
 
+### Outro PC (primeira vez)
+
+1. Instalar [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+2. Copiar o projeto completo (incluir `frontend/package-lock.json`).
+3. Na raiz do projeto:
+
+```powershell
+cd "caminho\para\Projeto de estagio"
+.\scripts\docker-subir-dev.ps1
+```
+
+Isto faz `build` do `web-dev`, corre `npm ci` com o lock file (instala `xlsx` e resto) e abre [http://localhost:5173](http://localhost:5173).
+
+Stack completo (frontend + API + Postgres em Docker):
+
+```powershell
+.\scripts\docker-subir-tudo.ps1
+```
+
 ### Modo recomendado (estável)
 
 Por defeito, o Compose sobe só o site (`web`) no Docker. A API continua no Windows em `localhost:8000` e usa a mesma base de dados PostgreSQL que já tinhas.
@@ -145,8 +164,9 @@ Nomes dos containers (quando ativos no Docker Desktop):
 ### Modos opcionais
 
 - **Frontend em Docker com auto-atualização (hot reload)**:  
-  `docker compose up -d web-dev`  
-  (edites no Cursor refletem no browser sem `--build`; usa Vite dentro do container)
+  `docker compose --profile dev-live up -d --build web-dev`  
+  ou `.\scripts\docker-subir-dev.ps1`  
+  (edites no Cursor refletem no browser; `npm ci` no arranque alinha dependências noutro PC)
 - **API também no Docker**:  
   `docker compose --profile docker-api up -d --build`
 - **Postgres também no Docker** (isolado para testes):  
@@ -164,7 +184,7 @@ cd "caminho\para\Projeto de estagio"
 docker compose up -d --build web
 
 # frontend com auto-atualização (dev)
-docker compose up -d web-dev
+docker compose --profile dev-live up -d --build web-dev
 
 # ligar os 3
 docker compose --profile docker-api --profile bundled-db up -d --build

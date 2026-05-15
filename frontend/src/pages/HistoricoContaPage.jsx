@@ -4,21 +4,8 @@ import { useEffect, useState } from "react";
 import { Button, Paper } from "@mui/material";
 import { api } from "../api";
 import EmptyState from "../components/EmptyState";
+import { formatarDataPtCurta } from "../domain/equipamento/index.js";
 import SectionCard from "../components/SectionCard";
-
-function formatarData(iso) {
-  if (!iso) return "—";
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleString("pt-PT", {
-      dateStyle: "short",
-      timeStyle: "medium",
-    });
-  } catch {
-    return String(iso);
-  }
-}
 
 export default function HistoricoContaPage({ token, active, user }) {
   const [itens, setItens] = useState([]);
@@ -102,7 +89,7 @@ export default function HistoricoContaPage({ token, active, user }) {
                   <strong className="historico-conta-acao">{ev.acao}</strong>
                   <p className="historico-conta-desc">{ev.descricao || "—"}</p>
                   <p className="historico-conta-when">
-                    <time dateTime={ev.data_evento}>{formatarData(ev.data_evento)}</time>
+                    <time dateTime={ev.data_evento}>{formatarDataPtCurta(ev.data_evento)}</time>
                   </p>
                 </div>
               </li>

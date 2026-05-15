@@ -1,11 +1,17 @@
 # Por defeito: só o site (web). A API corre no Windows em localhost:8000 e usa a tua
 # PostgreSQL no PC — assim o login usa os mesmos utilizadores que no pgAdmin.
 #
+# Outro PC (dev, hot reload):  scripts\docker-subir-dev.ps1
+# Outro PC (tudo em Docker):   scripts\docker-subir-tudo.ps1
+#
 # API também em Docker (usa Postgres no PC via host.docker.internal):
 #   docker compose --profile docker-api up -d --build
 #
 # Postgres só em Docker (BD isolada, host porta 5433):
 #   docker compose --profile bundled-db up -d --build
+#
+# Obrigatorio no repo: frontend/package.json + frontend/package-lock.json
+# (npm ci no arranque do web-dev instala xlsx e restantes deps).
 
 services:
   db:
@@ -58,11 +64,12 @@ services:
   web-dev:
     profiles:
       - dev-live
-    image: node:20-alpine
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    image: inventario-frontend-dev
     container_name: frontend-dev
-    working_dir: /app
     restart: unless-stopped
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     environment:
       VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8000}
       CHOKIDAR_USEPOLLING: "true"

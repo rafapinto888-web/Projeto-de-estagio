@@ -21,24 +21,17 @@ import {
 import { api } from "../api";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
+import {
+  etiquetaOrigemAmigavel,
+  formatarDataPtCurta,
+  labelAtivo,
+  origemRegistoVisual,
+  textoAtivoBusca,
+  txtBd,
+} from "../domain/equipamento/index.js";
+import { tipoInventarioLabel } from "../domain/inventario/index.js";
 import { exportInventarioComputadoresParaExcel } from "../utils/exportInventarioComputadores.js";
 import { estadoChipMuiColor } from "../utils/estadoMuiColor";
-
-function tipoInvLabel(t) {
-  if (t === "sub_rede") return "Sub-rede";
-  return "Normal";
-}
-
-function dash(v) {
-  if (v == null || v === "") return "—";
-  const s = String(v).trim();
-  return s || "—";
-}
-
-function labelAtivo(a) {
-  if (a.tipo === "computador") return a.nome || a.hostname || "—";
-  return a.hostname || a.ip || `Scan #${a.id}`;
-}
 
 function sortByIdentificacao(list) {
   return [...(list || [])].sort((a, b) =>
@@ -51,37 +44,6 @@ function linhasEquipamentosUnificadas(registos, scans) {
   return [...registos, ...scans].sort((a, b) =>
     labelAtivo(a).localeCompare(labelAtivo(b), "pt", { sensitivity: "base" }),
   );
-}
-
-/**
- * Origem lógica alinhada ao modelo: tabela computadores vs dispositivos_descobertos.origem_registo.
- */
-function origemRegistoVisual(a) {
-  if (a.tipo === "computador") return "manual";
-  const raw = String(a.origem_registo ?? "scan")
-    .trim()
-    .toLowerCase();
-  if (raw === "manual" || raw === "registo_manual") return "manual";
-  return "scan";
-}
-
-/** Texto da coluna Origem (Manual / Scan ou valor vindo da BD). */
-function etiquetaOrigemAmigavel(a) {
-  if (a.tipo === "computador") return "Manual";
-  const raw = String(a.origem_registo ?? "scan").trim();
-  const low = raw.toLowerCase();
-  if (low === "manual" || low === "registo_manual") return "Manual";
-  if (low === "scan" || low === "") return "Scan";
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
-}
-
-function fmtUltimaSinc(d) {
-  if (!d) return "—";
-  try {
-    return new Date(d).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short" });
-  } catch {
-    return "—";
-  }
 }
 
 function emptyScanForm() {
@@ -110,31 +72,6 @@ function payloadScanDispositivo(form) {
     numero_serie: form.numero_serie?.trim() || null,
     sistema_operativo: form.sistema_operativo?.trim() || null,
   };
-}
-
-/** Texto pesquisável de um ativo (manual ou scan). */
-function textoAtivoBusca(a) {
-  const partes = [
-    a.id,
-    a.nome,
-    a.hostname,
-    a.ip,
-    a.endereco_ip,
-    a.mac_address,
-    a.numero_serie,
-    a.marca,
-    a.modelo,
-    a.sistema_operativo,
-    a.estado,
-    a.localizacao_nome,
-    a.utilizador_responsavel_nome,
-    a.origem_registo,
-    a.criado_em,
-  ];
-  return partes
-    .filter((x) => x != null && String(x).trim() !== "")
-    .join(" ")
-    .toLowerCase();
 }
 
 function inventarioCoincideNome(grupo, qLimpa) {
@@ -662,7 +599,7 @@ export default function ComputadoresPage({
                       <div className="computadores-inv-card-head-text">
                         <div className="computadores-inv-card-title-row">
                           <h3 className="computadores-inv-card-title">{grupo.inventario_nome}</h3>
-                          <span className="pill badge-info">{tipoInvLabel(grupo.tipo_inventario)}</span>
+                          <span className="pill badge-info">{tipoInventarioLabel(grupo.tipo_inventario)}</span>
                           <span className="computadores-inv-card-index">#{idxInv + 1}</span>
                         </div>
                         <dl className="computadores-inv-kpis computadores-inv-kpis--inline">
@@ -692,7 +629,7 @@ export default function ComputadoresPage({
                         title={
                           linhasUnificadas.length === 0
                             ? "Sem linhas para exportar com os filtros atuais"
-                            : "Descarrega CSV para abrir no Excel (UTF-8, separador ;)"
+                            : "Ficheiro Excel (.xlsx)"
                         }
                         startIcon={
                           <span className="material-symbols-outlined computadores-inv-card-export-icon" aria-hidden>
@@ -825,13 +762,13 @@ export default function ComputadoresPage({
                                       hover
                                       key={a.tipo === "computador" ? `pc-${a.id}` : `scan-${a.id}`}
                                     >
-                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 120 }}>{dash(a.hostname)}</TableCell>
-                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 118 }}>{dash(a.ip || a.endereco_ip)}</TableCell>
-                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 132 }}>{dash(a.mac_address)}</TableCell>
-                                      <TableCell>{dash(a.marca)}</TableCell>
-                                      <TableCell>{dash(a.modelo)}</TableCell>
-                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 100 }}>{dash(a.numero_serie)}</TableCell>
-                                      <TableCell>{dash(a.sistema_operativo)}</TableCell>
+                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 120 }}>{txtBd(a.hostname)}</TableCell>
+                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 118 }}>{txtBd(a.ip || a.endereco_ip)}</TableCell>
+                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 132 }}>{txtBd(a.mac_address)}</TableCell>
+                                      <TableCell>{txtBd(a.marca)}</TableCell>
+                                      <TableCell>{txtBd(a.modelo)}</TableCell>
+                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 100 }}>{txtBd(a.numero_serie)}</TableCell>
+                                      <TableCell>{txtBd(a.sistema_operativo)}</TableCell>
                                       <TableCell>
                                         <Chip
                                           size="small"
@@ -842,23 +779,23 @@ export default function ComputadoresPage({
                                       </TableCell>
                                       <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 88 }}>
                                         <Typography variant="body2" color="text.secondary" component="span" noWrap>
-                                          {a.tipo === "dispositivo_descoberto" ? dash(a.origem_registo) : "—"}
+                                          {a.tipo === "dispositivo_descoberto" ? txtBd(a.origem_registo) : "—"}
                                         </Typography>
                                       </TableCell>
                                       <TableCell sx={{ whiteSpace: "nowrap" }}>
                                         <Typography variant="body2" color="text.secondary" component="span">
-                                          {a.tipo === "dispositivo_descoberto" ? fmtUltimaSinc(a.criado_em) : "—"}
+                                          {a.tipo === "dispositivo_descoberto" ? formatarDataPtCurta(a.criado_em) : "—"}
                                         </Typography>
                                       </TableCell>
                                       <TableCell>
-                                        <Chip size="small" label={dash(a.estado)} color={estadoChipMuiColor(a.estado)} />
+                                        <Chip size="small" label={txtBd(a.estado)} color={estadoChipMuiColor(a.estado)} />
                                       </TableCell>
-                                      <TableCell>{a.tipo === "computador" ? dash(a.localizacao_nome) : "—"}</TableCell>
-                                      <TableCell>{a.tipo === "computador" ? dash(a.utilizador_responsavel_nome) : "—"}</TableCell>
+                                      <TableCell>{a.tipo === "computador" ? txtBd(a.localizacao_nome) : "—"}</TableCell>
+                                      <TableCell>{a.tipo === "computador" ? txtBd(a.utilizador_responsavel_nome) : "—"}</TableCell>
                                       <TableCell sx={{ whiteSpace: "nowrap" }}>
                                         <Typography variant="body2" color="text.secondary" component="span">
                                           {a.tipo === "dispositivo_descoberto"
-                                            ? fmtUltimaSinc(a.ultima_vez_ativo_em)
+                                            ? formatarDataPtCurta(a.ultima_vez_ativo_em)
                                             : "—"}
                                         </Typography>
                                       </TableCell>

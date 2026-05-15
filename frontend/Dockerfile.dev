@@ -1,0 +1,14 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Dependencias fixadas no lock (inclui xlsx e resto do frontend).
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+COPY docker-entrypoint.dev.sh /usr/local/bin/docker-entrypoint.dev.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.dev.sh
+
+EXPOSE 5173
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.dev.sh"]

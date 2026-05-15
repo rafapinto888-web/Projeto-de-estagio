@@ -3,10 +3,7 @@
 import { useCallback, useState } from "react";
 import { Box, Button, MenuItem, Stack, TableCell, TableRow, TextField } from "@mui/material";
 
-function tipoInventarioLabel(t) {
-  if (t === "sub_rede") return "Sub-rede";
-  return "Normal";
-}
+import { tipoInventarioLabel } from "../domain/inventario/index.js";
 import DataTable from "../components/DataTable";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";

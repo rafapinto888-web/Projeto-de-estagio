@@ -1,35 +1,15 @@
-/** Texto vindo da API/BD para células e painéis (vazio → traço). */
-export function txtBd(v) {
-  if (v == null) return "—";
-  const s = String(v).trim();
-  return s || "—";
-}
+/** Reexporta regras de domínio + funções de apresentação (detalhe / pesquisa). */
+export {
+  txtBd,
+  formatarDataPt,
+  ipEquipamento,
+  origemDispositivo,
+} from "../domain/equipamento/index.js";
 
-export function formatarDataPt(v) {
-  if (v == null || v === "") return "—";
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return String(v);
-  return d.toLocaleString("pt-PT");
-}
-
-export function ipEquipamento(item) {
-  if (!item) return null;
-  return item.ip || item.endereco_ip || null;
-}
-
-/** Origem na lista unificada: manual vs scan (usa sempre o campo `tipo` da API). */
-export function origemDispositivo(a) {
-  const t = String(a?.tipo || "").toLowerCase();
-  if (t === "computador") return "manual";
-  if (t === "dispositivo_descoberto") return "scan";
-  return "scan";
-}
+import { txtBd, formatarDataPt, ipEquipamento } from "../domain/equipamento/index.js";
 
 /**
  * Linhas [rótulo, valor] para painel de detalhe — alinha inventário manual e dispositivo do scan.
- * @param {object} item
- * @param {{ nomeInventario?: string }} [opts]
- * @returns {Array<[string, string]>}
  */
 export function linhasDetalheEquipamento(item, opts = {}) {
   const nomeInv = opts.nomeInventario ?? item?.inventario_nome ?? "—";
@@ -75,8 +55,7 @@ export function secaoPesquisaEhEquipamento(secaoRaw) {
 }
 
 /**
- * Células alinhadas à grelha “completa” da pesquisa global (uma linha = um tipo de entidade).
- * @param {{ secao: string, item?: object, nome?: string }} r
+ * Células alinhadas à grelha da pesquisa global.
  */
 export function celulasGrelhaPesquisaGlobal(r) {
   const item = r.item || {};
