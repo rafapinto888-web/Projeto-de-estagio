@@ -40,14 +40,6 @@ function labelAtivo(a) {
   return a.hostname || a.ip || `Scan #${a.id}`;
 }
 
-/** Título na coluna Equipamento: evita repetir o IP quando a coluna IP já o mostra. */
-function tituloColunaEquipamento(a) {
-  if (a.tipo === "computador") return dash(a.nome);
-  const host = a.hostname && String(a.hostname).trim();
-  if (host) return dash(a.hostname);
-  return `Scan #${a.id ?? "?"}`;
-}
-
 function sortByIdentificacao(list) {
   return [...(list || [])].sort((a, b) =>
     labelAtivo(a).localeCompare(labelAtivo(b), "pt", { sensitivity: "base" }),
@@ -176,8 +168,8 @@ const TABLE_CELL_MONO = {
 };
 
 const LINHAS_POR_PAGINA = 10;
-/** Colunas da tabela unificada por inventário (ID … Ações). */
-const COLUNAS_TABELA_INVENTARIO = 17;
+/** Colunas da tabela unificada por inventário (sem ID/Equipamento … Ações). */
+const COLUNAS_TABELA_INVENTARIO = 15;
 
 export default function ComputadoresPage({
   isAdmin,
@@ -789,8 +781,6 @@ export default function ComputadoresPage({
                         >
                           <TableHead>
                             <TableRow>
-                              <TableCell>ID</TableCell>
-                              <TableCell>Equipamento</TableCell>
                               <TableCell>Hostname</TableCell>
                               <TableCell>IP</TableCell>
                               <TableCell>MAC</TableCell>
@@ -827,50 +817,7 @@ export default function ComputadoresPage({
                                     <TableRow
                                       hover
                                       key={a.tipo === "computador" ? `pc-${a.id}` : `scan-${a.id}`}
-                                      sx={{
-                                        "& > .MuiTableCell-root:first-of-type": {
-                                          borderLeftStyle: "solid",
-                                          borderLeftWidth: 3,
-                                          borderLeftColor: (theme) =>
-                                            manualRow ? theme.palette.primary.main : theme.palette.info.main,
-                                        },
-                                      }}
                                     >
-                                      <TableCell
-                                        sx={{
-                                          ...TABLE_CELL_MONO,
-                                          minWidth: 52,
-                                          fontVariantNumeric: "tabular-nums",
-                                        }}
-                                      >
-                                        {a.id != null ? String(a.id) : "—"}
-                                      </TableCell>
-                                      <TableCell sx={{ minWidth: 176, maxWidth: 280 }}>
-                                        <Stack direction="row" spacing={1} alignItems="flex-start">
-                                          <span
-                                            className="material-symbols-outlined"
-                                            style={{ fontSize: 20, color: "#64748b", flexShrink: 0 }}
-                                            aria-hidden
-                                          >
-                                            computer
-                                          </span>
-                                          <Box sx={{ minWidth: 0 }}>
-                                            <Typography variant="body2" fontWeight={700} display="block" lineHeight={1.35}>
-                                              {tituloColunaEquipamento(a)}
-                                            </Typography>
-                                            {a.tipo === "computador" && a.hostname ? (
-                                              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
-                                                {dash(a.hostname)}
-                                              </Typography>
-                                            ) : null}
-                                            {a.tipo === "dispositivo_descoberto" && a.hostname && (a.ip || a.endereco_ip) ? (
-                                              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
-                                                {dash(a.ip || a.endereco_ip)}
-                                              </Typography>
-                                            ) : null}
-                                          </Box>
-                                        </Stack>
-                                      </TableCell>
                                       <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 120 }}>{dash(a.hostname)}</TableCell>
                                       <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 118 }}>{dash(a.ip || a.endereco_ip)}</TableCell>
                                       <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 132 }}>{dash(a.mac_address)}</TableCell>

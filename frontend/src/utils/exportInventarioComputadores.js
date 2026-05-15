@@ -33,11 +33,6 @@ function etiquetaOrigemAmigavel(a) {
   return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
-function nomeEquipamentoLista(a) {
-  if (a?.tipo === "computador") return a.nome || a.hostname || "";
-  return a?.hostname || a?.ip || (a?.id != null ? `Scan #${a.id}` : "");
-}
-
 function csvCell(v) {
   if (v == null) return "";
   return String(v).trim();
@@ -52,13 +47,6 @@ function dataParaExcel(v) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-function tipoLegivel(a) {
-  const t = String(a?.tipo || "").toLowerCase();
-  if (t === "computador") return "Computador";
-  if (t === "dispositivo_descoberto") return "Dispositivo (scan)";
-  return csvCell(a?.tipo);
-}
-
 function tipoInventarioLegivel(v) {
   const s = String(v || "").trim().toLowerCase();
   if (s === "sub_rede") return "Sub-rede";
@@ -66,46 +54,39 @@ function tipoInventarioLegivel(v) {
   return csvCell(v);
 }
 
+/** Cabeçalhos alinhados à tabela do cartão (Computadores), mais contexto do inventário. */
+const HEADERS = [
+  "Inventário",
+  "Tipo inventário",
+  "Hostname",
+  "IP",
+  "MAC",
+  "Marca",
+  "Modelo",
+  "N.º série",
+  "Sistema operativo",
+  "Origem",
+  "Origem registo",
+  "Primeira vista",
+  "Estado",
+  "Localização",
+  "Responsável",
+  "Última atualização",
+];
+
 /**
- * Exporta as linhas do inventário (após filtros locais do cartão) para CSV otimizado para Excel:
+ * Exporta as linhas do inventário (após filtros do cartão) para CSV otimizado para Excel:
  * - UTF-8 com BOM
  * - Primeira linha `sep=;` (separador em PT)
  * - Fim de linha Windows (`\r\n`)
- * - Cabeçalhos em português
- * - Datas em ISO local para reconhecimento como data no Excel
+ * - Colunas iguais à grelha visível (sem ID de BD nem coluna Equipamento)
  *
  * @param {{ inventario_id?: number, inventario_nome?: string, tipo_inventario?: string }} grupo
  * @param {object[]} linhas
  */
 export function exportInventarioComputadoresParaExcel(grupo, linhas) {
   const invNome = grupo?.inventario_nome ?? "";
-  const invId = grupo?.inventario_id ?? "";
   const tipoInv = tipoInventarioLegivel(grupo?.tipo_inventario);
-  const exportadoEm = dataParaExcel(new Date());
-
-  const headers = [
-    "Inventário",
-    "ID inventário",
-    "Tipo inventário",
-    "Tipo de linha",
-    "ID (BD)",
-    "Nome / identificação",
-    "Hostname",
-    "IP",
-    "MAC",
-    "Marca",
-    "Modelo",
-    "N.º série",
-    "Sistema operativo",
-    "Origem (Manual/Scan)",
-    "Origem registo (BD)",
-    "Primeira vista",
-    "Estado",
-    "Localização",
-    "Responsável",
-    "Última atualização (scan)",
-    "Exportado em",
-  ];
 
   const list = Array.isArray(linhas) ? linhas : [];
   const linhasCsv = list.map((a) => {
@@ -116,11 +97,7 @@ export function exportInventarioComputadoresParaExcel(grupo, linhas) {
     const ultima = isPc ? "" : dataParaExcel(a?.ultima_vez_ativo_em);
     return [
       q(invNome),
-      q(invId),
       q(tipoInv),
-      q(tipoLegivel(a)),
-      q(a?.id != null ? String(a.id) : ""),
-      q(nomeEquipamentoLista(a)),
       q(csvCell(a?.hostname)),
       q(csvCell(ip)),
       q(csvCell(a?.mac_address)),
@@ -135,18 +112,14 @@ export function exportInventarioComputadoresParaExcel(grupo, linhas) {
       q(isPc ? csvCell(a?.localizacao_nome) : ""),
       q(isPc ? csvCell(a?.utilizador_responsavel_nome) : ""),
       q(ultima),
-      q(exportadoEm),
     ].join(SEP);
   });
 
-  const bloco = [
-    `sep=${SEP}`,
-    headers.join(SEP),
-    ...linhasCsv,
-  ].join(EOL);
+  const bloco = [`sep=${SEP}`, HEADERS.join(SEP), ...linhasCsv].join(EOL);
 
   const base = sanitizeFilename(invNome);
-  const filename = `Computadores_${base}_${invId}.csv`;
+  const stamp = dataParaExcel(new Date()).replace(/[: ]/g, "-").slice(0, 19);
+  const filename = `Computadores_${base}_${stamp}.csv`;
   const blob = new Blob(["\uFEFF", bloco], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const el = document.createElement("a");
