@@ -73,23 +73,18 @@ O sistema deve disponibilizar uma interface frontend para consulta de logs do si
 O sistema deve disponibilizar uma interface frontend para consulta dos dispositivos encontrados através do scan de rede.
 
 Requisitos Não Funcionais
-Integridade e Fiabilidade
-O sistema deve assegurar a integridade e consistência dos dados, mesmo em caso de falhas inesperadas.
-O sistema deve manter estabilidade durante a execução, evitando interrupções ou erros críticos.
 
-Arquitetura e Manutenção
-O sistema deve apresentar uma estrutura modular que facilite a manutenção e atualização.
-O sistema deve permitir expansão futura para novos módulos sem necessidade de reescrever os componentes principais.
+Desempenho
+A API deve responder, em condições normais, em até 2 segundos para operações CRUD comuns (GET, POST, PUT, DELETE).
+Listagens com paginação (quando aplicável) devem responder em até 3 segundos para até 1000 registos.
+O endpoint de scan deve iniciar processamento em até 2 segundos após o pedido.
+O frontend deve apresentar feedback visual de carregamento em operações que demorem mais de 500 ms.
 
-Segurança
-O sistema deve implementar mecanismos de autenticação segura dos utilizadores.
-O sistema deve proteger dados sensíveis contra acessos não autorizados.
-
-Comunicação e Disponibilidade
-O sistema deve responder corretamente a pedidos HTTP.
-O sistema deve disponibilizar os seus serviços através de um web service funcional e acessível via HTTP.
-O sistema deve ser disponibilizado através de um web server adequado, garantindo acesso contínuo à aplicação.
-
+Fiabilidade e Integridade
+Operações de escrita devem ser transacionais: em caso de falha, os dados devem manter-se consistentes (rollback).
+O sistema não deve permitir criação de registos com campos obrigatórios em falta.
+Restrições de unicidade (ex.: número de série, username, email, inventário+IP para dispositivos descobertos) devem ser garantidas pela aplicação e pela base de dados.
+Em caso de erro interno, o sistema deve devolver resposta HTTP controlada e não interromper o serviço.
 Usabilidade
 O sistema deve apresentar uma interface simples e intuitiva para os utilizadores.
 O frontend deve permitir navegação clara entre as funcionalidades principais do sistema.
@@ -130,8 +125,7 @@ Stack Tecnológica
 Backend / Web Service
 Python
 FastAPI
-uvicorn(cd "c:\Users\Jose\Desktop\Projeto de estagio\Projeto de estagio\backend"
->> .\venv\Scripts\python.exe -m uvicorn app.core.main:app --reload)#comando pra dar run
+uvicorn
 
 Web Server
 Nginx

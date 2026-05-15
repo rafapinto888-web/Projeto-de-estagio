@@ -1,37 +1,48 @@
-@startuml sequencia_consulta_logs
-skinparam shadowing false
-skinparam backgroundColor white
-title Diagrama de sequencia - Consulta de logs
+@startuml
+title Diagrama de Sequencia - Consulta de logs
 
 actor Utilizador as U
 participant Frontend as FE
 participant API as API
-database "Base de dados" as BD
+database "Base de Dados" as BD
+participant "Maquinas na rede" as REDE
 
-== Logs por computador (aba Logs) ==
+== Logs de computador ==
 
-U -> FE : Filtros: nome, hostname,\nserie ou tipo_log
-FE -> API : GET /computadores/logs/dispositivo?...\n(Bearer)
+U -> FE : Define filtros na pagina Logs
 
-API -> BD : Resolver computador(es)\npelos filtros
-API -> BD : SELECT LogDispositivo
-BD --> API : Eventos
-API --> FE : total_logs + lista JSON
-FE --> U : Tabela ou JSON na pagina
+FE -> API : Pedir logs do equipamento
 
-== Logs de inventario (scan + credenciais rede) ==
+API -> BD : Encontrar computador
+BD --> API : Registo encontrado
 
-U -> FE : Inventario + credenciais\n+ tipos seguranca/rdp
-FE -> API : GET /inventarios/{id}/logs/dispositivos-descobertos\n?coletar_agora=true&utilizador&password\n(Bearer)
+API -> BD : Ler eventos guardados
+BD --> API : Lista de logs
+
+API --> FE : Resultados
+
+FE --> U : Mostrar tabela
+
+== Logs de inventario ==
+
+U -> FE : Escolhe inventario e credenciais
+
+FE -> API : Pedir logs dos dispositivos
 
 API -> BD : Validar acesso ao inventario
-opt coletar_agora = true
-  API -> API : coletar_logs_windows\n(hosts associados)
-  API -> BD : Persistir LogDispositivo
+BD --> API : Acesso confirmado
+
+opt Recolher logs agora
+  API -> REDE : Consultar maquinas Windows
+  REDE --> API : Eventos
+  API -> BD : Guardar novos logs
 end
-API -> BD : Devolver logs guardados
-BD --> API : Dados
-API --> FE : Resposta JSON
-FE --> U : Resultado na pagina Logs
+
+API -> BD : Devolver logs existentes
+BD --> API : Lista de eventos
+
+API --> FE : Resultados
+
+FE --> U : Mostrar na pagina
 
 @enduml

@@ -1,33 +1,33 @@
-@startuml sequencia_bootstrap_sessao
-skinparam shadowing false
-skinparam backgroundColor white
-title Diagrama de sequencia - Arranque com token guardado (F5)
+@startuml
+title Diagrama de Sequencia - Arranque da aplicacao
 
 actor Utilizador as U
 participant Frontend as FE
 participant API as API
-database "Base de dados" as BD
+database "Base de Dados" as BD
 
-U -> FE : Abre ou recarrega a aplicacao
-FE -> FE : Ler access_token\n(localStorage)
+U -> FE : Abre ou atualiza a pagina
 
-alt Sem token
-  FE --> U : Ecra de login
-else Com token
-  FE -> API : GET /auth/me (Bearer)
-  alt Token valido
-    API -> BD : Carregar utilizador e perfil
+FE -> FE : Verificar sessao guardada
+
+alt Sem sessao
+  FE --> U : Mostrar ecra de login
+else Com sessao guardada
+  FE -> API : Confirmar sessao
+  API -> BD : Carregar utilizador
+  BD --> API : Dados do utilizador
+  API -> API : Validar sessao
+  alt Sessao valida
+    API --> FE : Sessao aceite
+    FE -> API : Pedir dados do painel
+    API -> BD : Carregar inventarios e listas
     BD --> API : Dados
-    API --> FE : Utilizador autenticado
-    FE -> API : loadAllData\n(paralelo: inventarios,\ncomputadores, perfis, ...)
-    API -> BD : Leituras
-    BD --> API : Listas
-    API --> FE : Estado global React
-    FE --> U : Ultima aba (#hash) ou Dashboard
-  else Token invalido ou expirado
-    API --> FE : 401
-    FE -> FE : Apagar token local
-    FE --> U : Ecra de login
+    API --> FE : Informacao atualizada
+    FE --> U : Mostrar ultima pagina ou Dashboard
+  else Sessao invalida
+    API --> FE : Sessao recusada
+    FE -> FE : Apagar sessao local
+    FE --> U : Mostrar ecra de login
   end
 end
 

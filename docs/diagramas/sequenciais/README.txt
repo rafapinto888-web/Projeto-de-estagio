@@ -1,18 +1,13 @@
-Diagramas de sequencia (PlantUML) - alinhados ao codigo do projeto (maio 2026)
+Diagramas de Sequencia - estilo natural (como o exemplo de Login)
 
-Ficheiros:
-  01-login.puml           - Login e carga inicial do painel
-  02-bootstrap-sessao.puml - Recarregar pagina com token
-  03-scan-rede.puml       - Scan sub-rede (AtivosPage / API)
-  04-pesquisa-global.puml - GET /pesquisar + UI PesquisaPage
-  05-crud-computador.puml - CRUD computador + withAction + historico
-  06-consulta-logs.puml   - Logs por PC e logs de inventario
-  07-exportar-csv.puml    - Export CSV no browser (sem API)
+Participantes: Utilizador, Frontend, API, Base de Dados, Sistema de Logs (quando aplicavel)
 
-Como gerar imagem:
-  https://www.plantuml.com/plantuml/uml/
-  ou extensao PlantUML no VS Code
+01-login.puml
+02-bootstrap-sessao.puml
+03-scan-rede.puml
+04-pesquisa-global.puml
+05-crud-computador.puml
+06-consulta-logs.puml
+07-exportar-csv.puml
 
-Codigo fonte principal:
-  frontend/src/App.jsx, frontend/src/api.js
-  backend/app/routes/auth.py, inventarios.py, pesquisa.py, computadores.py
+Preview: extensao PlantUML ou https://www.plantuml.com/plantuml/uml/
