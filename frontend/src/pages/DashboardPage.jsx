@@ -2,17 +2,14 @@
 
 import { useMemo } from "react";
 import {
-  Avatar,
   Box,
   Button,
   Chip,
   CircularProgress,
-  Divider,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -23,24 +20,13 @@ import {
   Typography,
 } from "@mui/material";
 import AtivosPorEstadoChart from "../components/AtivosPorEstadoChart";
-import MiniSparkline from "../components/MiniSparkline";
 import SectionCard from "../components/SectionCard";
+import MetricCard from "../components/ui/MetricCard";
+import Panel from "../components/ui/Panel";
 import { ipEquipamento, txtBd } from "../utils/detalheEquipamento";
 import { tipoInventarioLabel } from "../domain/inventario/index.js";
 import { estadoChipMuiColor } from "../utils/estadoMuiColor";
-
-/** Células que não devem partir ao meio (IP, MAC, IDs, etc.) */
-const dashCellNowrap = {
-  whiteSpace: "nowrap",
-  wordBreak: "normal",
-  overflowWrap: "normal",
-};
-
-const dashCellMono = {
-  ...dashCellNowrap,
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-  fontSize: 12,
-};
+import { tableCellEllipsis, tableCellMono, tableCellNowrap, tableSxSemQuebra } from "../utils/tableCellSx";
 
 function horaDoEvento(iso, fallback = "—") {
   if (!iso) return fallback;
@@ -166,7 +152,11 @@ export default function DashboardPage({
     return [...manual, ...scan.slice(0, 5)];
   }, [computadores, ativosPorInventario]);
   const totalScan = (inventarios || []).reduce((acc, inv) => acc + (inv.total_dispositivos_scan ?? 0), 0);
-  const totalAtivos = (computadores || []).length + totalScan;
+  const computadoresAtivos = useMemo(
+    () =>
+      (computadores || []).filter((pc) => String(pc?.estado || "").toLowerCase() === "ativo").length,
+    [computadores],
+  );
 
   const estadoContagens = useMemo(() => {
     const map = new Map();
@@ -203,18 +193,6 @@ export default function DashboardPage({
     return historicoOrdenado.filter(isAlertaEdicaoOuRemocao).slice(0, 12).map((ev, idx) => mapHistoricoParaItem(ev, idx));
   }, [historicoOrdenado]);
 
-  const eventosHoje = useMemo(() => {
-    const hoje = new Date().toLocaleDateString("pt-PT");
-    return (historicoConta || []).filter((ev) => {
-      if (!ev?.data_evento) return false;
-      try {
-        return new Date(ev.data_evento).toLocaleDateString("pt-PT") === hoje;
-      } catch {
-        return false;
-      }
-    }).length;
-  }, [historicoConta]);
-
   const dataHoje = useMemo(() => {
     try {
       return new Date().toLocaleDateString("pt-PT");
@@ -223,23 +201,41 @@ export default function DashboardPage({
     }
   }, []);
 
-  const cardsResumo = [
-    { key: "inventarios", label: "Inventários", value: inventarios.length, icon: "inventory_2" },
-    { key: "computadores", label: "Computadores", value: computadores.length, icon: "computer" },
-    { key: "ativos", label: "Dispositivos ativos", value: totalAtivos, icon: "devices" },
-    { key: "utilizadores", label: "Utilizadores", value: utilizadores.length, icon: "group" },
-    { key: "logs", label: "Eventos hoje", value: eventosHoje, icon: "receipt_long" },
+  const metrics = [
+    {
+      key: "inventarios",
+      label: "Inventários",
+      value: inventarios.length,
+      icon: "inventory_2",
+      tone: "primary",
+    },
+    {
+      key: "computadores-ativos",
+      label: "Computadores ativos",
+      value: computadoresAtivos,
+      icon: "computer",
+      tone: "success",
+      hint: `${(computadores || []).length} registados no total`,
+    },
+    {
+      key: "scan",
+      label: "Dispositivos em scan",
+      value: totalScan,
+      icon: "radar",
+      tone: "primary",
+      hint: "Descobertos em inventários de sub-rede",
+    },
+    {
+      key: "alertas",
+      label: "Alertas recentes",
+      value: alertasEdicaoRemocao.length,
+      icon: "notifications",
+      tone: alertasEdicaoRemocao.length > 0 ? "warning" : "neutral",
+      hint: "Edições e remoções de dados",
+    },
   ];
 
   const atividadeRede = atividadeTodas;
-  const painelSx = {
-    p: { xs: 1.5, md: 2 },
-    height: "100%",
-  };
-  const painelMedioSx = {
-    ...painelSx,
-    minHeight: { xs: 260, lg: 345 },
-  };
   const listaScrollSx = {
     maxHeight: { xs: 225, lg: 265 },
     overflowY: "auto",
@@ -249,25 +245,14 @@ export default function DashboardPage({
   return (
     <SectionCard
       title="Dashboard"
-      subtitle="Visão geral do inventário e atividade do sistema."
+      subtitle="Visão operacional do inventário, scans de rede e atividade do sistema."
       rightAction={
-        <Stack
-          direction="row"
-          spacing={1}
-          flexWrap="wrap"
-          useFlexGap
-          sx={{ width: { xs: "100%", md: "auto" }, justifyContent: "flex-end", ml: { md: "auto" } }}
-        >
-          <Button variant="outlined" size="small" onClick={() => onNavigate("inventarios")}>
-          Ver inventários
-          </Button>
-          <Button variant="outlined" size="small" startIcon={<span className="material-symbols-outlined">today</span>}>
-            Hoje: {dataHoje}
-          </Button>
-        </Stack>
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+          Atualizado · {dataHoje}
+        </Typography>
       }
     >
-      <Stack spacing={2.5}>
+      <Stack spacing={3}>
         <Box
           sx={{
             display: "grid",
@@ -275,55 +260,68 @@ export default function DashboardPage({
             gridTemplateColumns: {
               xs: "1fr",
               sm: "repeat(2, minmax(0, 1fr))",
-              md: "repeat(3, minmax(0, 1fr))",
-              xl: "repeat(6, minmax(0, 1fr))",
+              lg: "repeat(4, minmax(0, 1fr))",
             },
           }}
         >
-          {cardsResumo.map((c, idx) => (
-            <Box key={c.key}>
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: { xs: 1.5, md: 2 },
-                  minHeight: { xs: 106, md: 118 },
-                  background: "linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)",
-                  borderTop: `4px solid ${["#2563eb", "#6d28d9", "#0ea5e9", "#16a34a", "#d97706", "#1d4ed8"][idx % 6]}`,
-                  boxShadow: "0 10px 22px rgba(15,23,42,0.08)",
-                }}
-              >
-                <Stack spacing={1} sx={{ height: "100%", justifyContent: "space-between" }}>
-                  <Stack direction="row" spacing={1.2} alignItems="center" justifyContent="space-between">
-                    <Stack direction="row" spacing={1.1} alignItems="center">
-                      <Avatar
-                        variant="rounded"
-                        sx={{
-                          bgcolor: "#eaf2ff",
-                          color: "primary.main",
-                          width: 32,
-                          height: 32,
-                          border: "1px solid #dbeafe",
-                        }}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                {c.icon}
-              </span>
-                      </Avatar>
-                      <Typography variant="caption" color="text.secondary">
-                        {c.label}
-                      </Typography>
-                    </Stack>
-                    <MiniSparkline seed={c.value} />
-                  </Stack>
-                  <Box>
-                    <Typography fontWeight={800} fontSize={26} lineHeight={1.05}>
-                      {c.value}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Paper>
-            </Box>
+          {metrics.map((m) => (
+            <MetricCard
+              key={m.key}
+              label={m.label}
+              value={loading ? "—" : m.value}
+              icon={m.icon}
+              tone={m.tone}
+              hint={m.hint}
+            />
           ))}
+        </Box>
+
+        <Box>
+          <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 1, display: "block" }}>
+            Ações rápidas
+          </Typography>
+          <Stack direction="row" flexWrap="wrap" gap={1}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<span className="material-symbols-outlined">radar</span>}
+              onClick={() => onNavigate("ativos")}
+            >
+              Scan de rede
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<span className="material-symbols-outlined">computer</span>}
+              onClick={() => onNavigate("computadores")}
+            >
+              Computadores
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<span className="material-symbols-outlined">manage_search</span>}
+              onClick={() => onNavigate("pesquisa")}
+            >
+              Pesquisa global
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<span className="material-symbols-outlined">inventory_2</span>}
+              onClick={() => onNavigate("inventarios")}
+            >
+              Inventários
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<span className="material-symbols-outlined">receipt_long</span>}
+              onClick={() => onNavigate("logs")}
+            >
+              Logs
+            </Button>
+          </Stack>
         </Box>
 
         <Box
@@ -337,29 +335,25 @@ export default function DashboardPage({
           }}
         >
           <Box>
-            <Paper variant="outlined" sx={painelMedioSx}>
-              <Typography fontWeight={800} fontSize={17} mb={1.25} color="#0f172a">
-                Ativos por estado
-              </Typography>
-              <Divider sx={{ mb: 1.5 }} />
+            <Panel
+              title="Ativos por estado"
+              subtitle="Computadores registados e dispositivos de scan"
+              minHeight={320}
+            >
               <AtivosPorEstadoChart totais={estadoContagens.totais} total={estadoContagens.total} />
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-                Inclui computadores registados e dispositivos encontrados em scan.
-              </Typography>
-            </Paper>
+            </Panel>
           </Box>
 
           <Box>
-            <Paper variant="outlined" sx={painelMedioSx}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.25}>
-                <Typography fontWeight={800} fontSize={17}>
-                  Inventários mais recentes
-                </Typography>
+            <Panel
+              title="Inventários recentes"
+              action={
                 <Button variant="text" size="small" onClick={() => onNavigate("inventarios")}>
                   Ver todos
                 </Button>
-              </Stack>
-              <Divider sx={{ mb: 1 }} />
+              }
+              minHeight={320}
+            >
               {loading ? (
                 <Stack direction="row" spacing={1} alignItems="center">
                   <CircularProgress size={16} />
@@ -385,20 +379,19 @@ export default function DashboardPage({
                   </List>
                 </Box>
               )}
-            </Paper>
+            </Panel>
           </Box>
 
           <Box>
-            <Paper variant="outlined" sx={painelMedioSx}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.25}>
-                <Typography fontWeight={800} fontSize={17}>
-                  Atividade recente
-                </Typography>
+            <Panel
+              title="Atividade recente"
+              action={
                 <Button variant="text" size="small" onClick={abrirMeuHistorico}>
-                  Histórico completo
+                  Histórico
                 </Button>
-              </Stack>
-              <Divider sx={{ mb: 1 }} />
+              }
+              minHeight={320}
+            >
             {loading ? (
                 <Stack direction="row" spacing={1} alignItems="center">
                   <CircularProgress size={16} />
@@ -429,7 +422,7 @@ export default function DashboardPage({
                   </List>
                 </Box>
               )}
-            </Paper>
+            </Panel>
           </Box>
         </Box>
 
@@ -444,27 +437,24 @@ export default function DashboardPage({
           }}
         >
           <Box>
-            <Paper variant="outlined" sx={{ ...painelSx, minHeight: { xs: 250, lg: 340 } }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.25}>
-                <Typography fontWeight={800} fontSize={17}>
-                  Equipamentos recentes
-                </Typography>
+            <Panel
+              title="Equipamentos recentes"
+              action={
                 <Button variant="text" size="small" onClick={() => onNavigate("computadores")}>
                   Ver todos
                 </Button>
-              </Stack>
-              <Divider sx={{ mb: 1 }} />
+              }
+              minHeight={340}
+              noPadding
+            >
+              <Box sx={{ px: 2, pb: 2 }}>
               <TableContainer sx={{ overflowX: "auto", maxWidth: "100%" }}>
                 <Table
                   size="small"
                   sx={{
                     minWidth: 1080,
-                    "& .MuiTableCell-root": { fontSize: 13, verticalAlign: "middle" },
-                    "& .MuiTableCell-head": { whiteSpace: "nowrap" },
-                    "& tbody .MuiTableCell-root": {
-                      wordBreak: "break-word",
-                      overflowWrap: "break-word",
-                    },
+                    ...tableSxSemQuebra,
+                    "& .MuiTableCell-root": { fontSize: 13 },
                   }}
                 >
                   <TableHead>
@@ -495,17 +485,17 @@ export default function DashboardPage({
                     ) : (
                       equipamentosRecentesPainel.map((row) => (
                         <TableRow key={`${row.linha}-${row.id}`} hover>
-                          <TableCell sx={{ ...dashCellNowrap, minWidth: 72 }}>{row.linha === "manual" ? "Manual" : "Scan"}</TableCell>
-                          <TableCell sx={{ ...dashCellMono, minWidth: 44, fontVariantNumeric: "tabular-nums" }}>{row.id}</TableCell>
-                          <TableCell sx={{ ...dashCellNowrap, fontWeight: 600, minWidth: 120 }}>{txtBd(row.nome)}</TableCell>
-                          <TableCell sx={{ ...dashCellMono, minWidth: 110 }}>{txtBd(row.hostname)}</TableCell>
-                          <TableCell sx={{ ...dashCellMono, minWidth: 118 }}>{txtBd(row.ip)}</TableCell>
-                          <TableCell sx={{ ...dashCellMono, minWidth: 132, fontSize: 11 }}>{txtBd(row.mac_address)}</TableCell>
-                          <TableCell sx={{ minWidth: 88 }}>{txtBd(row.marca)}</TableCell>
-                          <TableCell sx={{ minWidth: 88 }}>{txtBd(row.modelo)}</TableCell>
-                          <TableCell sx={{ ...dashCellMono, minWidth: 100, fontSize: 11 }}>{txtBd(row.numero_serie)}</TableCell>
-                          <TableCell sx={{ minWidth: 100 }}>{txtBd(row.sistema_operativo)}</TableCell>
-                          <TableCell sx={{ minWidth: 120 }}>{txtBd(row.inventario_nome)}</TableCell>
+                          <TableCell sx={{ ...tableCellNowrap, minWidth: 72 }}>{row.linha === "manual" ? "Manual" : "Scan"}</TableCell>
+                          <TableCell sx={tableCellMono(44)}>{row.id}</TableCell>
+                          <TableCell sx={{ ...tableCellEllipsis(120, 220), fontWeight: 600 }}>{txtBd(row.nome)}</TableCell>
+                          <TableCell sx={tableCellMono(110)}>{txtBd(row.hostname)}</TableCell>
+                          <TableCell sx={tableCellMono(118)}>{txtBd(row.ip)}</TableCell>
+                          <TableCell sx={tableCellMono(132)}>{txtBd(row.mac_address)}</TableCell>
+                          <TableCell sx={tableCellEllipsis(88, 140)}>{txtBd(row.marca)}</TableCell>
+                          <TableCell sx={tableCellEllipsis(88, 140)}>{txtBd(row.modelo)}</TableCell>
+                          <TableCell sx={tableCellMono(100)}>{txtBd(row.numero_serie)}</TableCell>
+                          <TableCell sx={tableCellEllipsis(100, 180)}>{txtBd(row.sistema_operativo)}</TableCell>
+                          <TableCell sx={tableCellEllipsis(120, 200)}>{txtBd(row.inventario_nome)}</TableCell>
                           <TableCell sx={{ whiteSpace: "nowrap" }}>
                             <Chip size="small" label={txtBd(row.estado)} color={estadoChipMuiColor(row.estado)} />
                           </TableCell>
@@ -515,20 +505,20 @@ export default function DashboardPage({
                   </TableBody>
                 </Table>
               </TableContainer>
-              <Button variant="text" size="small" sx={{ mt: 1 }} onClick={() => onNavigate("computadores")}>
-                Ver todos os computadores
-              </Button>
-            </Paper>
+              </Box>
+            </Panel>
           </Box>
           <Box>
-            <Paper variant="outlined" sx={{ ...painelSx, minHeight: { xs: 250, lg: 315 } }}>
-              <Typography fontWeight={800} fontSize={17} mb={0.5}>
-                Alertas de alterações
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block" mb={1.25}>
-                Edições, atualizações e remoções de dados (inventários, equipamentos, contas…).
-              </Typography>
-              <Divider sx={{ mb: 1.25 }} />
+            <Panel
+              title="Alertas"
+              subtitle="Edições e remoções recentes"
+              action={
+                <Button variant="text" size="small" onClick={() => onNavigate("historico-conta")}>
+                  Ver histórico
+                </Button>
+              }
+              minHeight={340}
+            >
               {alertasEdicaoRemocao.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
                   Sem alterações ou remoções recentes.
@@ -572,23 +562,18 @@ export default function DashboardPage({
                   </List>
                 </Box>
               )}
-              <Button variant="text" size="small" sx={{ mt: 1 }} onClick={() => onNavigate("historico-conta")}>
-                Ver histórico de alterações
-              </Button>
-            </Paper>
+            </Panel>
           </Box>
         </Box>
 
-        <Paper variant="outlined" sx={{ ...painelSx, minHeight: { xs: 230, lg: 260 } }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.25}>
-            <Typography fontWeight={800} fontSize={17}>
-              Utilizadores recentes
-            </Typography>
+        <Panel
+          title="Utilizadores recentes"
+          action={
             <Button variant="text" size="small" onClick={() => onNavigate("utilizadores")}>
               Ver todos
             </Button>
-          </Stack>
-          <Divider sx={{ mb: 1 }} />
+          }
+        >
           <Box sx={{ ...listaScrollSx, maxHeight: { xs: 165, lg: 175 } }}>
             <List disablePadding>
               {latestUsers.map((u) => (
@@ -608,7 +593,7 @@ export default function DashboardPage({
               ))}
             </List>
           </Box>
-        </Paper>
+        </Panel>
       </Stack>
     </SectionCard>
   );

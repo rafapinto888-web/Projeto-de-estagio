@@ -26,6 +26,7 @@ import {
 import SectionCard from "../components/SectionCard";
 import { celulasGrelhaPesquisaGlobal } from "../utils/detalheEquipamento";
 import { estadoChipMuiColor } from "../utils/estadoMuiColor";
+import { tableCellEllipsis, tableCellMono, tableCellNowrap, tableSxSemQuebra } from "../utils/tableCellSx";
 
 function tituloSecao(chave) {
   return String(chave || "")
@@ -662,7 +663,7 @@ export default function PesquisaPage({
                   },
                 }}
               >
-                <Table size="small" sx={{ minWidth: 1240 }}>
+                <Table size="small" sx={{ minWidth: 1480, ...tableSxSemQuebra }}>
                   <TableHead>
                     <TableRow>
                       <TableCell>Tipo</TableCell>
@@ -687,91 +688,51 @@ export default function PesquisaPage({
                       const c = celulasGrelhaPesquisaGlobal(r);
                       return (
                         <TableRow key={r.key}>
-                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                          <TableCell sx={{ ...tableCellNowrap, width: 48 }}>
                             <span className="material-symbols-outlined" style={{ fontSize: 18, verticalAlign: "middle" }}>
                               {secaoVisual(r.secao).icon}
                             </span>
                           </TableCell>
-                          <TableCell
-                            sx={{
-                              fontFamily: "ui-monospace, Menlo, Monaco, Consolas, monospace",
-                              fontSize: 11,
-                              whiteSpace: "nowrap",
-                              wordBreak: "normal",
-                              overflowWrap: "normal",
-                              minWidth: 44,
-                              fontVariantNumeric: "tabular-nums",
-                            }}
-                          >
-                            {c.id}
-                          </TableCell>
-                          <TableCell sx={{ maxWidth: 240, wordBreak: "break-word", overflowWrap: "break-word" }}>
-                            <Typography fontSize={12.5} fontWeight={700}>
+                          <TableCell sx={tableCellMono(52)}>{c.id}</TableCell>
+                          <TableCell sx={tableCellEllipsis(140, 240)} title={c.nome !== "—" ? c.nome : undefined}>
+                            <Typography fontSize={12.5} fontWeight={700} noWrap>
                               {c.nome}
                             </Typography>
                           </TableCell>
-                          <TableCell
-                            sx={{
-                              fontFamily: "ui-monospace, Menlo, Monaco, Consolas, monospace",
-                              fontSize: 11,
-                              whiteSpace: "nowrap",
-                              wordBreak: "normal",
-                              overflowWrap: "normal",
-                              minWidth: 120,
-                            }}
-                          >
+                          <TableCell sx={tableCellMono(120)} title={c.hostname !== "—" ? c.hostname : undefined}>
                             {c.hostname}
                           </TableCell>
-                          <TableCell
-                            sx={{
-                              fontFamily: "ui-monospace, Menlo, Monaco, Consolas, monospace",
-                              fontSize: 11,
-                              whiteSpace: "nowrap",
-                              wordBreak: "normal",
-                              overflowWrap: "normal",
-                              minWidth: 118,
-                            }}
-                          >
-                            {c.ip}
+                          <TableCell sx={tableCellMono(118)}>{c.ip}</TableCell>
+                          <TableCell sx={tableCellMono(132)}>{c.mac}</TableCell>
+                          <TableCell sx={tableCellEllipsis(88, 160)} title={c.marca !== "—" ? c.marca : undefined}>
+                            {c.marca}
                           </TableCell>
-                          <TableCell
-                            sx={{
-                              fontFamily: "ui-monospace, Menlo, Monaco, Consolas, monospace",
-                              fontSize: 11,
-                              whiteSpace: "nowrap",
-                              wordBreak: "normal",
-                              overflowWrap: "normal",
-                              minWidth: 132,
-                            }}
-                          >
-                            {c.mac}
+                          <TableCell sx={tableCellEllipsis(88, 160)} title={c.modelo !== "—" ? c.modelo : undefined}>
+                            {c.modelo}
                           </TableCell>
-                          <TableCell sx={{ maxWidth: 160, wordBreak: "break-word" }}>{c.marca}</TableCell>
-                          <TableCell sx={{ maxWidth: 160, wordBreak: "break-word" }}>{c.modelo}</TableCell>
-                          <TableCell
-                            sx={{
-                              fontFamily: "ui-monospace, Menlo, Monaco, Consolas, monospace",
-                              fontSize: 11,
-                              whiteSpace: "nowrap",
-                              wordBreak: "normal",
-                              overflowWrap: "normal",
-                              minWidth: 100,
-                            }}
-                          >
-                            {c.serie}
+                          <TableCell sx={tableCellMono(100)}>{c.serie}</TableCell>
+                          <TableCell sx={tableCellEllipsis(100, 180)} title={c.so !== "—" ? c.so : undefined}>
+                            {c.so}
                           </TableCell>
-                          <TableCell sx={{ maxWidth: 180, wordBreak: "break-word" }}>{c.so}</TableCell>
-                          <TableCell sx={{ maxWidth: 200, wordBreak: "break-word" }}>{c.inventario}</TableCell>
-                          <TableCell sx={{ maxWidth: 180, wordBreak: "break-word" }}>{c.localizacao}</TableCell>
-                          <TableCell sx={{ maxWidth: 180, wordBreak: "break-word" }}>{c.responsavel}</TableCell>
-                          <TableCell>
+                          <TableCell sx={tableCellEllipsis(120, 200)} title={c.inventario !== "—" ? c.inventario : undefined}>
+                            {c.inventario}
+                          </TableCell>
+                          <TableCell sx={tableCellEllipsis(100, 180)} title={c.localizacao !== "—" ? c.localizacao : undefined}>
+                            {c.localizacao}
+                          </TableCell>
+                          <TableCell sx={tableCellEllipsis(100, 180)} title={c.responsavel !== "—" ? c.responsavel : undefined}>
+                            {c.responsavel}
+                          </TableCell>
+                          <TableCell sx={tableCellNowrap}>
                             {c.estado !== "—" ? (
                               <Chip label={c.estado} size="small" color={estadoChipMuiColor(c.estado)} />
                             ) : (
                               "—"
                             )}
                           </TableCell>
-                          <TableCell sx={{ maxWidth: 220, wordBreak: "break-word" }}>{c.extra}</TableCell>
+                          <TableCell sx={tableCellEllipsis(100, 220)} title={c.extra !== "—" ? c.extra : undefined}>
+                            {c.extra}
+                          </TableCell>
                         </TableRow>
                       );
                     })}

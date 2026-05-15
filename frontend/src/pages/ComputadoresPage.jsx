@@ -32,6 +32,7 @@ import {
 import { tipoInventarioLabel } from "../domain/inventario/index.js";
 import { exportInventarioComputadoresParaExcel } from "../utils/exportInventarioComputadores.js";
 import { estadoChipMuiColor } from "../utils/estadoMuiColor";
+import { tableCellEllipsis, tableCellMono, tableSxSemQuebra } from "../utils/tableCellSx";
 
 function sortByIdentificacao(list) {
   return [...(list || [])].sort((a, b) =>
@@ -95,14 +96,6 @@ function estadosUnicosDeAtivos(ativos) {
   });
   return [...s].sort((a, b) => a.localeCompare(b, "pt", { sensitivity: "base" }));
 }
-
-const TABLE_CELL_MONO = {
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-  fontSize: "0.8125rem",
-  whiteSpace: "nowrap",
-  wordBreak: "normal",
-  overflowWrap: "normal",
-};
 
 const LINHAS_POR_PAGINA = 10;
 /** Colunas da tabela unificada por inventário (sem ID/Equipamento … Ações). */
@@ -714,13 +707,8 @@ export default function ComputadoresPage({
                           stickyHeader
                           sx={{
                             minWidth: 1320,
+                            ...tableSxSemQuebra,
                             "& .MuiTableCell-root": { fontSize: 13 },
-                            "& .MuiTableCell-head": { whiteSpace: "nowrap" },
-                            /* Sobrepõe theme global (overflowWrap: anywhere) só nesta tabela */
-                            "& tbody .MuiTableCell-root": {
-                              wordBreak: "break-word",
-                              overflowWrap: "break-word",
-                            },
                           }}
                         >
                           <TableHead>
@@ -762,13 +750,13 @@ export default function ComputadoresPage({
                                       hover
                                       key={a.tipo === "computador" ? `pc-${a.id}` : `scan-${a.id}`}
                                     >
-                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 120 }}>{txtBd(a.hostname)}</TableCell>
-                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 118 }}>{txtBd(a.ip || a.endereco_ip)}</TableCell>
-                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 132 }}>{txtBd(a.mac_address)}</TableCell>
-                                      <TableCell>{txtBd(a.marca)}</TableCell>
-                                      <TableCell>{txtBd(a.modelo)}</TableCell>
-                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 100 }}>{txtBd(a.numero_serie)}</TableCell>
-                                      <TableCell>{txtBd(a.sistema_operativo)}</TableCell>
+                                      <TableCell sx={tableCellMono(120)}>{txtBd(a.hostname)}</TableCell>
+                                      <TableCell sx={tableCellMono(118)}>{txtBd(a.ip || a.endereco_ip)}</TableCell>
+                                      <TableCell sx={tableCellMono(132)}>{txtBd(a.mac_address)}</TableCell>
+                                      <TableCell sx={tableCellEllipsis(88, 140)}>{txtBd(a.marca)}</TableCell>
+                                      <TableCell sx={tableCellEllipsis(88, 140)}>{txtBd(a.modelo)}</TableCell>
+                                      <TableCell sx={tableCellMono(100)}>{txtBd(a.numero_serie)}</TableCell>
+                                      <TableCell sx={tableCellEllipsis(100, 180)}>{txtBd(a.sistema_operativo)}</TableCell>
                                       <TableCell>
                                         <Chip
                                           size="small"
@@ -777,7 +765,7 @@ export default function ComputadoresPage({
                                           color={manualRow ? "primary" : "info"}
                                         />
                                       </TableCell>
-                                      <TableCell sx={{ ...TABLE_CELL_MONO, minWidth: 88 }}>
+                                      <TableCell sx={tableCellMono(88)}>
                                         <Typography variant="body2" color="text.secondary" component="span" noWrap>
                                           {a.tipo === "dispositivo_descoberto" ? txtBd(a.origem_registo) : "—"}
                                         </Typography>

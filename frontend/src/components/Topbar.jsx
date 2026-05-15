@@ -1,7 +1,7 @@
-/* Cabeçalho superior: pesquisa global, íconos e utilizador atual. */
+/* Cabeçalho superior — pesquisa global e sessão. */
 
 import { useEffect, useRef } from "react";
-import { AppBar, Avatar, Box, Button, InputBase, Paper, Stack, Toolbar, Typography } from "@mui/material";
+import { Avatar, Box, Button, InputBase, Stack, Typography } from "@mui/material";
 
 function initials(user) {
   const base = user?.nome || user?.username || user?.email || "?";
@@ -31,104 +31,98 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, showNavToggl
   }
 
   return (
-    <AppBar
-      position="static"
-      color="inherit"
-      elevation={0}
+    <Box
+      component="header"
       sx={{
-        border: "1px solid #dbe5f2",
-        borderRadius: 4,
-        mb: 2,
-        background: "linear-gradient(90deg, rgba(255,255,255,0.98) 0%, rgba(248,251,255,0.98) 100%)",
-        boxShadow: "0 10px 24px rgba(15,23,42,0.06)",
+        bgcolor: "#ffffff",
+        borderBottom: "1px solid #e5e7eb",
+        px: { xs: 2, md: 3 },
+        py: 1.5,
+        position: "sticky",
+        top: 0,
+        zIndex: 10,
       }}
     >
-      <Toolbar
-        sx={{
-          gap: 1,
-          minHeight: "64px !important",
-          px: { xs: 1.2, md: 1.8 },
-          py: 1,
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={2}
+        sx={{ minHeight: 48, flexWrap: { xs: "wrap", md: "nowrap" } }}
       >
-        <Paper
-          variant="outlined"
+        {showNavToggle ? (
+          <Button type="button" variant="outlined" size="small" onClick={onToggleNav}>
+            Menu
+          </Button>
+        ) : null}
+
+        <Box
           sx={{
-            display: "flex",
-            alignItems: "center",
-            px: 1.2,
-            py: 0.45,
-            borderRadius: 2.5,
             flex: 1,
             minWidth: { xs: "100%", md: 280 },
-            bgcolor: "#ffffff",
-            borderColor: "#dbe5f2",
-            boxShadow: "inset 0 0 0 1px rgba(219,229,242,0.55)",
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            px: 1.5,
+            py: 0.75,
+            borderRadius: 1,
+            border: "1px solid #e5e7eb",
+            bgcolor: "#f9fafb",
+            "&:focus-within": {
+              borderColor: "#2563eb",
+              bgcolor: "#ffffff",
+              boxShadow: "0 0 0 3px rgba(37, 99, 235, 0.12)",
+            },
           }}
         >
-          <span className="material-symbols-outlined" style={{ color: "#64748b", marginRight: 8, fontSize: 18 }}>
+          <span className="material-symbols-outlined" style={{ color: "#9ca3af", fontSize: 20 }}>
             search
           </span>
           <InputBase
             inputRef={inputRef}
             type="search"
             fullWidth
-            placeholder="Pesquisa global de ativos, inventários…"
+            placeholder="Pesquisar ativos, inventários, utilizadores…"
             onKeyDown={(e) => {
               if (e.key === "Enter") runSearch();
             }}
             inputProps={{ "aria-label": "Pesquisa global" }}
-            sx={{ fontSize: 14 }}
+            sx={{ fontSize: "0.875rem" }}
           />
-          <Typography variant="caption" color="text.secondary" sx={{ display: { xs: "none", sm: "inline" } }}>
-            Ctrl + K
+          <Typography
+            variant="caption"
+            sx={{
+              display: { xs: "none", sm: "block" },
+              color: "text.secondary",
+              px: 0.75,
+              py: 0.25,
+              borderRadius: 0.5,
+              bgcolor: "#f3f4f6",
+              fontFamily: "ui-monospace, monospace",
+              fontSize: "0.7rem",
+            }}
+          >
+            ⌘K
           </Typography>
-        </Paper>
+        </Box>
 
-        <Stack
-          direction="row"
-          spacing={0.6}
-          alignItems="center"
-          sx={{
-            flexShrink: 0,
-            justifyContent: "flex-end",
-            marginLeft: "auto",
-            width: { xs: "100%", md: "auto" },
-          }}
-        >
-          {showNavToggle ? (
-            <Button
-              type="button"
-              variant="outlined"
-              size="small"
-              onClick={onToggleNav}
-              sx={{ minWidth: 72 }}
-            >
-              Menu
-            </Button>
-          ) : null}
-
-          <Stack direction="row" spacing={1.2} alignItems="center" sx={{ px: 0.6 }}>
-            <Avatar sx={{ width: 34, height: 34, bgcolor: "primary.main", fontSize: 13, fontWeight: 700 }}>
+        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ ml: { md: "auto" } }}>
+          <Stack direction="row" alignItems="center" spacing={1.25} sx={{ display: { xs: "none", sm: "flex" } }}>
+            <Avatar sx={{ width: 32, height: 32, bgcolor: "primary.main", fontSize: 12, fontWeight: 600 }}>
               {initials(user)}
             </Avatar>
-            <Box sx={{ lineHeight: 1.2 }}>
-              <Typography fontSize={13} fontWeight={700}>
+            <Box sx={{ lineHeight: 1.2, minWidth: 0 }}>
+              <Typography fontSize={13} fontWeight={600} noWrap>
                 {user?.nome || user?.username || "Utilizador"}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {isAdmin ? "Administrador" : "Utilizador"}
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {isAdmin ? "Administrador" : "Operador"}
               </Typography>
             </Box>
           </Stack>
-
           <Button
             variant="outlined"
             size="small"
             onClick={onLogout}
-            sx={{ display: { xs: "none", sm: "inline-flex" } }}
             startIcon={
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                 logout
@@ -138,7 +132,7 @@ export default function Topbar({ user, isAdmin, onLogout, onSearch, showNavToggl
             Sair
           </Button>
         </Stack>
-      </Toolbar>
-    </AppBar>
+      </Stack>
+    </Box>
   );
 }

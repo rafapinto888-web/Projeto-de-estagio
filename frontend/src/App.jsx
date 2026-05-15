@@ -490,8 +490,6 @@ export default function App() {
         display: "flex",
         minHeight: "100vh",
         bgcolor: "background.default",
-        p: { xs: 1, md: 1.5 },
-        gap: { xs: 1, md: 1.5 },
       }}
     >
       <SidebarNav
@@ -503,7 +501,7 @@ export default function App() {
         onClose={() => setMobileNavOpen(false)}
       />
 
-      <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 0.5 }}>
+      <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <Topbar
           user={user}
           isAdmin={isAdmin}
@@ -518,7 +516,18 @@ export default function App() {
           }}
         />
 
-        <main className="content" style={{ marginTop: 0, width: "100%" }}>
+        <Box
+          component="main"
+          className="content"
+          sx={{
+            flex: 1,
+            width: "100%",
+            maxWidth: 1440,
+            mx: "auto",
+            px: { xs: 2, md: 3 },
+            py: { xs: 2, md: 3 },
+          }}
+        >
           <StatusAlert type={status.type} message={status.message} />
 
           {/* --- Páginas por aba --- */}
@@ -1074,7 +1083,7 @@ export default function App() {
               loading={loading}
             />
           )}
-        </main>
+        </Box>
       </Box>
     </Box>
   );
