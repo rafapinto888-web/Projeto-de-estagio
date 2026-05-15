@@ -1,0 +1,37 @@
+@startuml sequencia_consulta_logs
+skinparam shadowing false
+skinparam backgroundColor white
+title Diagrama de sequencia - Consulta de logs
+
+actor Utilizador as U
+participant Frontend as FE
+participant API as API
+database "Base de dados" as BD
+
+== Logs por computador (aba Logs) ==
+
+U -> FE : Filtros: nome, hostname,\nserie ou tipo_log
+FE -> API : GET /computadores/logs/dispositivo?...\n(Bearer)
+
+API -> BD : Resolver computador(es)\npelos filtros
+API -> BD : SELECT LogDispositivo
+BD --> API : Eventos
+API --> FE : total_logs + lista JSON
+FE --> U : Tabela ou JSON na pagina
+
+== Logs de inventario (scan + credenciais rede) ==
+
+U -> FE : Inventario + credenciais\n+ tipos seguranca/rdp
+FE -> API : GET /inventarios/{id}/logs/dispositivos-descobertos\n?coletar_agora=true&utilizador&password\n(Bearer)
+
+API -> BD : Validar acesso ao inventario
+opt coletar_agora = true
+  API -> API : coletar_logs_windows\n(hosts associados)
+  API -> BD : Persistir LogDispositivo
+end
+API -> BD : Devolver logs guardados
+BD --> API : Dados
+API --> FE : Resposta JSON
+FE --> U : Resultado na pagina Logs
+
+@enduml

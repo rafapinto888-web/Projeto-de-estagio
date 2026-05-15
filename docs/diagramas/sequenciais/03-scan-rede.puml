@@ -1,0 +1,40 @@
+@startuml sequencia_scan_rede
+skinparam shadowing false
+skinparam backgroundColor white
+title Diagrama de sequencia - Scan de rede (inventario sub-rede)
+
+actor "Administrador" as U
+participant Frontend as FE
+participant API as API
+database "Base de dados" as BD
+participant "Servico scan\n(scan_rede)" as SCAN
+participant "Hosts Windows\n(rede alvo)" as WIN
+
+U -> FE : Inventario sub-rede,\ncredenciais e rede
+FE -> FE : Validar formulario\n(rede, user, password, tipos log)
+
+FE -> API : POST /inventarios/{id}/scan\n(rede, utilizador, password, tipos_log)\n[admin + Bearer]
+
+API -> BD : Validar inventario\ntipo = sub_rede
+API -> SCAN : Descobrir IPs ativos\ne enriquecer metadados
+SCAN -> WIN : Ping / WMI / consultas remotas
+WIN --> SCAN : Hostname, MAC, SO, etc.
+SCAN --> API : Lista dispositivos
+
+loop Por cada IP encontrado
+  API -> BD : Criar ou atualizar\nDispositivoDescoberto
+  opt Computador associado encontrado
+    API -> WIN : Recolher logs Windows\n(security / rdp)
+    WIN --> API : Eventos
+    API -> BD : Guardar LogDispositivo
+  end
+end
+
+API -> BD : Marcar inativos\nIPs ausentes no scan
+API -> BD : commit
+API --> FE : total_dispositivos,\nlogs_recolhidos, lista
+
+FE -> FE : loadAllData + atualizar UI scan
+FE --> U : Resultado do scan\n(mensagem + lista)
+
+@enduml

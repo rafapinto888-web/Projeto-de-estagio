@@ -1,0 +1,35 @@
+@startuml sequencia_crud_computador
+skinparam shadowing false
+skinparam backgroundColor white
+title Diagrama de sequencia - Criar ou editar computador (admin)
+
+actor "Administrador" as U
+participant Frontend as FE
+participant API as API
+database "Base de dados" as BD
+participant "Sistema de logs\n(LogSistema)" as LOG
+
+U -> FE : Preenche formulario\nComputadores
+FE -> API : POST ou PUT ou PATCH\n/computadores[...]\n[admin + Bearer]
+
+API -> BD : Validar inventario e FKs\n(localizacao, responsavel)
+API -> BD : INSERT ou UPDATE\nComputador
+BD --> API : Registo guardado
+
+API --> FE : 200 / 201
+
+FE -> API : Recarregar listas\n(loadAllData)
+API -> BD : Leituras agregadas
+BD --> API : Dados
+API --> FE : Estado atualizado
+
+opt Operacao com sucesso
+  FE -> API : POST /auth/me/historico\nacao painel + descricao
+  API -> LOG : Registar auditoria
+  LOG --> API : OK
+  API --> FE : ok
+end
+
+FE --> U : Mensagem de sucesso\nlista atualizada
+
+@enduml

@@ -1,0 +1,36 @@
+@startuml sequencia_login
+skinparam shadowing false
+skinparam backgroundColor white
+title Diagrama de sequencia - Login
+
+actor Utilizador as U
+participant Frontend as FE
+participant API as API
+database "Base de dados" as BD
+participant "Sistema de logs\n(LogSistema)" as LOG
+
+U -> FE : Identificador e palavra-passe
+FE -> API : POST /auth/login\n{ identificador, palavra_passe }
+
+API -> BD : Procurar utilizador\n(username ou email)
+BD --> API : Registo utilizador
+API -> API : Validar palavra-passe (hash)
+
+alt Credenciais validas
+  API -> LOG : Registar sessao.login
+  LOG --> API : OK
+  API --> FE : access_token (JWT)
+  FE -> FE : Guardar token\n(localStorage)
+  FE -> API : GET /auth/me (Bearer)
+  API --> FE : Perfil utilizador
+  FE -> API : GET listas iniciais\n(inventarios, computadores, ...)
+  API -> BD : Consultas de leitura
+  BD --> API : Dados
+  API --> FE : JSON agregado
+  FE --> U : Painel principal
+else Credenciais invalidas
+  API --> FE : 401 Credenciais invalidas
+  FE --> U : Mensagem de erro
+end
+
+@enduml

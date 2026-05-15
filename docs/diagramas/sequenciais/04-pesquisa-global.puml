@@ -1,0 +1,67 @@
+@startuml
+title Pesquisa global
+
+actor Utilizador as U
+participant Frontend as FE
+participant Servidor as Srv
+database "Base de dados" as BD
+
+note over FE
+  Na sessao ativa o Frontend ja tem em memoria
+  computadores, inventarios, utilizadores,
+  localizacoes e dispositivos de scan.
+end note
+
+== Como o utilizador pesquisa ==
+
+alt Barra superior
+  U -> FE : Escreve o termo e confirma
+  FE -> FE : Abre a pagina Pesquisa global
+  FE -> Srv : Pesquisa automatica
+else Pagina Pesquisa global
+  U -> FE : Escreve o termo e clica Pesquisar
+  FE -> Srv : Pesquisa pedida pelo utilizador
+end
+
+FE --> U : Mostra estado a pesquisar
+
+== O servidor responde ==
+
+Srv -> Srv : Valida o termo
+
+Srv -> BD : Procura computadores
+BD --> Srv : Resultados
+
+Srv -> BD : Procura inventarios
+BD --> Srv : Resultados
+
+Srv -> BD : Procura utilizadores
+BD --> Srv : Resultados
+
+Srv -> BD : Procura localizacoes
+BD --> Srv : Resultados
+
+Srv --> FE : Resultados por categoria
+
+== O Frontend apresenta ==
+
+opt Dispositivos de scan em memoria
+  FE -> FE : Junta os que coincidem com o termo
+end
+
+FE -> FE : Filtros, ordenacao e paginacao
+
+alt Com resultados
+  FE --> U : Grelha e resumo por secao
+else Sem resultados
+  FE --> U : Nenhuma correspondencia
+else Erro
+  FE --> U : Mensagem de erro
+end
+
+note over U, FE
+  Antes da primeira pesquisa pode mostrar
+  dados da sessao; depois usa resultados do servidor.
+end note
+
+@enduml

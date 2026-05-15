@@ -1,0 +1,24 @@
+@startuml sequencia_exportar_csv
+skinparam shadowing false
+skinparam backgroundColor white
+title Diagrama de sequencia - Exportar inventario para Excel (CSV)
+
+actor Utilizador as U
+participant Frontend as FE
+participant "exportInventario\nComputadores.js" as EXP
+participant "Ficheiro local\n(download)" as FILE
+
+note over FE
+  Dados ja estao em memoria\n(filtros do cartao Computadores).
+  Nao ha novo pedido HTTP.
+end note
+
+U -> FE : Exportar para Excel
+FE -> EXP : exportInventarioComputadoresParaExcel\n(grupo, linhas filtradas)
+
+EXP -> EXP : Montar CSV UTF-8\nsep=; + cabecalhos PT
+EXP -> FILE : Blob + download\nComputadores_nome_data.csv
+
+FILE --> U : Abrir no Excel
+
+@enduml

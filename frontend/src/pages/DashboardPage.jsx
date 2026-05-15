@@ -8,7 +8,6 @@ import {
   Chip,
   CircularProgress,
   Divider,
-  LinearProgress,
   List,
   ListItem,
   ListItemIcon,
@@ -23,6 +22,7 @@ import {
   TableContainer,
   Typography,
 } from "@mui/material";
+import AtivosPorEstadoChart from "../components/AtivosPorEstadoChart";
 import MiniSparkline from "../components/MiniSparkline";
 import SectionCard from "../components/SectionCard";
 import { ipEquipamento, txtBd } from "../utils/detalheEquipamento";
@@ -189,21 +189,6 @@ export default function DashboardPage({
     return { totais, total };
   }, [computadores, dispositivosScan]);
 
-  const estadoCores = ["#22c55e", "#facc15", "#ef4444", "#8b5cf6", "#06b6d4", "#94a3b8"];
-  const gradienteAtivos = useMemo(() => {
-    const total = Math.max(estadoContagens.total, 1);
-    let acumulado = 0;
-    const stops = estadoContagens.totais.map((item, idx) => {
-      const inicio = acumulado;
-      acumulado += (item.total / total) * 100;
-      const fim = acumulado;
-      const cor = estadoCores[idx % estadoCores.length];
-      return `${cor} ${inicio.toFixed(2)}% ${fim.toFixed(2)}%`;
-    });
-    if (stops.length === 0) return "#e2e8f0 0% 100%";
-    return stops.join(", ");
-  }, [estadoContagens]);
-
   const historicoOrdenado = useMemo(() => {
     return [...(historicoConta || [])].sort((a, b) => {
       const ta = a?.data_evento ? new Date(a.data_evento).getTime() : 0;
@@ -360,71 +345,8 @@ export default function DashboardPage({
               <Typography fontWeight={800} fontSize={17} mb={1.25} color="#0f172a">
                 Ativos por estado
               </Typography>
-              <Divider sx={{ mb: 1.25 }} />
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                spacing={1.5}
-                alignItems={{ xs: "stretch", md: "center" }}
-              >
-                <Box
-                  sx={{
-                    width: { xs: 136, md: 150 },
-                    height: { xs: 136, md: 150 },
-                    borderRadius: "50%",
-                    background: `conic-gradient(${gradienteAtivos})`,
-                    position: "relative",
-                    flexShrink: 0,
-                    mx: { xs: "auto", md: 0 },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      inset: 18,
-                      borderRadius: "50%",
-                      bgcolor: "#fff",
-                      display: "grid",
-                      placeItems: "center",
-                      textAlign: "center",
-                      p: 1,
-                    }}
-                  >
-                    <Typography variant="caption" color="text.secondary">
-                      Total
-                    </Typography>
-                    <Typography fontWeight={800} fontSize={22} lineHeight={1}>
-                      {estadoContagens.total}
-                    </Typography>
-                  </Box>
-                </Box>
-                <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
-                  {estadoContagens.totais.slice(0, 4).map((item, idx) => {
-                    const percent = estadoContagens.total ? Math.round((item.total / estadoContagens.total) * 100) : 0;
-                  return (
-                      <Box key={item.estado}>
-                        <Stack direction="row" justifyContent="space-between" mb={0.35}>
-                          <Typography fontSize={12}>{item.estado}</Typography>
-                          <Typography fontSize={12} color="text.secondary">
-                            {item.total}
-                          </Typography>
-                        </Stack>
-                        <LinearProgress
-                          variant="determinate"
-                          value={percent}
-                          sx={{
-                            height: 6,
-                            borderRadius: 999,
-                            bgcolor: "#edf2f7",
-                            "& .MuiLinearProgress-bar": {
-                              backgroundColor: estadoCores[idx % estadoCores.length],
-                            },
-                          }}
-                        />
-                      </Box>
-                  );
-                })}
-                </Stack>
-              </Stack>
+              <Divider sx={{ mb: 1.5 }} />
+              <AtivosPorEstadoChart totais={estadoContagens.totais} total={estadoContagens.total} />
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
                 Inclui computadores registados e dispositivos encontrados em scan.
               </Typography>
