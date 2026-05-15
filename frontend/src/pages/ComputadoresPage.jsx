@@ -681,22 +681,29 @@ export default function ComputadoresPage({
                         </dl>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="computadores-inv-card-export"
-                      disabled={linhasUnificadas.length === 0}
-                      title={
-                        linhasUnificadas.length === 0
-                          ? "Sem linhas para exportar com os filtros atuais"
-                          : "CSV para Excel (UTF-8, separador ;, datas e cabeçalhos em português)"
-                      }
-                      onClick={() => exportInventarioComputadoresParaExcel(grupo, linhasUnificadas)}
-                    >
-                      Exportar para Excel
-                      <span className="material-symbols-outlined" aria-hidden>
-                        download
-                      </span>
-                    </button>
+                    <div className="computadores-inv-card-export-wrap">
+                      <Button
+                        type="button"
+                        size="small"
+                        variant="outlined"
+                        color="success"
+                        className="computadores-inv-card-export"
+                        disabled={linhasUnificadas.length === 0}
+                        title={
+                          linhasUnificadas.length === 0
+                            ? "Sem linhas para exportar com os filtros atuais"
+                            : "Descarrega CSV para abrir no Excel (UTF-8, separador ;)"
+                        }
+                        startIcon={
+                          <span className="material-symbols-outlined computadores-inv-card-export-icon" aria-hidden>
+                            download
+                          </span>
+                        }
+                        onClick={() => exportInventarioComputadoresParaExcel(grupo, linhasUnificadas)}
+                      >
+                        Exportar Excel
+                      </Button>
+                    </div>
                   </header>
 
                   <div className="computadores-inv-card-body">

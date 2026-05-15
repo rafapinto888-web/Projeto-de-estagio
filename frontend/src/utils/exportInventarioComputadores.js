@@ -1,13 +1,8 @@
 import { ipEquipamento } from "./detalheEquipamento.js";
 
-/** Separador listas (PT) — linha `sep=;` no início ajuda o Excel a abrir bem o ficheiro. */
 const SEP = ";";
 const EOL = "\r\n";
 
-/**
- * Escapa texto para CSV e evita que o Excel interprete `=`, `+`, `-`, `@` como fórmula.
- * @param {unknown} v
- */
 function q(v) {
   let t = String(v ?? "");
   t = t.replace(/"/g, '""');
@@ -24,27 +19,21 @@ function sanitizeFilename(name) {
     .slice(0, 72) || "inventario";
 }
 
-function etiquetaOrigemAmigavel(a) {
-  if (a?.tipo === "computador") return "Manual";
-  const raw = String(a?.origem_registo ?? "scan").trim();
-  const low = raw.toLowerCase();
-  if (low === "manual" || low === "registo_manual") return "Manual";
-  if (low === "scan" || low === "") return "Scan";
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
-}
-
 function csvCell(v) {
-  if (v == null) return "";
-  return String(v).trim();
+  if (v == null || v === "") return "";
+  const s = String(v).trim();
+  return s === "—" ? "" : s;
 }
 
-/** Data/hora em formato ISO local (YYYY-MM-DD HH:mm:ss) — o Excel trata bem como data/hora. */
-function dataParaExcel(v) {
+function dataExportacaoPt(v) {
   if (v == null || v === "") return "";
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  try {
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return "";
+  }
 }
 
 function tipoInventarioLegivel(v) {
@@ -54,7 +43,16 @@ function tipoInventarioLegivel(v) {
   return csvCell(v);
 }
 
-/** Cabeçalhos alinhados à tabela do cartão (Computadores), mais contexto do inventário. */
+function etiquetaOrigemAmigavel(a) {
+  if (a?.tipo === "computador") return "Manual";
+  const raw = String(a?.origem_registo ?? "scan").trim();
+  const low = raw.toLowerCase();
+  if (low === "manual" || low === "registo_manual") return "Manual";
+  if (low === "scan" || low === "") return "Scan";
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+/** Colunas alinhadas à tabela da página Computadores (+ inventário no início). */
 const HEADERS = [
   "Inventário",
   "Tipo inventário",
@@ -64,7 +62,7 @@ const HEADERS = [
   "Marca",
   "Modelo",
   "N.º série",
-  "Sistema operativo",
+  "Sistema",
   "Origem",
   "Origem registo",
   "Primeira vista",
@@ -74,58 +72,58 @@ const HEADERS = [
   "Última atualização",
 ];
 
-/**
- * Exporta as linhas do inventário (após filtros do cartão) para CSV otimizado para Excel:
- * - UTF-8 com BOM
- * - Primeira linha `sep=;` (separador em PT)
- * - Fim de linha Windows (`\r\n`)
- * - Colunas iguais à grelha visível (sem ID de BD nem coluna Equipamento)
- *
- * @param {{ inventario_id?: number, inventario_nome?: string, tipo_inventario?: string }} grupo
- * @param {object[]} linhas
- */
-export function exportInventarioComputadoresParaExcel(grupo, linhas) {
+function linhaCsvAtivo(grupo, a) {
   const invNome = grupo?.inventario_nome ?? "";
   const tipoInv = tipoInventarioLegivel(grupo?.tipo_inventario);
+  const ip = ipEquipamento(a) ?? "";
+  const isPc = a?.tipo === "computador";
+  const isScan = a?.tipo === "dispositivo_descoberto";
 
+  return [
+    q(invNome),
+    q(tipoInv),
+    q(csvCell(a?.hostname)),
+    q(csvCell(ip)),
+    q(csvCell(a?.mac_address)),
+    q(csvCell(a?.marca)),
+    q(csvCell(a?.modelo)),
+    q(csvCell(a?.numero_serie)),
+    q(csvCell(a?.sistema_operativo)),
+    q(etiquetaOrigemAmigavel(a)),
+    q(isScan ? csvCell(a?.origem_registo) : ""),
+    q(isScan ? dataExportacaoPt(a?.criado_em) : ""),
+    q(csvCell(a?.estado)),
+    q(isPc ? csvCell(a?.localizacao_nome) : ""),
+    q(isPc ? csvCell(a?.utilizador_responsavel_nome) : ""),
+    q(isScan ? dataExportacaoPt(a?.ultima_vez_ativo_em) : ""),
+  ].join(SEP);
+}
+
+/**
+ * Exporta linhas filtradas do cartão para CSV (Excel PT: UTF-8 BOM, separador ;).
+ */
+export function exportInventarioComputadoresParaExcel(grupo, linhas) {
   const list = Array.isArray(linhas) ? linhas : [];
-  const linhasCsv = list.map((a) => {
-    const ip = ipEquipamento(a) ?? "";
-    const isPc = a?.tipo === "computador";
-    const origemReg = isPc ? "" : csvCell(a?.origem_registo);
-    const primeira = isPc ? "" : dataParaExcel(a?.criado_em);
-    const ultima = isPc ? "" : dataParaExcel(a?.ultima_vez_ativo_em);
-    return [
-      q(invNome),
-      q(tipoInv),
-      q(csvCell(a?.hostname)),
-      q(csvCell(ip)),
-      q(csvCell(a?.mac_address)),
-      q(csvCell(a?.marca)),
-      q(csvCell(a?.modelo)),
-      q(csvCell(a?.numero_serie)),
-      q(csvCell(a?.sistema_operativo)),
-      q(etiquetaOrigemAmigavel(a)),
-      q(origemReg),
-      q(primeira),
-      q(csvCell(a?.estado)),
-      q(isPc ? csvCell(a?.localizacao_nome) : ""),
-      q(isPc ? csvCell(a?.utilizador_responsavel_nome) : ""),
-      q(ultima),
-    ].join(SEP);
-  });
+  if (list.length === 0) return;
 
-  const bloco = [`sep=${SEP}`, HEADERS.join(SEP), ...linhasCsv].join(EOL);
+  const linhasCsv = list.map((a) => linhaCsvAtivo(grupo, a));
+  const headerLine = HEADERS.map((h) => q(h)).join(SEP);
+  const bloco = [`sep=${SEP}`, headerLine, ...linhasCsv].join(EOL);
 
-  const base = sanitizeFilename(invNome);
-  const stamp = dataParaExcel(new Date()).replace(/[: ]/g, "-").slice(0, 19);
+  const base = sanitizeFilename(grupo?.inventario_nome);
+  const stamp = new Date()
+    .toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "medium" })
+    .replace(/[/:,\s]+/g, "-");
   const filename = `Computadores_${base}_${stamp}.csv`;
+
   const blob = new Blob(["\uFEFF", bloco], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const el = document.createElement("a");
   el.href = url;
   el.download = filename;
   el.rel = "noopener";
+  document.body.appendChild(el);
   el.click();
-  URL.revokeObjectURL(url);
+  document.body.removeChild(el);
+  window.setTimeout(() => URL.revokeObjectURL(url), 200);
 }
