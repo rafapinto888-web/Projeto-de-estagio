@@ -1,4 +1,8 @@
-# --- Python ---
+# =============================================================================
+# Sistema de Inventário — ficheiros a não versionar
+# =============================================================================
+
+# --- Python (backend, script de rede, venv na raiz) ---
 __pycache__/
 *.py[cod]
 *$py.class
@@ -9,6 +13,10 @@ __pycache__/
 *.egg
 *.egg-info/
 .eggs/
+*.manifest
+*.toc
+
+# Builds / packaging (raiz, backend, script de rede)
 build/
 dist/
 pip-wheel-metadata/
@@ -20,15 +28,17 @@ sdist/
 var/
 wheels/
 MANIFEST
+*.whl
 
 # Virtualenvs
 venv/
 .venv/
-backend/.venv/
 env/
 ENV/
+backend/.venv/
+backend/venv/
 
-# Test / typing / lint cache
+# Testes, cobertura, linters
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -38,60 +48,103 @@ ENV/
 htmlcov/
 *.cover
 *.py,cover
+.tox/
+.nox/
 
 # --- Node / frontend (Vite + React) ---
 node_modules/
 frontend/node_modules/
 frontend/dist/
 .npm
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 *.tsbuildinfo
+.eslintcache
 
-# Vite cache
+# Vite
 **/node_modules/.vite/
 frontend/.vite/
 
 # --- Logs e temporários ---
 *.log
+logs/
 *.tmp
 *.temp
 *.bak
 *.swp
 *~
-
-# PyInstaller
-*.spec
-*.toc
+*.orig
 
 # Outputs de scripts (rede / scan)
 resultado*.txt
 resultado*.json
+resultado_scan*.json
 
-# Bases de dados locais
+# Bases de dados locais / dumps
 *.sqlite
 *.sqlite3
 *.db
+*.dump
+pgdata/
 
-# --- IDE / OS ---
-# Partilhar definições úteis do Cursor/VS Code; ignorar o resto da pasta local
-.cursor/
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
-.idea/
-*.sublime-project
-*.sublime-workspace
-.DS_Store
-Thumbs.db
-ehthumbs.db
-Desktop.ini
+# --- Docker (overrides locais; não versionar segredos locais) ---
+docker-compose.override.yml
+docker-compose.*.local.yml
+.env.docker
+.env.docker.local
 
 # --- Segredos / ambiente ---
 .env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
 .env.local
-.env.*.local
-.env.development
-.env.production
-.env.test
-# Artefactos compilados Windows (ex.: bundles locais)
-*.exe
+.env.development.local
+.env.test.local
+.env.production.local
 
+# Chaves e credenciais
+*.pem
+*.key
+*.p12
+credentials.json
+secrets.json
+service-account*.json
+
+# Artefactos Windows locais
+*.exe
+*.msi
+*.lnk
+
+# Exports gerados localmente (opcional — descomenta se guardares no repo)
+# *.xlsx
+# export_*.xlsx
+
+# --- IDE / editor ---
+# Cursor: pasta local do IDE (definições partilháveis ficam em .vscode)
+.cursor/
+
+# VS Code: ignorar estado local; manter definições úteis do projeto
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# --- Sistema operativo ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
