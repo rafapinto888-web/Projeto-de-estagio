@@ -70,11 +70,46 @@ function indicadoresPagina(atual, total) {
   return out;
 }
 
+const CHAVES_SECOES_API = ["computadores", "inventarios", "utilizadores", "localizacoes"];
+
 function toSections(parsed) {
   if (!parsed) return [];
   if (Array.isArray(parsed)) return [{ key: "resultados", value: parsed }];
-  if (typeof parsed === "object") return Object.entries(parsed).map(([key, value]) => ({ key, value }));
+  if (typeof parsed === "object") {
+    if (parsed.erro) return [];
+    return Object.entries(parsed)
+      .filter(([key]) => CHAVES_SECOES_API.includes(key))
+      .map(([key, value]) => ({ key, value }));
+  }
   return [{ key: "resultado", value: parsed }];
+}
+
+function pesquisaFoiExecutada(globalOutput) {
+  return String(globalOutput || "").trim() !== "";
+}
+
+function mapaLocalizacoes(localizacoesBase) {
+  const porId = new Map();
+  (localizacoesBase || []).forEach((loc) => {
+    const nome = String(loc?.nome || "").trim();
+    if (loc?.id != null && nome) porId.set(Number(loc.id), nome);
+  });
+  return porId;
+}
+
+function secaoSuportaFiltroEstado(secao) {
+  const s = normalizarTexto(secao);
+  return s === "computadores" || s.includes("dispositivo") || s.includes("ativo");
+}
+
+function secaoSuportaFiltroLocalizacao(secao) {
+  const s = normalizarTexto(secao);
+  return (
+    s === "computadores" ||
+    s.includes("dispositivo") ||
+    s.includes("ativo") ||
+    s === "localizacoes"
+  );
 }
 
 function secaoVisual(secao) {
@@ -137,7 +172,7 @@ function itemCorrespondeTermo(item, termoNormalizado) {
   return texto.includes(termoNormalizado);
 }
 
-function normalizarLinha(row) {
+function normalizarLinha(row, localizacoesPorId) {
   const item = row.item || {};
   const secao = normalizarTexto(row.secao);
   const nome = item.nome || item.hostname || item.email || item.descricao || "—";
@@ -152,14 +187,23 @@ function normalizarLinha(row) {
     secao === "computadores" || secao.includes("dispositivo") || secao.includes("ativo")
       ? item.utilizador_nome || item.utilizador_responsavel_nome || ""
       : "";
+
+  let localizacao = String(item.localizacao_nome || item.localizacao || "").trim();
+  if (!localizacao && item.localizacao_id != null) {
+    localizacao = localizacoesPorId.get(Number(item.localizacao_id)) || "";
+  }
+  if (secao === "localizacoes") {
+    localizacao = String(item.nome || localizacao || "").trim();
+  }
+
   return {
     ...row,
     nome,
     desc,
     detalhes,
-    localizacao: item.localizacao_nome || item.localizacao || "",
+    localizacao,
     utilizador: utilizadorAssociado,
-    estado: item.estado || "",
+    estado: String(item.estado || "").trim(),
   };
 }
 
@@ -218,15 +262,20 @@ export default function PesquisaPage({
     ],
     [computadoresComScansBase, inventariosBase, utilizadoresBase, localizacoesBase],
   );
-  const secoes = useMemo(() => {
-    const fromSearch = toSections(parsed);
-    const temResultadoPesquisa = fromSearch.some((s) => Array.isArray(s.value) && s.value.length > 0);
-    if (!temResultadoPesquisa) return secoesBase;
+  const localizacoesPorId = useMemo(() => mapaLocalizacoes(localizacoesBase), [localizacoesBase]);
+  const pesquisaExecutada = useMemo(() => pesquisaFoiExecutada(globalOutput), [globalOutput]);
 
-    if (scansFiltradosPorTermo.length === 0) return fromSearch;
+  const secoes = useMemo(() => {
+    if (!pesquisaExecutada) return secoesBase;
+
+    const fromSearch = toSections(parsed);
+    const secoesPesquisa =
+      fromSearch.length > 0 ? fromSearch : CHAVES_SECOES_API.map((key) => ({ key, value: [] }));
+
+    if (scansFiltradosPorTermo.length === 0) return secoesPesquisa;
 
     let encontrouSecaoComputadores = false;
-    const merged = fromSearch.map((secao) => {
+    const merged = secoesPesquisa.map((secao) => {
       if (secao.key !== "computadores") return secao;
       encontrouSecaoComputadores = true;
       const lista = Array.isArray(secao.value) ? secao.value : [secao.value];
@@ -238,14 +287,16 @@ export default function PesquisaPage({
     }
 
     return merged;
-  }, [parsed, secoesBase, scansFiltradosPorTermo]);
+  }, [parsed, pesquisaExecutada, secoesBase, scansFiltradosPorTermo]);
 
   const rowsBase = useMemo(() => {
     return secoes.flatMap(({ key, value }) => {
       const lista = Array.isArray(value) ? value : [value];
-      return lista.map((item, idx) => normalizarLinha({ key: `${key}-${idx}`, secao: key, item }));
+      return lista.map((item, idx) =>
+        normalizarLinha({ key: `${key}-${idx}`, secao: key, item }, localizacoesPorId),
+      );
     });
-  }, [secoes]);
+  }, [secoes, localizacoesPorId]);
 
   const opcoesTipo = useMemo(() => {
     const extras = secoes
@@ -300,8 +351,17 @@ export default function PesquisaPage({
   const rowsFiltradas = useMemo(() => {
     return rowsBase.filter((r) => {
       if (filtroSecao !== "todas" && normalizarTexto(r.secao) !== normalizarTexto(filtroSecao)) return false;
-      if (filtroEstado !== "todos" && normalizarTexto(r.estado) !== normalizarTexto(filtroEstado)) return false;
-      if (filtroLocalizacao !== "todas" && normalizarTexto(r.localizacao) !== normalizarTexto(filtroLocalizacao)) return false;
+
+      if (filtroEstado !== "todos") {
+        if (!secaoSuportaFiltroEstado(r.secao)) return false;
+        if (normalizarTexto(r.estado) !== normalizarTexto(filtroEstado)) return false;
+      }
+
+      if (filtroLocalizacao !== "todas") {
+        if (!secaoSuportaFiltroLocalizacao(r.secao)) return false;
+        if (normalizarTexto(r.localizacao) !== normalizarTexto(filtroLocalizacao)) return false;
+      }
+
       return true;
     });
   }, [rowsBase, filtroSecao, filtroEstado, filtroLocalizacao]);
@@ -326,6 +386,24 @@ export default function PesquisaPage({
   }, [filtroSecao, filtroEstado, filtroLocalizacao, ordem, globalOutput]);
 
   useEffect(() => {
+    if (filtroSecao !== "todas" && !opcoesTipo.some((o) => o.value === filtroSecao)) {
+      setFiltroSecao("todas");
+    }
+  }, [opcoesTipo, filtroSecao]);
+
+  useEffect(() => {
+    if (filtroEstado !== "todos" && !opcoesEstado.some((o) => o.value === filtroEstado)) {
+      setFiltroEstado("todos");
+    }
+  }, [opcoesEstado, filtroEstado]);
+
+  useEffect(() => {
+    if (filtroLocalizacao !== "todas" && !opcoesLocalizacao.some((o) => o.value === filtroLocalizacao)) {
+      setFiltroLocalizacao("todas");
+    }
+  }, [opcoesLocalizacao, filtroLocalizacao]);
+
+  useEffect(() => {
     if (!searchRequestId) return;
     const termo = String(globalTermo || "").trim();
     if (!termo) return;
@@ -338,12 +416,14 @@ export default function PesquisaPage({
     return Array.from(by.entries()).map(([secao, total]) => ({ secao, total }));
   }, [rowsFiltradas]);
 
-  const semResultado = !loading && rowsBase.length === 0;
-  const semResultadosFiltrados = !loading && !semResultado && rowsOrdenadas.length === 0;
   const erroMensagem =
     parsed && typeof parsed === "object" && !Array.isArray(parsed) && parsed?.erro
       ? String(parsed.erro)
       : "";
+  const semResultado = !loading && pesquisaExecutada && rowsBase.length === 0;
+  const prontoParaPesquisar = !loading && !pesquisaExecutada && rowsBase.length === 0 && !erroMensagem;
+  const semResultadosFiltrados =
+    !loading && !semResultado && !prontoParaPesquisar && !erroMensagem && rowsBase.length > 0 && rowsOrdenadas.length === 0;
   const totalResultados = rowsOrdenadas.length;
 
   async function handleSubmit(e) {
@@ -544,6 +624,22 @@ export default function PesquisaPage({
           <Paper variant="outlined" sx={{ p: 2, borderStyle: "dashed", bgcolor: "#f8fafc" }}>
             <Stack direction="row" spacing={1}>
               <span className="material-symbols-outlined" style={{ color: "#94a3b8" }}>
+                search_off
+              </span>
+              <Box>
+                <Typography fontSize={14} fontWeight={700}>
+                  Nenhum resultado para este termo
+                </Typography>
+                <Typography fontSize={12} color="text.secondary">
+                  Tenta outro termo ou remove filtros adicionais.
+                </Typography>
+              </Box>
+            </Stack>
+          </Paper>
+        ) : prontoParaPesquisar ? (
+          <Paper variant="outlined" sx={{ p: 2, borderStyle: "dashed", bgcolor: "#f8fafc" }}>
+            <Stack direction="row" spacing={1}>
+              <span className="material-symbols-outlined" style={{ color: "#94a3b8" }}>
                 travel_explore
               </span>
               <Box>
@@ -558,6 +654,13 @@ export default function PesquisaPage({
           </Paper>
         ) : (
           <>
+            {!pesquisaExecutada ? (
+              <Paper variant="outlined" sx={{ px: 1.5, py: 1, bgcolor: "#f8fbff", borderColor: "#dbeafe" }}>
+                <Typography fontSize={12} color="text.secondary">
+                  A mostrar todos os registos. Introduz um termo e carrega em Pesquisar para refinar.
+                </Typography>
+              </Paper>
+            ) : null}
             <Box
               sx={{
                 display: "grid",
