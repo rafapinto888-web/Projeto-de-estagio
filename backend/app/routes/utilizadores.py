@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, is_admin_user, require_admin
 from app.database.connection import get_db
+from app.models.computador_db import ComputadorDB
+from app.models.log_sistema_db import LogSistemaDB
 from app.models.perfil_db import PerfilDB
 from app.models.utilizador_db import UtilizadorDB
 from app.schemas.utilizador import (
@@ -155,10 +157,30 @@ def atualizar_utilizador(
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_admin)],
 )
-def apagar_utilizador(utilizador_id: int, db: Session = Depends(get_db)):
+def apagar_utilizador(
+    utilizador_id: int,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
     utilizador = db.get(UtilizadorDB, utilizador_id)
     if utilizador is None:
         raise HTTPException(status_code=404, detail="Utilizador nao encontrado")
+
+    if current_user.id == utilizador_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Nao podes apagar a tua propria conta enquanto tens sessao iniciada",
+        )
+
+    # Desassocia computadores (mantem o equipamento; remove apenas o responsavel).
+    db.query(ComputadorDB).filter(
+        ComputadorDB.utilizador_responsavel_id == utilizador_id
+    ).update({ComputadorDB.utilizador_responsavel_id: None}, synchronize_session=False)
+
+    # Remove historico/auditoria do utilizador (FK obrigatoria em logs_sistema).
+    db.query(LogSistemaDB).filter(LogSistemaDB.utilizador_id == utilizador_id).delete(
+        synchronize_session=False
+    )
 
     db.delete(utilizador)
     try:
@@ -167,7 +189,7 @@ def apagar_utilizador(utilizador_id: int, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(
             status_code=400,
-            detail="Nao e possivel apagar o utilizador porque existem registos associados",
+            detail="Nao foi possivel apagar o utilizador",
         ) from None
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
