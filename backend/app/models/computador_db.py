@@ -1,4 +1,4 @@
-"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Modelo ORM da tabela computadores (registo manual no inventario)."""
 
 # Modelo ORM de computadores registados manualmente.
 from __future__ import annotations
@@ -10,6 +10,8 @@ from app.database.connection import Base
 
 
 class ComputadorDB(Base):
+    """Equipamento registado manualmente com inventario, localizacao e responsavel."""
+
     __tablename__ = "computadores"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)

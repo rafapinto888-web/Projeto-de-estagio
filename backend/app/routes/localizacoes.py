@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Endpoints CRUD de localizacoes fisicas dos equipamentos."""
 
 # Rotas CRUD das localizacoes de equipamentos.
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -22,6 +22,7 @@ router = APIRouter(prefix="/localizacoes", tags=["Localizacoes"])
 def obter_localizacao_duplicada(
     db: Session, nome: str, descricao: str | None
 ) -> LocalizacaoDB | None:
+    """Verifica duplicado pela combinacao nome + descricao."""
     return (
         db.query(LocalizacaoDB)
         .filter(

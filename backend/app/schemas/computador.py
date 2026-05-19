@@ -1,10 +1,12 @@
-"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Schemas Pydantic para criacao, atualizacao e resposta de computadores."""
 
 # Schemas de criacao, atualizacao e resposta de computadores.
 from pydantic import BaseModel, ConfigDict
 
 
 class BaseSchema(BaseModel):
+    """Base com serializacao ORM e helper to_dict para camadas de dados."""
+
     model_config = ConfigDict(from_attributes=True)
 
     def to_dict(self, exclude_unset: bool = False) -> dict:

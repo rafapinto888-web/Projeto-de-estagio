@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Engine SQLAlchemy, sessao e dependencia get_db para injecao nas rotas."""
 
 # Configuracao da ligacao SQLAlchemy e sessoes da BD.
 import os
@@ -24,6 +24,7 @@ Base = declarative_base()
 
 
 def get_db() -> Generator[Session, None, None]:
+    """Abre sessao por pedido HTTP e fecha ao terminar (padrao FastAPI)."""
     db = SessionLocal()
     try:
         yield db

@@ -1,8 +1,11 @@
-/* Cabeçalho superior — pesquisa global e sessão. */
+/*
+ * Barra superior: pesquisa global (Ctrl+K), utilizador autenticado e logout.
+ */
 
 import { useEffect, useRef } from "react";
 import { Avatar, Box, Button, InputBase, Stack, Typography } from "@mui/material";
 
+/** Iniciais para o avatar a partir do nome ou username. */
 function initials(user) {
   const base = user?.nome || user?.username || user?.email || "?";
   const parts = String(base).trim().split(/\s+/);

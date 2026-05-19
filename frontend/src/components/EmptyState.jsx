@@ -1,4 +1,6 @@
-/* Comentario geral deste ficheiro: estado vazio reutilizavel para tabelas e listas. */
+/*
+ * Placeholder quando uma lista ou tabela não tem registos.
+ */
 import { Paper, Stack, Typography } from "@mui/material";
 
 export default function EmptyState({ title, description }) {

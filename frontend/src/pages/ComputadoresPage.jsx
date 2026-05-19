@@ -1,4 +1,6 @@
-/* CRUD de computadores + vista agregada com equipamentos descobertos por inventário (scan). */
+/*
+ * Computadores — CRUD manual e vista agregada por inventário (manuais + scan).
+ */
 
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -33,6 +35,8 @@ import { tipoInventarioLabel } from "../domain/inventario/index.js";
 import { exportInventarioComputadoresParaExcel } from "../utils/exportInventarioComputadores.js";
 import { estadoChipMuiColor } from "../utils/estadoMuiColor";
 import { tableCellEllipsis, tableCellMono, tableSxSemQuebra } from "../utils/tableCellSx";
+
+// --- Helpers: ordenação, payloads e filtros por inventário ---
 
 function sortByIdentificacao(list) {
   return [...(list || [])].sort((a, b) =>
@@ -121,6 +125,8 @@ export default function ComputadoresPage({
   token,
   withPanelAction,
 }) {
+  // --- Estado: editores, filtros e paginação por inventário ---
+
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState("create");
   const [scanEditorOpen, setScanEditorOpen] = useState(false);

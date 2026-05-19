@@ -1,3 +1,7 @@
+/*
+ * Cartão de métrica (KPI) com ícone, valor e dica opcional.
+ */
+
 import { Box, Paper, Stack, Typography } from "@mui/material";
 
 const TONE_STYLES = {

@@ -1,4 +1,4 @@
-"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Ponto de entrada FastAPI: CORS, migracoes SQLite e registo de routers."""
 
 # Arranque da API FastAPI e registo de routers.
 from fastapi import FastAPI
@@ -40,6 +40,7 @@ app.add_middleware(
 
 
 def garantir_compatibilidade_schema_sqlite() -> None:
+    """Adiciona/remove colunas em BD existentes sem perder dados (SQLite/PostgreSQL)."""
     with engine.begin() as connection:
         inspetor = inspect(connection)
 

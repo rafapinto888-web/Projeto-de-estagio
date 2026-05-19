@@ -1,4 +1,6 @@
-/* Localizações físicas — CRUD em modal com grelha horizontal. */
+/*
+ * Localizações — listagem e editor modal (nome e descrição).
+ */
 
 import { useCallback, useState } from "react";
 import { Button, Stack, TableCell, TableRow, TextField } from "@mui/material";
@@ -19,6 +21,8 @@ export default function LocalizacoesPage({
   onPick,
   onDeleteRow,
 }) {
+  // --- Estado do editor modal ---
+
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState("create");
 

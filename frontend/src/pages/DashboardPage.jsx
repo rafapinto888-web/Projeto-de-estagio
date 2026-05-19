@@ -1,4 +1,6 @@
-/* Dashboard — visão executiva no estilo painel operacional. */
+/*
+ * Dashboard — KPIs, gráfico por estado, inventários recentes e atividade do sistema.
+ */
 
 import { useMemo } from "react";
 import {
@@ -98,6 +100,8 @@ export default function DashboardPage({
 }) {
   const abrirMeuHistorico =
     typeof onOpenHistorico === "function" ? onOpenHistorico : () => onNavigate("historico-conta");
+
+  // --- Métricas e listas derivadas dos props ---
 
   const recentInventarios = (inventarios || []).slice(0, 5);
   const latestUsers = (utilizadores || []).slice(0, 5);
@@ -242,6 +246,8 @@ export default function DashboardPage({
     pr: 0.5,
   };
 
+  // --- Render: grelha de KPIs, gráficos e tabelas resumo ---
+
   return (
     <SectionCard
       title="Dashboard"
@@ -349,17 +355,17 @@ export default function DashboardPage({
               title="Inventários recentes"
               action={
                 <Button variant="text" size="small" onClick={() => onNavigate("inventarios")}>
-                  Ver todos
+                Ver todos
                 </Button>
               }
               minHeight={320}
             >
-              {loading ? (
+            {loading ? (
                 <Stack direction="row" spacing={1} alignItems="center">
                   <CircularProgress size={16} />
                   <Typography variant="body2">A carregar inventários…</Typography>
                 </Stack>
-              ) : recentInventarios.length === 0 ? (
+            ) : recentInventarios.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
                   Não existem inventários para mostrar.
                 </Typography>
@@ -441,7 +447,7 @@ export default function DashboardPage({
               title="Equipamentos recentes"
               action={
                 <Button variant="text" size="small" onClick={() => onNavigate("computadores")}>
-                  Ver todos
+                Ver todos
                 </Button>
               }
               minHeight={340}

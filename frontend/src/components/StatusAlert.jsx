@@ -1,4 +1,7 @@
-/* Comentario geral deste ficheiro: componente visual para feedback de estado. */
+/*
+ * Alerta flutuante (Snackbar) para mensagens de sucesso, aviso ou erro.
+ * Reage a mudanças na prop message e fecha automaticamente.
+ */
 import { useEffect, useState } from "react";
 import { Alert, Snackbar } from "@mui/material";
 

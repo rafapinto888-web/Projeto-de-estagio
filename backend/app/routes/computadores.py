@@ -1,6 +1,8 @@
-"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Endpoints de computadores: CRUD, permissoes por perfil e consulta de logs."""
 
 # Rotas para gestao de computadores e consulta de logs de dispositivo.
+
+# --- Validacao de referencias (inventario, localizacao, responsavel) ---
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -74,6 +76,8 @@ def validar_utilizador_responsavel(
         )
 
 
+# --- Controlo de acesso por perfil ---
+
 def _query_computadores_visiveis(db: Session, current_user: UtilizadorDB):
     # Admin ve tudo; utilizador normal so os computadores associados a si.
     query = db.query(ComputadorDB)
@@ -94,6 +98,8 @@ def _garantir_acesso_computador(
         )
     return computador
 
+
+# --- Listagem e consulta de logs ---
 
 @router.get("/", response_model=list[ComputadorResponse])
 def listar_computadores(
@@ -242,6 +248,8 @@ def buscar_computador(
     computador = obter_computador(db, computador_id)
     return _garantir_acesso_computador(computador, current_user)
 
+
+# --- CRUD de computadores (apenas admin) ---
 
 @router.post(
     "/",

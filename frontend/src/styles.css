@@ -1,4 +1,7 @@
-/* Inventario IT — tema visual tipo console de gestao moderna (apenas frontend). */
+/*
+ * Folha de estilos global — layout shell, auth, tabelas, modais e páginas específicas.
+ * Complementa o tema MUI (theme.js); secções marcadas com comentários --- abaixo.
+ */
 
 .material-symbols-outlined {
   font-family: "Material Symbols Outlined", sans-serif;

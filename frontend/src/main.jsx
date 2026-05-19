@@ -1,4 +1,7 @@
-/* Comentario geral deste ficheiro: contem partes importantes da interface e comportamento. */
+/*
+ * Ponto de entrada da SPA React.
+ * Monta a árvore com tema MUI, reset CSS global e o componente App.
+ */
 
 import React from "react";
 import ReactDOM from "react-dom/client";

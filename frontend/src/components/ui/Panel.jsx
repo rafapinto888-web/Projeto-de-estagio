@@ -1,6 +1,10 @@
+/*
+ * Painel com borda (subsecção dentro de páginas, sobretudo dashboard).
+ */
+
 import { Box, Divider, Paper, Stack, Typography } from "@mui/material";
 
-/** Painel interno (título + conteúdo) para dashboard e secções. */
+/** Painel interno: título, subtítulo opcional e slot de ação. */
 export default function Panel({
   title,
   subtitle,

@@ -1,4 +1,4 @@
-"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Schemas dos dispositivos descobertos no scan (criar, atualizar, resposta)."""
 
 # Schemas dos dispositivos descobertos no scan de rede.
 from datetime import datetime
@@ -16,6 +16,7 @@ class BaseSchema(BaseModel):
 
 
 def _limpar_texto_obrigatorio(valor: str, nome_campo: str) -> str:
+    """Remove espacos e rejeita string vazia com mensagem por campo."""
     valor_limpo = valor.strip()
     if not valor_limpo:
         raise ValueError(f"{nome_campo} nao pode estar vazio")

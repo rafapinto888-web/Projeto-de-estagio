@@ -1,4 +1,6 @@
-/* Perfis — lista em tabela como as outras abas; membros em modal dedicado. */
+/*
+ * Perfis de acesso — CRUD e modal de membros associados ao perfil.
+ */
 
 import { useCallback, useState } from "react";
 import { Button, Stack, TableCell, TableRow, TextField, Typography } from "@mui/material";
@@ -43,6 +45,8 @@ export default function PerfisPage({
   onPick,
   onDeleteRow,
 }) {
+  // --- Estado: editor de perfil e modal de membros ---
+
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState("create");
   const [membrosModal, setMembrosModal] = useState(null);

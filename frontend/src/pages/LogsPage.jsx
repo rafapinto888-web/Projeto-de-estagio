@@ -1,4 +1,6 @@
-/* Consulta de logs — filtros em modais horizontais; resultado mantém-se na página. */
+/*
+ * Logs — consulta por computador ou por inventário (RDP / segurança) com credenciais.
+ */
 
 import { useMemo, useState } from "react";
 import {
@@ -32,6 +34,8 @@ export default function LogsPage({
   logsOutput,
   loading,
 }) {
+  // --- Estado: modais de filtro e credenciais de rede ---
+
   const [modal, setModal] = useState(null);
   const [pcCampoPesquisa, setPcCampoPesquisa] = useState("nome");
   const [pcValorPesquisa, setPcValorPesquisa] = useState("");

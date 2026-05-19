@@ -1,4 +1,4 @@
-"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Schemas de inventarios, scan de rede, ativos unificados e pesquisa."""
 
 # Schemas de inventarios, detalhes e respostas de scan.
 from enum import Enum
@@ -77,6 +77,8 @@ class InventarioComContagensResponse(InventarioResponse):
 
 
 class ScanRedeRequest(BaseModel):
+    """Pedido de scan com credenciais de rede e tipos de log a recolher."""
+
     rede: str | None = None
     utilizador: str
     password: str
@@ -142,6 +144,8 @@ class InventarioScanInfo(BaseModel):
 
 
 class ScanRedeResponse(BaseModel):
+    """Resultado do scan: dispositivos encontrados e total de logs guardados."""
+
     inventario: InventarioScanInfo
     rede_analisada: str
     total_dispositivos_encontrados: int

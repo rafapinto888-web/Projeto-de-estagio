@@ -1,4 +1,7 @@
-// Raiz da app: sessão (token), dados partilhados e troca de abas do painel.
+/*
+ * Componente raiz: autenticação, estado global e roteamento por abas (hash).
+ * Delega UI de cada secção às páginas em ./pages.
+ */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, useMediaQuery } from "@mui/material";
@@ -18,7 +21,8 @@ import HistoricoContaPage from "./pages/HistoricoContaPage";
 import PesquisaPage from "./pages/PesquisaPage";
 import UtilizadoresPage from "./pages/UtilizadoresPage";
 
-// Itens do menu lateral (id = chave da aba e do hash na URL).
+// --- Navegação: abas do menu e sincronização com URL (#hash) ---
+
 const TABS = [
   { id: "dashboard", label: "Dashboard" },
   { id: "inventarios", label: "Inventários" },
@@ -54,7 +58,8 @@ function syncLocationHash(tabId) {
   }
 }
 
-// Valores iniciais do formulário de computador (CRUD).
+// --- Formulários e utilitários de rede (scan) ---
+
 function emptyComputerForm() {
   return {
     id: "",
@@ -181,7 +186,9 @@ function normalizarRedeScan(rawValue) {
 
 export default function App() {
   const theme = useTheme();
-  const isMobileNav = useMediaQuery(theme.breakpoints.down("lg")); // menu lateral em drawer no telemóvel
+  const isMobileNav = useMediaQuery(theme.breakpoints.down("lg"));
+
+  // --- Estado da aplicação ---
   const [status, setStatus] = useState({ type: "ok", message: "" }); // mensagens ok / erro na StatusAlert
   const [activeTab, setActiveTab] = useState(() => tabIdFromLocation());
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -243,7 +250,8 @@ export default function App() {
     return isAdminProfileName(nomePerfil) || user?.is_admin === true;
   }, [user]);
 
-  // Carrega todas as listas em paralelo (após login ou refresh).
+  // --- Carregamento de dados (API) ---
+
   async function loadAllData(currentToken, options = {}) {
     const tk = currentToken || token;
     if (!tk) return;
@@ -303,7 +311,8 @@ export default function App() {
     }
   }
 
-  // Submissão do ecrã de login: token + utilizador + dados iniciais.
+  // --- Autenticação ---
+
   async function handleLogin(event) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -341,7 +350,8 @@ export default function App() {
     setStatus({ type: "ok", message: "Sessao terminada" });
   }
 
-  // Executa uma mutação API, recarrega listas, regista histórico opcional.
+  // --- Mutações CRUD com feedback e auditoria ---
+
   async function withAction(action, successMessage) {
     setActionLoading(true);
     try {
@@ -374,7 +384,8 @@ export default function App() {
     }
   }
 
-  // Com token guardado: valida sessão e carrega dados; token inválido => logout silencioso.
+  // --- Efeitos: bootstrap, sync hash, refresh dashboard ---
+
   useEffect(() => {
     async function bootstrap() {
       if (!token) {
@@ -453,7 +464,8 @@ export default function App() {
     if (isMobileNav) setMobileNavOpen(false);
   }
 
-  // Sem sessão: só ecrã de autenticação.
+  // --- Render: ecrã de login (sem token) ---
+
   if (!token) {
     return (
       <main className="auth-screen">
@@ -483,7 +495,8 @@ export default function App() {
     );
   }
 
-  // Com sessão: layout com sidebar, topbar e conteúdo por aba.
+  // --- Render: shell autenticado (sidebar + topbar + páginas) ---
+
   return (
     <Box
       sx={{
@@ -530,7 +543,7 @@ export default function App() {
         >
           <StatusAlert type={status.type} message={status.message} />
 
-          {/* --- Páginas por aba --- */}
+          {/* --- Páginas por aba (conteúdo principal) --- */}
           {activeTab === "dashboard" && (
             <DashboardPage
               inventarios={inventarios}
@@ -549,6 +562,7 @@ export default function App() {
             <HistoricoContaPage token={token} active={activeTab === "historico-conta"} user={user} />
           )}
 
+          {/* Inventários, scan e computadores */}
           {activeTab === "inventarios" && (
             <InventariosPage
               isAdmin={isAdmin}
@@ -870,6 +884,7 @@ export default function App() {
             />
           )}
 
+          {/* Utilizadores e localizações */}
           {activeTab === "utilizadores" && (
             <UtilizadoresPage
               isAdmin={isAdmin}
@@ -984,6 +999,7 @@ export default function App() {
             />
           )}
 
+          {/* Pesquisa global e logs */}
           {activeTab === "pesquisa" && (
             <PesquisaPage
               globalTermo={globalTermo}

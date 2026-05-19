@@ -1,4 +1,7 @@
-/** Etiquetas de tipo de inventário (único sítio). */
+/*
+ * Etiquetas legíveis para tipos de inventário (normal, sub-rede).
+ */
+
 export function tipoInventarioLabel(tipo) {
   const s = String(tipo || "").trim().toLowerCase();
   if (s === "sub_rede") return "Sub-rede";

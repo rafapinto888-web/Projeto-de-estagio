@@ -1,6 +1,11 @@
+/*
+ * Tema Material UI partilhado pela aplicação.
+ * Paleta, tipografia e overrides de componentes (botões, tabelas, diálogos).
+ */
+
 import { createTheme } from "@mui/material/styles";
 
-/** Design system — enterprise IT ops (Linear / Defender / UniFi / Vercel). */
+/** Design system — operações IT (paleta clara, bordas suaves). */
 const theme = createTheme({
   spacing: 8,
   palette: {

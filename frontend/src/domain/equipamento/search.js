@@ -1,3 +1,7 @@
+/*
+ * Pesquisa e etiquetas de ativos (computador ou dispositivo descoberto).
+ */
+
 import { ipEquipamento } from "./formatters.js";
 
 /** Nome de exibição para ordenação e títulos. */

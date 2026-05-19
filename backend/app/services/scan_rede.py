@@ -1,6 +1,8 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Servico de scan: ping na sub-rede, MAC/hostname e enriquecimento Windows (CIM)."""
 
 # Servico responsavel por descobrir IPs ativos e metadados basicos na rede.
+
+# --- Utilitarios de normalizacao ---
 from __future__ import annotations
 
 import platform
@@ -46,6 +48,8 @@ def _normalizar_mac(mac: object) -> str | None:
         return None
     return padrao.group(1).replace("-", ":").lower()
 
+
+# --- Descoberta basica (ping, ARP, DNS) ---
 
 def ping_host(ip: str) -> bool:
     # Faz ping ao IP (Windows/Linux) para saber se está ativo.
@@ -178,6 +182,8 @@ def descobrir_hosts_ativos(rede: str) -> list[str]:
         resultados = executor.map(ping_host, hosts)
         return [ip for ip, ativo in zip(hosts, resultados, strict=False) if ativo]
 
+
+# --- Enriquecimento remoto Windows (PowerShell / CIM) ---
 
 def obter_info_windows_por_ip(
     ip: str,

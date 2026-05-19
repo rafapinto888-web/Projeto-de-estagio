@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Modelo ORM da tabela logs_dispositivo (eventos Windows por computador)."""
 
 # Modelo ORM dos logs associados a computadores.
 from __future__ import annotations
@@ -12,6 +12,8 @@ from app.database.connection import Base
 
 
 class LogDispositivoDB(Base):
+    """Log de seguranca ou RDP associado a um computador."""
+
     __tablename__ = "logs_dispositivo"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)

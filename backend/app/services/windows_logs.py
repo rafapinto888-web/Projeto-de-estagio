@@ -1,4 +1,4 @@
-"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Recolha de eventos Windows (Security e Terminal Services) via PowerShell."""
 
 # Servico para recolher logs reais do Windows (seguranca e RDP).
 from __future__ import annotations

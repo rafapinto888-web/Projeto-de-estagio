@@ -1,4 +1,4 @@
-"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Endpoints CRUD de perfis de utilizador (restrito a admin)."""
 
 # Rotas CRUD dos perfis de utilizador.
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -19,6 +19,7 @@ router = APIRouter(prefix="/perfis", tags=["Perfis"])
 
 
 def obter_perfil_ou_404(db: Session, perfil_id: int) -> PerfilDB:
+    """Carrega perfil ou HTTP 404."""
     perfil = db.get(PerfilDB, perfil_id)
     if perfil is None:
         raise HTTPException(status_code=404, detail="Perfil nao encontrado")

@@ -1,4 +1,4 @@
-"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Dependencias FastAPI: autenticacao JWT/Basic e controlo de perfil admin."""
 
 import base64
 import re
@@ -18,6 +18,7 @@ _PERFIL_ADMIN_TOKENS = frozenset({"admin", "administrador", "administrator"})
 
 
 def _tokens_do_perfil(perfil_raw: str | None) -> frozenset[str]:
+    """Extrai palavras do nome do perfil para comparacao (ex.: Admin, Administrador)."""
     if not perfil_raw or not str(perfil_raw).strip():
         return frozenset()
     pedacos = re.split(r"[^\wàáâãèéêìíîòóôõùúûçÀÁÂÃÈÉÊÌÍÎÒÓÔÕÙÚÛÇ]+", perfil_raw.lower())
@@ -42,6 +43,7 @@ def get_current_user(
     swagger_credentials: HTTPBasicCredentials | None = Depends(basic_scheme),
     db: Session = Depends(get_db),
 ) -> UtilizadorDB:
+    """Resolve o utilizador autenticado via Bearer JWT, Basic ou modo Swagger."""
     # No Swagger/ReDoc, permite testar endpoints sem exigir login manual.
     if _is_swagger_request(request):
         candidatos = (
@@ -137,6 +139,7 @@ def get_current_user(
 
 
 def require_admin(current_user: UtilizadorDB = Depends(get_current_user)) -> UtilizadorDB:
+    """Bloqueia a operacao se o utilizador atual nao for administrador."""
     if not is_admin_user(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -1,4 +1,6 @@
-/* Gestão de utilizadores — criar/editar dentro de modal (componente FormModal). */
+/*
+ * Utilizadores — listagem e editor modal (perfil e credenciais).
+ */
 
 import { useCallback, useState } from "react";
 import { Button, MenuItem, Stack, TableCell, TableRow, TextField, Typography } from "@mui/material";
@@ -30,6 +32,8 @@ export default function UtilizadoresPage({
   onPick,
   onDeleteRow,
 }) {
+  // --- Estado do editor modal ---
+
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState("create");
 

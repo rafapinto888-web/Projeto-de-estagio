@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Modelo ORM da tabela inventarios (normal ou sub-rede)."""
 
 # Modelo ORM dos inventarios de equipamentos.
 from __future__ import annotations
@@ -10,6 +10,8 @@ from app.database.connection import Base
 
 
 class InventarioDB(Base):
+    """Grupo logico ou inventario associado a uma rede para scan."""
+
     __tablename__ = "inventarios"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)

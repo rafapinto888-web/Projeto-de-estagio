@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Modelo ORM da tabela localizacoes fisicas."""
 
 # Modelo ORM das localizacoes fisicas dos equipamentos.
 from __future__ import annotations
@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
 
 class LocalizacaoDB(Base):
+    """Local fisica (nome + descricao) onde podem estar computadores."""
+
     __tablename__ = "localizacoes"
     __table_args__ = (
         UniqueConstraint(

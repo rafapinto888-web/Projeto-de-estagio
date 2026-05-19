@@ -1,4 +1,4 @@
-"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Schemas de login, token JWT e historico de auditoria do utilizador."""
 
 from datetime import datetime
 
@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class LoginRequest(BaseModel):
+    """Pedido de login com identificador (username ou email) e password."""
+
     model_config = ConfigDict(extra="forbid")
 
     identificador: str = Field(min_length=1)
@@ -13,11 +15,15 @@ class LoginRequest(BaseModel):
 
 
 class AuthTokenResponse(BaseModel):
+    """Resposta com token Bearer apos autenticacao bem-sucedida."""
+
     access_token: str
     token_type: str = "bearer"
 
 
 class AuthMeResponse(BaseModel):
+    """Dados do utilizador autenticado (endpoint /auth/me)."""
+
     id: int
     nome: str
     username: str

@@ -12,65 +12,301 @@ O sistema deverá permitir a gestão de inventário informático de forma centra
 
 
 
-Requisitos funcionais 
-Gestão de inventários
-O sistema deve permitir criar inventários.
-O sistema deve permitir listar inventários.
-O sistema deve permitir consultar os dados de um inventário específico.
-O sistema deve permitir editar inventários.
-O sistema deve permitir remover inventários.
-O sistema deve permitir associar computadores a um inventário.
-O sistema deve permitir associar dispositivos descobertos a um inventário.
-O sistema deve permitir associar utilizadores a inventários.
-O sistema deve permitir definir o tipo de inventário (sub-rede ou grupo lógico/normal).
-O sistema deve permitir listar os ativos de um inventário de forma unificada (computadores registados e dispositivos descobertos), mantendo distinção da origem.
+Requisitos funcionais
 
-Gestão de computadores
-O sistema deve permitir o registo de computadores no inventário.
-O sistema deve permitir listar todos os computadores registados.
-O sistema deve permitir consultar os dados de um computador específico.
-O sistema deve permitir pesquisar computadores pelo identificador interno da base de dados.
-O sistema deve permitir pesquisar computadores pelo número de série.
-O sistema deve permitir editar a informação de um computador.
-O sistema deve permitir remover computadores do inventário.
-O sistema deve permitir associar computadores a utilizadores responsáveis.
-O sistema deve permitir associar computadores a localizações.
-O sistema deve permitir identificar o estado de cada equipamento.
-O sistema deve permitir distinguir entre computadores registados manualmente e dispositivos descobertos automaticamente, caso estes sejam importados/associados ao inventário.
+Convenção de escrita (para revisão e testes)
+- Cada RF tem identificador único (RF-XX), ator, pré-condições e critérios de aceitação verificáveis.
+- Formato dos critérios: Dado [estado inicial] / Quando [ação] / Então [resultado observável].
+- "Referência técnica" aponta para o código atual (frontend + API); serve de rasto para diagramas de sequência UML.
+- Um requisito só é considerado cumprido se todos os critérios de aceitação puderem ser reproduzidos manualmente ou via Swagger.
 
-Gestão de utilizadores e perfis
-O sistema deve permitir a autenticação de utilizadores.
-O sistema deve permitir diferentes níveis de acesso consoante o perfil do utilizador.
-O sistema deve permitir gerir perfis de utilizador.
-O sistema deve permitir registar utilizadores.
-O sistema deve permitir associar utilizadores a perfis.
-O sistema deve permitir associar utilizadores a inventários.
 
-Logs
-O sistema deve registar logs das ações realizadas no sistema.
-O sistema deve permitir ao utilizador consultar o seu próprio histórico de ações.
-O sistema deve permitir ao administrador consultar os logs dos utilizadores.
-O sistema deve permitir consultar logs de segurança e logs RDP provenientes dos computadores monitorizados.
-O sistema deve permitir associar os logs recolhidos ao respetivo computador.
-O sistema deve permitir consultar logs por computador, número de série, nome ou hostname.
-O sistema deve permitir filtrar logs por tipo (seguranca ou rdp).
+--- Autenticação e sessão ---
 
-Scan de rede
-O sistema deve permitir realizar o scan de uma rede através de um intervalo de endereços IP.
-O sistema deve permitir identificar dispositivos ativos na rede.
-O sistema deve permitir recolher informações básicas dos dispositivos, como endereço IP, hostname e, quando possível, modelo.
-O sistema deve permitir importar para o inventário os dispositivos encontrados através do scan de rede.
-O sistema deve permitir distinguir dispositivos registados manualmente de dispositivos descobertos automaticamente.
-O sistema deve evitar duplicados de dispositivos descobertos dentro do mesmo inventário (por inventário + IP).
-O sistema deve atualizar dispositivos já existentes do inventário quando o IP já tiver sido descoberto.
-O sistema deve atualizar o estado dos dispositivos descobertos (ativo/inativo) e guardar a última vez em que estiveram ativos.
+RF-01 Iniciar sessão com credenciais válidas
+Descrição: O utilizador autentica-se na aplicação e obtém um token de acesso JWT.
+Ator: Utilizador registado.
+Pré-condições: Existe um utilizador ativo na base de dados; a API está disponível.
+Critérios de aceitação:
+  CA1: Dado username ou email e palavra-passe corretos, quando submete o formulário de login, então a API responde HTTP 200 com `access_token` e `token_type=bearer`.
+  CA2: Dado login com sucesso, quando o frontend processa a resposta, então o token é guardado em `localStorage` e o ecrã principal é apresentado.
+  CA3: Dado login com sucesso, então é criado um registo de auditoria com ação `sessao.login` na tabela de logs de sistema.
+Referência técnica: `App.handleLogin` → `api.login` → `POST /auth/login` → `auth.login` → `autenticar_utilizador` → `criar_access_token` → `registar_log_sistema`.
 
-Interface frontend
-O sistema deve disponibilizar uma interface frontend para autenticação de utilizadores.
-O sistema deve disponibilizar uma interface frontend para consulta e gestão do inventário.
-O sistema deve disponibilizar uma interface frontend para consulta e gestão de computadores.
-O sistema deve disponibilizar uma interface frontend para consulta de logs do sistema.
-O sistema deve disponibilizar uma interface frontend para consulta dos dispositivos encontrados através do scan de rede.
+RF-02 Rejeitar credenciais inválidas no login
+Descrição: Tentativas de autenticação com dados incorretos são recusadas sem expor detalhes do erro.
+Ator: Utilizador (ou tentativa não autorizada).
+Pré-condições: API disponível.
+Critérios de aceitação:
+  CA1: Dado identificador ou palavra-passe incorretos, quando é efetuado `POST /auth/login`, então a API responde HTTP 401.
+  CA2: Dado resposta 401, quando o frontend apresenta feedback, então o utilizador permanece no ecrã de login e nenhum token é guardado.
+Referência técnica: `auth.autenticar_utilizador` (exceção HTTP 401).
+
+RF-03 Consultar identidade da sessão atual
+Descrição: O utilizador autenticado obtém os dados da conta e do perfil associado.
+Ator: Utilizador autenticado.
+Pré-condições: Token JWT válido e não expirado.
+Critérios de aceitação:
+  CA1: Dado token válido no cabeçalho `Authorization: Bearer`, quando é chamado `GET /auth/me`, então a API responde HTTP 200 com `id`, `username`, `email`, `perfil_id` e `perfil_nome`.
+  CA2: Dado token inválido ou expirado, quando é chamado `GET /auth/me`, então a API responde HTTP 401.
+Referência técnica: `api.me` → `auth.me` → `deps.get_current_user` → `security.descodificar_access_token`.
+
+RF-04 Carregar dados iniciais após autenticação
+Descrição: Após o login, o painel carrega em paralelo as listagens necessárias à navegação.
+Ator: Utilizador autenticado.
+Pré-condições: Sessão iniciada (RF-01).
+Critérios de aceitação:
+  CA1: Dado login concluído, quando `App.loadAllData` é executado, então são invocados com sucesso (HTTP 200) os endpoints de inventários, computadores, utilizadores, perfis, localizações, ativos por inventário e histórico do utilizador.
+  CA2: Dado carregamento concluído, então o dashboard e as restantes abas dispõem de dados para listagem sem novo login.
+Referência técnica: `App.loadAllData` → `api.inventarios.listar`, `api.computadores.listar`, `api.utilizadores.listar`, `api.perfis.listar`, `api.localizacoes.listar`, `api.inventarios.ativosPorInventario`, `api.historicoMeu`.
+
+RF-05 Terminar sessão
+Descrição: O utilizador encerra a sessão e o cliente remove o token local.
+Ator: Utilizador autenticado.
+Pré-condições: Sessão ativa.
+Critérios de aceitação:
+  CA1: Quando o utilizador termina sessão, então `access_token` é removido de `localStorage` e o estado React de listagens é limpo.
+  CA2: Dado sessão terminada, quando tenta aceder a operações protegidas, então é redirecionado para o ecrã de login.
+Referência técnica: `App.handleLogout`.
+
+
+--- Auditoria (histórico de ações do utilizador) ---
+
+RF-06 Consultar histórico pessoal de ações
+Descrição: Cada utilizador consulta apenas o seu histórico de eventos registados no sistema.
+Ator: Utilizador autenticado.
+Pré-condições: Sessão válida; existem ou não registos de histórico.
+Critérios de aceitação:
+  CA1: Dado utilizador A autenticado, quando chama `GET /auth/me/historico`, então recebe HTTP 200 com lista ordenada por data (máx. 500 entradas) apenas do utilizador A.
+  CA2: Dado utilizador sem registos, então a lista devolvida é vazia (`itens: []`) e não provoca erro na interface.
+Referência técnica: `auth.historico_do_utilizador` → consulta `LogSistemaDB` filtrada por `utilizador_id`.
+
+RF-07 Registar evento de auditoria a partir do painel
+Descrição: Operações relevantes no frontend podem gerar um registo descritivo no histórico do utilizador.
+Ator: Utilizador autenticado.
+Pré-condições: Sessão válida.
+Critérios de aceitação:
+  CA1: Dado uma operação concluída com sucesso no painel (`App.withAction`), quando o frontend chama `POST /auth/me/historico`, então a API responde HTTP 201 e o evento fica visível em `GET /auth/me/historico`.
+  CA2: Dado falha ao registar histórico, então a operação principal (ex.: criar computador) não é revertida — o registo de auditoria é auxiliar.
+Referência técnica: `App.withAction` → `api.registarHistorico` → `auth.registar_evento_historico` → `registar_log_sistema`.
+
+
+--- Inventários ---
+
+RF-08 Listar inventários acessíveis ao utilizador
+Descrição: O sistema apresenta inventários consoante o perfil (admin vê todos; não-admin vê inventários associados).
+Ator: Utilizador autenticado.
+Pré-condições: Sessão válida.
+Critérios de aceitação:
+  CA1: Dado utilizador autenticado, quando chama `GET /inventarios/`, então recebe HTTP 200 com lista de inventários incluindo contagens (`total_computadores`, `total_dispositivos_scan`).
+  CA2: Dado utilizador não administrador, então a lista não inclui inventários sem associação ao utilizador.
+Referência técnica: `inventarios.listar_inventarios` → `_inventarios_visiveis_query` → `deps.is_admin_user`.
+
+RF-09 Criar inventário (administrador)
+Descrição: Um administrador regista um novo inventário (tipo normal ou sub-rede).
+Ator: Administrador.
+Pré-condições: Perfil de administrador; token válido.
+Critérios de aceitação:
+  CA1: Dado payload válido (`nome`, `tipo_inventario`, `rede` obrigatória se `sub_rede`), quando `POST /inventarios`, então HTTP 201 e o inventário aparece em `GET /inventarios/`.
+  CA2: Dado utilizador não administrador, quando tenta `POST /inventarios`, então HTTP 403.
+  CA3: Dado inventário `sub_rede` sem rede válida IPv4, então HTTP 422 ou 400 com mensagem de validação.
+Referência técnica: `inventarios.criar_inventario` → `require_admin`.
+
+RF-10 Atualizar inventário (administrador)
+Descrição: Um administrador altera nome, descrição, tipo ou rede de um inventário existente.
+Ator: Administrador.
+Pré-condições: Inventário existente; perfil admin.
+Critérios de aceitação:
+  CA1: Dado `PUT /inventarios/{id}` com dados válidos, então HTTP 200 e os campos alterados persistem na consulta seguinte.
+  CA2: Dado ID inexistente, então HTTP 404.
+Referência técnica: `inventarios.atualizar_inventario`.
+
+RF-11 Remover inventário (administrador)
+Descrição: Um administrador elimina um inventário do sistema.
+Ator: Administrador.
+Pré-condições: Inventário existente; perfil admin.
+Critérios de aceitação:
+  CA1: Dado confirmação na interface e `DELETE /inventarios/{id}`, então HTTP 204 e o inventário deixa de aparecer na listagem.
+  CA2: Dado ID inexistente, então HTTP 404.
+Referência técnica: `inventarios.apagar_inventario` → `App` / `InventariosPage` via `api.inventarios.apagar`.
+
+RF-12 Listar ativos unificados de um inventário
+Descrição: Por inventário, o sistema devolve computadores registados e dispositivos descobertos, distinguindo a origem.
+Ator: Utilizador autenticado com acesso ao inventário.
+Pré-condições: Inventário existente; sessão válida.
+Critérios de aceitação:
+  CA1: Dado inventário acessível, quando `GET /inventarios/{id}/computadores`, então HTTP 200 com itens que incluem campo `tipo` (`computador` ou `dispositivo_descoberto`).
+  CA2: Dado utilizador sem permissão sobre o inventário, então HTTP 403.
+Referência técnica: `inventarios.listar_computadores_do_inventario` → `_ativos_unificados_do_inventario` → `_garantir_acesso_inventario`.
+
+RF-13 Pesquisar ativos dentro de um inventário
+Descrição: O utilizador filtra ativos de um inventário por termo livre (nome, IP, hostname, etc.).
+Ator: Utilizador autenticado com acesso ao inventário.
+Pré-condições: Inventário selecionado na interface.
+Critérios de aceitação:
+  CA1: Dado termo não vazio, quando `GET /inventarios/{id}/computadores/pesquisar?termo=...`, então HTTP 200 apenas com ativos cujos campos pesquisáveis contêm o termo (case-insensitive).
+  CA2: Dado termo vazio na interface, então é usada a listagem completa (RF-12) via `api.inventarios.ativos`.
+Referência técnica: `inventarios.pesquisar_computadores_do_inventario` → `App.refreshAtivos`.
+
+
+--- Computadores (registo manual) ---
+
+RF-14 Listar computadores visíveis
+Descrição: Listagem global de computadores respeitando regras de visibilidade por perfil.
+Ator: Utilizador autenticado.
+Pré-condições: Sessão válida.
+Critérios de aceitação:
+  CA1: Quando `GET /computadores/`, então HTTP 200 com lista de computadores; administrador vê todos os registos.
+  CA2: Cada item inclui, quando aplicável, `inventario_nome`, `localizacao_nome` e `utilizador_responsavel_nome`.
+Referência técnica: `computadores.listar_computadores` → `_query_computadores_visiveis`.
+
+RF-15 Registar computador em inventário (administrador)
+Descrição: Criação de um computador com campos obrigatórios e associações a inventário, localização e responsável.
+Ator: Administrador.
+Pré-condições: Inventário existente; número de série único na BD.
+Critérios de aceitação:
+  CA1: Dado payload válido, quando `POST /computadores`, então HTTP 201 e o computador é consultável por ID.
+  CA2: Dado `numero_serie` duplicado, então HTTP 400 ou 409 (conflito de unicidade).
+  CA3: Dado utilizador não admin, então HTTP 403.
+Referência técnica: `computadores.adicionar_computador` → validações `validar_inventario`, `validar_localizacao`, `validar_utilizador_responsavel`.
+
+RF-16 Atualizar computador (administrador)
+Descrição: Alteração total ou parcial dos dados de um computador existente.
+Ator: Administrador.
+Pré-condições: Computador existente.
+Critérios de aceitação:
+  CA1: Dado `PUT /computadores/{id}` válido, então HTTP 200 e alterações visíveis em consulta posterior.
+  CA2: Dado `PATCH /computadores/{id}` com subconjunto de campos, então apenas esses campos são alterados.
+Referência técnica: `computadores.editar_computador`, `computadores.atualizar_parcialmente_computador`.
+
+RF-17 Remover computador (administrador)
+Descrição: Eliminação de um computador do inventário.
+Ator: Administrador.
+Pré-condições: Computador existente.
+Critérios de aceitação:
+  CA1: Dado `DELETE /computadores/{id}` bem-sucedido, então HTTP 204 e o ID deixa de existir em `GET /computadores/`.
+  CA2: Dado ID inexistente, então HTTP 404.
+Referência técnica: `computadores.apagar_computador`.
+
+
+--- Scan de rede e dispositivos descobertos ---
+
+RF-18 Executar scan de sub-rede num inventário
+Descrição: Administrador dispara descoberta de hosts ativos numa rede e persiste/atualiza dispositivos descobertos.
+Ator: Administrador.
+Pré-condições: Inventário com `tipo_inventario=sub_rede` e rede definida; credenciais de rede fornecidas no pedido.
+Critérios de aceitação:
+  CA1: Dado pedido válido (`utilizador`, `password`, opcionalmente `rede` e `tipos_log`), quando `POST /inventarios/{id}/scan`, então HTTP 200 com `total_dispositivos_encontrados` e lista `dispositivos_descobertos`.
+  CA2: Dado IP novo no inventário, então é criado registo em `dispositivos_descobertos` com `estado=ativo` e `origem_registo=scan`.
+  CA3: Dado IP já existente no mesmo inventário, então o registo é atualizado (sem duplicar linha para inventário+IP).
+  CA4: Dado IP que existia mas não respondeu no scan atual, então `estado` passa a `inativo`.
+  CA5: Dado inventário que não é `sub_rede`, então HTTP 400.
+Referência técnica: `inventarios.executar_scan_do_inventario` → `descobrir_dispositivos_enriquecidos` → `obter_dispositivos_descobertos_por_ips` → `coletar_logs_windows` (quando aplicável).
+
+RF-19 Atualizar dispositivo descoberto (administrador)
+Descrição: Correção manual de metadados de um dispositivo obtido por scan.
+Ator: Administrador.
+Pré-condições: Dispositivo existente no inventário.
+Critérios de aceitação:
+  CA1: Dado `PATCH /inventarios/{inv_id}/dispositivos-descobertos/{disp_id}` válido, então HTTP 200 e campos alterados persistem.
+Referência técnica: `inventarios.atualizar_dispositivo_descoberto` → `api.inventarios.atualizarDispositivo`.
+
+RF-20 Remover dispositivo descoberto (administrador)
+Descrição: Eliminação de um dispositivo descoberto associado a um inventário.
+Ator: Administrador.
+Pré-condições: Dispositivo existente.
+Critérios de aceitação:
+  CA1: Dado `DELETE` bem-sucedido, então HTTP 204 e o dispositivo deixa de aparecer na listagem unificada do inventário.
+Referência técnica: `inventarios.apagar_dispositivo_descoberto`.
+
+
+--- Logs de dispositivos (segurança / RDP) ---
+
+RF-21 Consultar logs de dispositivos por inventário
+Descrição: Consulta de logs Windows recolhidos, filtrando por inventário e dispositivo.
+Ator: Utilizador autenticado com acesso ao inventário.
+Pré-condições: Logs previamente recolhidos (ex.: após scan).
+Critérios de aceitação:
+  CA1: Dado parâmetros válidos, quando `GET /inventarios/{id}/logs/dispositivos-descobertos?...`, então HTTP 200 com eventos cujo `tipo_log` é `seguranca` ou `rdp`.
+  CA2: Dado filtro `tipo_log`, então apenas eventos desse tipo são devolvidos.
+Referência técnica: `inventarios.listar_logs_dos_dispositivos_descobertos` → `LogsPage` / `api.inventarios.logsDispositivos`.
+
+RF-22 Consultar logs por computador
+Descrição: Consulta de logs associados a um computador por ID, nome, número de série ou hostname.
+Ator: Utilizador autenticado.
+Pré-condições: Computador identificável na BD.
+Critérios de aceitação:
+  CA1: Dado pelo menos um critério de pesquisa (`computador_id`, `nome`, `numero_serie` ou `hostname`), quando `GET /computadores/logs/dispositivo?...`, então HTTP 200 com estrutura de resposta prevista pelo schema ou HTTP 404 se nenhum computador corresponder.
+  CA2: Dado `tipo_log` informado, então a resposta filtra por `seguranca` ou `rdp`.
+Referência técnica: `computadores.consultar_logs_dispositivo` → `api.logs.porComputador`.
+
+
+--- Pesquisa global ---
+
+RF-23 Pesquisa global multi-entidade
+Descrição: Pesquisa textual única sobre computadores, inventários, utilizadores e localizações.
+Ator: Utilizador autenticado na interface (a API aceita pedido sem token — ver nota de implementação).
+Pré-condições: Termo de pesquisa não vazio.
+Critérios de aceitação:
+  CA1: Dado termo `T`, quando `GET /pesquisar?pesquisa=T`, então HTTP 200 com objeto contendo chaves `computadores`, `inventarios`, `utilizadores`, `localizacoes` (listas, possivelmente vazias).
+  CA2: Dado termo vazio ou só espaços, então HTTP 400.
+  CA3: Dado correspondência por ID exacto, quando `T` é numérico e coincide com um ID, então esse registo aparece na categoria respetiva.
+  CA4: Na interface, dado pesquisa submetida, quando `PesquisaPage` recebe JSON da API, então os resultados são apresentados em grelha com filtros locais (tipo, estado, localização).
+Referência técnica: `pesquisa.pesquisar_global` → `api.pesquisa.global` → `PesquisaPage` / `App` (tab pesquisa).
+Nota de implementação: Endurecer autenticação em `/pesquisar` é melhoria de segurança pendente; o RF descreve o comportamento actual da API.
+
+
+--- Perfis, utilizadores e localizações (administração) ---
+
+RF-24 Gerir perfis de acesso (CRUD — administrador)
+Descrição: Criação, consulta, alteração e remoção de perfis (ex.: Admin, Operador).
+Ator: Administrador.
+Pré-condições: Sessão admin.
+Critérios de aceitação:
+  CA1: Operações `GET/POST/PUT/DELETE /perfis` por administrador devolvem códigos HTTP adequados (200/201/204 ou 404).
+  CA2: Dado utilizador não admin, então operações de escrita respondem HTTP 403.
+Referência técnica: `perfis.listar_perfis`, `criar_perfil`, `atualizar_perfil`, `apagar_perfil` → `require_admin`.
+
+RF-25 Gerir utilizadores (CRUD — administrador)
+Descrição: Registo e manutenção de contas com perfil e palavra-passe hasheada.
+Ator: Administrador.
+Pré-condições: Perfil existente para associação.
+Critérios de aceitação:
+  CA1: Dado `POST /utilizadores` com email e username únicos, então HTTP 201 e login possível com as credenciais definidas.
+  CA2: Dado email ou username duplicado, então HTTP 400 com mensagem de conflito.
+  CA3: Dado `DELETE /utilizadores/{id}`, então o utilizador deixa de autenticar-se.
+Referência técnica: `utilizadores.criar_utilizador` (`gerar_hash_palavra_passe`), `atualizar_utilizador`, `apagar_utilizador`.
+
+RF-26 Gerir localizações (CRUD — administrador)
+Descrição: Manutenção de localizações físicas associáveis a computadores.
+Ator: Administrador (escrita); qualquer utilizador autenticado pode listar na prática via API pública de leitura).
+Pré-condições: Sessão válida para uso na interface.
+Critérios de aceitação:
+  CA1: Dado `POST /localizacoes` válido por admin, então HTTP 201 e localização disponível em `GET /localizacoes`.
+  CA2: Dado nome+descrição duplicados conforme regra de negócio, então HTTP 400.
+  CA3: Dado `DELETE /localizacoes/{id}` com computadores associados, então o sistema impede ou trata o conflito (verificar comportamento actual e documentar no teste).
+Referência técnica: `localizacoes.criar_localizacao`, `atualizar_localizacao`, `apagar_localizacao`, `listar_localizacoes`.
+
+
+--- Interface e exportação ---
+
+RF-27 Exportar listagem de ativos para Excel
+Descrição: Exportação local (browser) dos ativos visíveis de um inventário para ficheiro `.xlsx`.
+Ator: Utilizador autenticado na aba Computadores/Inventário.
+Pré-condições: Dados de ativos carregados na grelha.
+Critérios de aceitação:
+  CA1: Dado lista de ativos apresentada, quando o utilizador aciona exportar, então é gerado ficheiro `.xlsx` com colunas definidas (nome, IP, MAC, estado, etc.) sem chamada adicional obrigatória à API.
+  CA2: Dado lista vazia, então a exportação não gera ficheiro ou apresenta aviso (conforme implementação em `ComputadoresPage`).
+Referência técnica: `exportInventarioComputadoresParaExcel` (`frontend/src/utils/exportInventarioComputadores.js`) — processamento apenas no cliente.
+
+RF-28 Navegar funcionalidades principais via interface web
+Descrição: A SPA React disponibiliza abas para dashboard, inventários, computadores, utilizadores, perfis, localizações, pesquisa global e logs.
+Ator: Utilizador autenticado.
+Pré-condições: Sessão iniciada.
+Critérios de aceitação:
+  CA1: Dado sessão activa, quando selecciona cada item do menu lateral, então a área de conteúdo muda para a página correspondente sem recarregar a aplicação completa.
+  CA2: Dado utilizador não administrador, então acções de escrita reservadas a admin (botões criar/apagar inventário, scan, etc.) não estão disponíveis ou falham com mensagem compreensível.
+Referência técnica: `App.jsx` (`activeTab`, `isAdmin`), páginas em `frontend/src/pages/`.
 
 Requisitos Não Funcionais
 
@@ -120,22 +356,26 @@ O scan não deve criar computadores manualmente registados de forma automática.
 A identificação de duplicados em dispositivos descobertos deve considerar, no mínimo, inventário + IP.
 Quando um dispositivo não for encontrado em scans subsequentes, deve poder ser marcado como inativo mantendo histórico da última vez ativo.
 
+Nota: Os diagramas de sequência UML estão em docs/diagramas-sequencia/ (uma pasta por fluxo).
+
 Stack Tecnológica
 
 Backend / Web Service
 Python
 FastAPI
 uvicorn
+SQLAlchemy
 
 Web Server
-Nginx
+Nginx (produção / Docker)
 
 Base de Dados
-PostgreSQL
+PostgreSQL (produção) / SQLite (desenvolvimento local)
 
 Frontend
-HTML
-CSS
+React
+Vite
+Material UI (MUI)
 JavaScript
 
 Containerização

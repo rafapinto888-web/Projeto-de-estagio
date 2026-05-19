@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Modelo ORM da tabela utilizadores (credenciais e perfil)."""
 
 # Modelo ORM dos utilizadores da aplicacao.
 from __future__ import annotations
@@ -10,6 +10,8 @@ from app.database.connection import Base
 
 
 class UtilizadorDB(Base):
+    """Conta de acesso com hash de password e perfil de permissoes."""
+
     __tablename__ = "utilizadores"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)

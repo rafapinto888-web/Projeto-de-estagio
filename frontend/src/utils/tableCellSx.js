@@ -1,4 +1,6 @@
-/** Estilos partilhados para células de tabela (evita quebra vertical agressiva). */
+/*
+ * Estilos sx reutilizáveis para células de tabela (nowrap, mono, ellipsis).
+ */
 
 export const tableCellNowrap = {
   whiteSpace: "nowrap",

@@ -1,4 +1,6 @@
-/* Modal reutilizável para formulários CRUD (overlay, Escape, foco semântico). */
+/*
+ * Diálogo modal para formulários CRUD: título, subtítulo opcional e rodapé de ações.
+ */
 
 import { Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Typography } from "@mui/material";
 

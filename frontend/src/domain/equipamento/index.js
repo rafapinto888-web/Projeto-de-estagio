@@ -1,3 +1,7 @@
+/*
+ * Barrel: exporta formatters, origem e funções de pesquisa de equipamento.
+ */
+
 export {
   txtBd,
   textoExport,

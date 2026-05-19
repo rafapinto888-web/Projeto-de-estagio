@@ -1,4 +1,9 @@
-/* Comentario geral deste ficheiro: contem partes importantes da interface e comportamento. */
+/*
+ * Cliente HTTP da API REST (FastAPI).
+ * Resolve URL base, pedidos autenticados e agrupamentos por domínio (auth, inventários, …).
+ */
+
+// --- Configuração da URL base ---
 
 const FALLBACK_API_BASE = "http://localhost:8000";
 const ENV_BASE =
@@ -27,6 +32,7 @@ function localStorageApiBaseUsavel(saved) {
   return true;
 }
 
+/** URL base efetiva (env, Docker, localStorage ou fallback localhost:8000). */
 export function getApiBase() {
   if (ENV_BASE) return normalizeBase(ENV_BASE);
   const dockerHint = apiBaseParaSiteDocker5173();
@@ -36,9 +42,12 @@ export function getApiBase() {
   return FALLBACK_API_BASE;
 }
 
+/** Persiste URL base escolhida pelo utilizador. */
 export function setApiBase(value) {
   localStorage.setItem("api_base", value);
 }
+
+// --- Pedido HTTP genérico (JSON + Bearer) ---
 
 async function request(path, options = {}, token) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
@@ -71,7 +80,10 @@ async function request(path, options = {}, token) {
   return data;
 }
 
+// --- Objeto api: módulos por recurso ---
+
 export const api = {
+  // Autenticação e sessão
   login: (identificador, password) =>
     request("/auth/login", {
       method: "POST",
@@ -83,6 +95,7 @@ export const api = {
     request("/auth/me/historico", { method: "POST", body: JSON.stringify(payload) }, token),
   health: () => fetch(getApiBase()).then((r) => r.ok),
 
+  // Inventários, scan de rede e dispositivos descobertos
   inventarios: {
     listar: (token) => request("/inventarios/", {}, token),
     ativosPorInventario: (token) => request("/inventarios/ativos-por-inventario", {}, token),
@@ -106,6 +119,7 @@ export const api = {
     apagarDispositivo: (inventarioId, dispositivoId, token) =>
       request(`/inventarios/${inventarioId}/dispositivos-descobertos/${dispositivoId}`, { method: "DELETE" }, token),
   },
+  // Computadores registados manualmente
   computadores: {
     listar: (token) => request("/computadores/", {}, token),
     criar: (payload, token) => request("/computadores", { method: "POST", body: JSON.stringify(payload) }, token),
@@ -115,6 +129,7 @@ export const api = {
       request(`/computadores/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token),
     apagar: (id, token) => request(`/computadores/${id}`, { method: "DELETE" }, token),
   },
+  // Utilizadores do sistema
   utilizadores: {
     listar: (token) => request("/utilizadores", {}, token),
     criar: (payload, token) => request("/utilizadores", { method: "POST", body: JSON.stringify(payload) }, token),
@@ -122,6 +137,7 @@ export const api = {
       request(`/utilizadores/${id}`, { method: "PUT", body: JSON.stringify(payload) }, token),
     apagar: (id, token) => request(`/utilizadores/${id}`, { method: "DELETE" }, token),
   },
+  // Perfis de acesso (roles)
   perfis: {
     listar: (token) => request("/perfis", {}, token),
     criar: (payload, token) => request("/perfis", { method: "POST", body: JSON.stringify(payload) }, token),
@@ -129,6 +145,7 @@ export const api = {
       request(`/perfis/${id}`, { method: "PUT", body: JSON.stringify(payload) }, token),
     apagar: (id, token) => request(`/perfis/${id}`, { method: "DELETE" }, token),
   },
+  // Localizações físicas
   localizacoes: {
     listar: (token) => request("/localizacoes", {}, token),
     criar: (payload, token) => request("/localizacoes", { method: "POST", body: JSON.stringify(payload) }, token),
@@ -136,9 +153,11 @@ export const api = {
       request(`/localizacoes/${id}`, { method: "PUT", body: JSON.stringify(payload) }, token),
     apagar: (id, token) => request(`/localizacoes/${id}`, { method: "DELETE" }, token),
   },
+  // Pesquisa global multi-entidade
   pesquisa: {
     global: (termo, token) => request(`/pesquisar?pesquisa=${encodeURIComponent(termo)}`, {}, token),
   },
+  // Logs de dispositivos / computadores
   logs: {
     porComputador: (params, token) =>
       request(`/computadores/logs/dispositivo?${new URLSearchParams(params).toString()}`, {}, token),

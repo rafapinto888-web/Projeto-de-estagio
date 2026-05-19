@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Schemas de localizacoes para pedidos e respostas."""
 
 # Schemas de localizacoes para requests e responses.
 from pydantic import BaseModel, ConfigDict, Field, field_validator

@@ -1,4 +1,7 @@
-/** Reexporta regras de domínio + funções de apresentação (detalhe / pesquisa). */
+/*
+ * Apresentação de equipamentos: detalhe, pesquisa global e reexport do domínio.
+ */
+
 export {
   txtBd,
   formatarDataPt,

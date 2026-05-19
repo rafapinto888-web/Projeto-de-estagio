@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Modelo ORM da tabela logs_sistema (auditoria por utilizador)."""
 
 # Modelo ORM dos logs de acoes do sistema.
 from __future__ import annotations
@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 
 
 class LogSistemaDB(Base):
+    """Registo de acao do utilizador na aplicacao (login, navegacao, etc.)."""
+
     __tablename__ = "logs_sistema"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)

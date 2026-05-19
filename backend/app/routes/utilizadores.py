@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Endpoints CRUD de utilizadores com filtro por perfil admin/normal."""
 
 # Rotas CRUD dos utilizadores e respetivos perfis.
 from fastapi import APIRouter, Depends, HTTPException, Response, status

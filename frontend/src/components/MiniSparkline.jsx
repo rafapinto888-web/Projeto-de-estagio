@@ -1,4 +1,6 @@
-/* Mini gráfico decorativo nos cartões KPI (dashboard). */
+/*
+ * Mini gráfico decorativo (sparkline SVG) nos cartões KPI do dashboard.
+ */
 
 export default function MiniSparkline({ seed = 1, accent = "#2563eb" }) {
   const pts = [0, 1, 2, 3, 4].map((i) => {

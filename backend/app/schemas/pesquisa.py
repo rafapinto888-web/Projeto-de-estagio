@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Schema da pesquisa global que agrega varias entidades."""
 
 # Schema de resposta da pesquisa global do sistema.
 from pydantic import BaseModel
@@ -10,6 +10,8 @@ from app.schemas.utilizador import UtilizadorResponse
 
 
 class PesquisaGlobalResponse(BaseModel):
+    """Resultados agrupados por tipo de entidade."""
+
     computadores: list[ComputadorResponse]
     inventarios: list[InventarioResponse]
     utilizadores: list[UtilizadorResponse]

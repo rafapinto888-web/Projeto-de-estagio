@@ -1,4 +1,6 @@
-/* Pesquisa global - layout aproximado da referencia visual. */
+/*
+ * Pesquisa global — termo único na API, resultados por secção e filtros locais.
+ */
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -27,6 +29,8 @@ import SectionCard from "../components/SectionCard";
 import { celulasGrelhaPesquisaGlobal } from "../utils/detalheEquipamento";
 import { estadoChipMuiColor } from "../utils/estadoMuiColor";
 import { tableCellEllipsis, tableCellMono, tableCellNowrap, tableSxSemQuebra } from "../utils/tableCellSx";
+
+// --- Parsing da resposta API e filtros por secção ---
 
 function tituloSecao(chave) {
   return String(chave || "")

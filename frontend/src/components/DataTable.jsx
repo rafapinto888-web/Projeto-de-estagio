@@ -1,4 +1,6 @@
-/* Comentario geral deste ficheiro: tabela padronizada com estado vazio e loading. */
+/*
+ * Tabela reutilizável: cabeçalhos fixos, loading e estado vazio (EmptyState).
+ */
 
 import { CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from "@mui/material";
 import EmptyState from "./EmptyState";

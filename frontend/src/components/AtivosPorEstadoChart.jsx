@@ -1,6 +1,11 @@
+/*
+ * Gráfico de barras: distribuição de ativos por estado operacional (dashboard).
+ */
+
 import { Box, Chip, Stack, Typography } from "@mui/material";
 import { estadoChipMuiColor } from "../utils/estadoMuiColor";
 
+/** Cores da barra conforme severidade MUI do estado. */
 function corBarraEstado(estado) {
   const chip = estadoChipMuiColor(estado);
   if (chip === "success") return { main: "#16a34a", light: "#4ade80" };

@@ -1,4 +1,4 @@
-"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Modelo ORM da tabela dispositivos_descobertos (resultado do scan)."""
 
 # Modelo ORM dos dispositivos descobertos pelo scan.
 from __future__ import annotations
@@ -12,6 +12,8 @@ from app.database.connection import Base
 
 
 class DispositivoDescobertoDB(Base):
+    """Host encontrado no scan; unico por inventario_id + ip."""
+
     __tablename__ = "dispositivos_descobertos"
     __table_args__ = (
         UniqueConstraint("inventario_id", "ip", name="uq_dispositivo_descoberto_inventario_ip"),
@@ -40,6 +42,7 @@ class DispositivoDescobertoDB(Base):
 
     @property
     def inventario_nome(self) -> str | None:
+        # Nome do inventario para respostas JSON sem join extra.
         if self.inventario is None:
             return None
         return self.inventario.nome

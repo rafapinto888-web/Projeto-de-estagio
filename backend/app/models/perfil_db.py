@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Modelo ORM da tabela perfis (ex.: Admin, Utilizador)."""
 
 # Modelo ORM dos perfis de utilizador.
 from __future__ import annotations
@@ -10,6 +10,8 @@ from app.database.connection import Base
 
 
 class PerfilDB(Base):
+    """Perfil de permissoes atribuido a utilizadores."""
+
     __tablename__ = "perfis"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)

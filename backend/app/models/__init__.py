@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Exporta modelos ORM SQLAlchemy usados na aplicacao."""
 
 # Pacote com os modelos ORM da aplicacao.
 """Modelos internos da aplicacao."""

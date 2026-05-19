@@ -1,4 +1,6 @@
-/* Histórico pessoal — entradas gravadas na API por utilizador autenticado (logs_sistema). */
+/*
+ * Histórico da conta — auditoria das ações do utilizador autenticado (/auth/me/historico).
+ */
 
 import { useEffect, useState } from "react";
 import { Button, Paper } from "@mui/material";
@@ -11,6 +13,8 @@ export default function HistoricoContaPage({ token, active, user }) {
   const [itens, setItens] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
+
+  // --- Carregamento ao ativar a aba ---
 
   useEffect(() => {
     if (!token || !active) return undefined;

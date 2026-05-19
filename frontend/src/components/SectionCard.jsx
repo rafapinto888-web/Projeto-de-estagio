@@ -1,4 +1,6 @@
-/* Secção principal de cada página — título, descrição e conteúdo. */
+/*
+ * Contentor de página: título, subtítulo e área de conteúdo com ação opcional à direita.
+ */
 import { Box, Paper, Stack, Typography } from "@mui/material";
 
 export default function SectionCard({ title, subtitle, children, rightAction = null }) {

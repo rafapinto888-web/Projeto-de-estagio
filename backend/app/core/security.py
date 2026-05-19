@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Hash de passwords (Argon2/bcrypt), emissao e validacao de tokens JWT."""
 
 import os
 from datetime import UTC, datetime, timedelta
@@ -32,6 +32,7 @@ password_hash = _build_password_hash()
 
 
 def verificar_palavra_passe(palavra_passe: str, palavra_passe_hash: str) -> bool:
+    """Compara password em claro com hash Argon2/bcrypt ou texto legado."""
     try:
         # Compara a password em claro com o hash armazenado.
         return password_hash.verify(palavra_passe, palavra_passe_hash)
@@ -41,12 +42,14 @@ def verificar_palavra_passe(palavra_passe: str, palavra_passe_hash: str) -> bool
 
 
 def criar_access_token(subject: str) -> str:
+    """Gera JWT com subject (id do utilizador) e expiracao configuravel."""
     expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": subject, "exp": expire}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
 def descodificar_access_token(token: str) -> str | None:
+    """Devolve o subject do JWT ou None se o token for invalido/expirado."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except InvalidTokenError:

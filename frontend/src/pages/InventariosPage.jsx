@@ -1,4 +1,6 @@
-/* Gestão de inventários — criar/editar em modal com grelha horizontal. */
+/*
+ * Inventários — listagem e editor modal (tipos normal e sub-rede).
+ */
 
 import { useCallback, useState } from "react";
 import { Box, Button, MenuItem, Stack, TableCell, TableRow, TextField } from "@mui/material";
@@ -21,6 +23,8 @@ export default function InventariosPage({
   onSelectInventario,
   onCancel,
 }) {
+  // --- Estado do editor modal ---
+
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState("create");
 

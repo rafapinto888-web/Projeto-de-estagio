@@ -1,0 +1,17 @@
+Molde de diagrama de sequência (aprovado)
+=======================================
+
+Participantes (títulos curtos):
+  UI | Controller | Service | Repository | BD
+
+Regras:
+  - Métodos reais do código nas setas (handleLogin, autenticar_utilizador, ...)
+  - Números nos passos principais (1, 2, 3...)
+  - Retornos tracejados (--)
+  - alt / else para erros quando fizer sentido
+  - skinparam sequenceMessageAlign center
+  - skinparam responseMessageBelowArrow true
+
+Referência: DS-01-autenticacao-sessao/diagrama.puml
+
+Para outros fluxos: trocar métodos, manter as mesmas 5 caixas.

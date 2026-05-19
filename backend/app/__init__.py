@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Pacote raiz da aplicacao backend (API de inventario)."""
 
 # Pacote principal da aplicacao backend.
 """Pacote principal da API."""

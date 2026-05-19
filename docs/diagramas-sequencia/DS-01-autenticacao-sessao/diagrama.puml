@@ -1,0 +1,49 @@
+@startuml DS-01-login
+title Login
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor Utilizador
+
+boundary "UI" as UI
+control "Controller" as C
+control "Service" as S
+control "Repository" as R
+database "BD" as BD
+
+Utilizador -> UI : 1. preenche e clica Entrar
+UI -> C : 2. handleLogin()
+
+C -> S : 3. autenticar_utilizador()
+S -> R : 4. findByUsernameOrEmail()
+R -> BD : 5. SELECT utilizador
+BD --> R : utilizador
+R --> S : utilizador
+S -> S : 6. verificar_palavra_passe()
+
+alt credenciais erradas
+  S --> C : 401
+  C --> UI : erro
+else ok
+  S --> C : utilizador ok
+  C -> S : 7. registar_log_sistema()
+  S -> R : insert log
+  R -> BD : INSERT
+  BD --> R : ok
+  R --> S : ok
+  S --> C : ok
+  C -> S : 8. criar_access_token()
+  S --> C : JWT
+  C --> UI : 9. access_token
+  UI -> C : 10. me(token)
+  C -> S : get_current_user()
+  S -> R : findById()
+  R -> BD : SELECT
+  BD --> R : user
+  R --> S : user
+  S --> C : user
+  C --> UI : 11. dados sessão
+  UI --> Utilizador : 12. entra no painel
+end
+
+@enduml

@@ -1,3 +1,7 @@
+/*
+ * Formatação de valores de equipamento para UI, tabelas e exportação.
+ */
+
 /** Valor vazio na UI (traço). */
 export function txtBd(v) {
   if (v == null || v === "") return "—";

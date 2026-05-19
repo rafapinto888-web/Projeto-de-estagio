@@ -1,4 +1,7 @@
-/** Origem lógica: manual (computador) vs scan (dispositivo descoberto). */
+/*
+ * Regras de origem do registo: manual (CRUD) vs descoberta em scan de rede.
+ */
+
 export function origemRegistoVisual(a) {
   if (a?.tipo === "computador") return "manual";
   const raw = String(a?.origem_registo ?? "scan")

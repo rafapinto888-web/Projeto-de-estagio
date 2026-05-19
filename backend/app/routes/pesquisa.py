@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Endpoint GET /pesquisar: pesquisa global em varias tabelas."""
 
 # Rota de pesquisa global por varias entidades do sistema.
 from fastapi import APIRouter, Depends, HTTPException, Query

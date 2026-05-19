@@ -1,4 +1,6 @@
-/* Navegação lateral fixa — estilo enterprise. */
+/*
+ * Menu lateral: drawer temporário em mobile e permanente em desktop.
+ */
 import { Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Typography } from "@mui/material";
 
 const NAV_ICONS = {
@@ -21,6 +23,7 @@ function iconForTab(tabId) {
   );
 }
 
+/** Conteúdo partilhado do drawer (logo + lista de abas). */
 function MenuContent({ tabs, activeTab, onSelect, mobile = false, onClose }) {
   return (
     <>

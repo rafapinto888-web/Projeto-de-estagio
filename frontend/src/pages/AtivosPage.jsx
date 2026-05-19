@@ -1,4 +1,6 @@
-/* Scan — lista de ativos por inventário; configuração visível sem credenciais (credenciais só no modal). */
+/*
+ * Scan de rede — seleção de inventário, execução do scan e lista de dispositivos descobertos.
+ */
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -34,6 +36,8 @@ import {
   txtBd,
 } from "../utils/detalheEquipamento";
 import { estadoChipMuiColor } from "../utils/estadoMuiColor";
+
+// --- Helpers: export CSV, chaves de linha, resumo do scan ---
 
 function semDadosCompleto(a) {
   const semNome = !(a?.nome || a?.hostname)?.toString()?.trim();
@@ -141,6 +145,8 @@ export default function AtivosPage({
   ativos,
   loading,
 }) {
+  // --- Estado local: modais, filtros e inventário novo ---
+
   const [modal, setModal] = useState(null);
   const [scanTab, setScanTab] = useState("existente");
   const [tabLista, setTabLista] = useState("todos");

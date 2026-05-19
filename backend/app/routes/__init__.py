@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Subpacote de routers FastAPI (endpoints HTTP)."""
 
 # Pacote com os endpoints HTTP da API.
 """Rotas da API."""

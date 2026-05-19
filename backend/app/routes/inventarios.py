@@ -1,6 +1,8 @@
-"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Endpoints de inventarios: CRUD, scan de rede, ativos unificados e logs."""
 
 # Rotas para gestao de inventarios, scan e dispositivos descobertos.
+
+# --- Helpers: contagens, dispositivos por IP e logs Windows ---
 from datetime import datetime
 from typing import Literal
 
@@ -49,6 +51,7 @@ router = APIRouter(prefix="/inventarios", tags=["Inventarios"])
 def _contagens_por_inventario_ids(
     db: Session, inventario_ids: list[int]
 ) -> tuple[dict[int, int], dict[int, int]]:
+    """Conta computadores e dispositivos de scan por inventario_id."""
     if not inventario_ids:
         return {}, {}
     contagem_pc = (
@@ -87,6 +90,7 @@ def _inventario_com_contagens(
 
 
 def obter_inventario_ou_404(db: Session, inventario_id: int) -> InventarioDB:
+    """Carrega inventario ou HTTP 404."""
     inventario = db.get(InventarioDB, inventario_id)
     if inventario is None:
         raise HTTPException(status_code=404, detail="Inventario nao encontrado")
@@ -210,6 +214,8 @@ def _guardar_logs_windows_no_computador(
     return guardados
 
 
+# --- Controlo de acesso e vista unificada de ativos ---
+
 def _inventarios_visiveis_query(db: Session, current_user: UtilizadorDB):
     # Admin ve todos; utilizador normal apenas inventarios dos seus computadores.
     if is_admin_user(current_user):
@@ -319,6 +325,8 @@ def _garantir_acesso_inventario(
         )
     return inventario
 
+
+# --- Listagem e consulta de inventarios ---
 
 @router.get("/", response_model=list[InventarioComContagensResponse])
 def listar_inventarios(
@@ -536,6 +544,8 @@ def obter_detalhes_do_inventario(
     }
 
 
+# --- Scan de rede e persistencia de dispositivos descobertos ---
+
 @router.post(
     "/{inventario_id}/scan",
     response_model=ScanRedeResponse,
@@ -684,6 +694,8 @@ def executar_scan_do_inventario(
         "total_logs_recolhidos": logs_recolhidos_no_scan,
     }
 
+
+# --- Dispositivos descobertos (listar, editar, apagar, logs) ---
 
 @router.get(
     "/{inventario_id}/dispositivos-descobertos",
@@ -867,6 +879,8 @@ def listar_logs_dos_dispositivos_descobertos(
     logs = query_logs.all()
     return {"filtros": filtros, "total_logs": len(logs), "logs": logs}
 
+
+# --- CRUD de inventarios (apenas admin) ---
 
 @router.post(
     "/",

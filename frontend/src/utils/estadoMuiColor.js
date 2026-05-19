@@ -1,3 +1,7 @@
+/*
+ * Mapeamento de estados de equipamento para cores de Chip MUI.
+ */
+
 /**
  * Cor do `Chip` MUI para estado de equipamento / computador.
  * Nota: a string "inativo" contém "ativo" — inativo/offline/erro têm de vir antes de ativo.

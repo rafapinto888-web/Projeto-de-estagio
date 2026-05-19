@@ -1,3 +1,7 @@
+/*
+ * Exportação Excel (.xlsx) dos ativos de um inventário (manuais + scan).
+ */
+
 import * as XLSX from "xlsx";
 import {
   etiquetaOrigemAmigavel,
@@ -26,6 +30,7 @@ const HEADERS = [
   "Última atualização",
 ];
 
+/** Nome de ficheiro seguro para o sistema de ficheiros. */
 function sanitizeFilename(name) {
   return String(name || "inventario")
     .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_")
@@ -79,6 +84,7 @@ function largurasColunas(rows) {
   });
 }
 
+/** Gera e descarrega o Excel com as linhas do inventário indicado. */
 export function exportInventarioComputadoresParaExcel(grupo, linhas) {
   const list = Array.isArray(linhas) ? linhas : [];
   if (list.length === 0) return;

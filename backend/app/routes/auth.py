@@ -1,4 +1,4 @@
-"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+"""Endpoints de autenticacao, sessao (/me) e historico de auditoria."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_
@@ -41,6 +41,7 @@ def registar_log_sistema(
 def autenticar_utilizador(
     db: Session, identificador: str, palavra_passe: str
 ) -> UtilizadorDB:
+    """Valida credenciais; levanta 401 se falhar."""
     identificador_limpo = identificador.strip()
     utilizador = (
         db.query(UtilizadorDB)

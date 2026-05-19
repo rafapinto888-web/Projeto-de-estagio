@@ -1,4 +1,4 @@
-﻿"""Comentario geral deste ficheiro: define a logica principal deste modulo."""
+﻿"""Schemas de utilizadores para CRUD e respostas da API."""
 
 # Schemas de utilizadores para criacao, update e resposta.
 from pydantic import BaseModel, ConfigDict, Field
