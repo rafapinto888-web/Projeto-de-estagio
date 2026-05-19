@@ -891,30 +891,29 @@ export default function App() {
               utilizadorForm={utilizadorForm}
               setUtilizadorForm={setUtilizadorForm}
               perfis={perfis}
-              onCreate={() =>
+              onCreate={(extra = {}) =>
                 withAction(
                   () => {
                     const { id: _id, ...dados } = utilizadorForm;
-                    return api.utilizadores.criar(
-                      { ...dados, perfil_id: Number(utilizadorForm.perfil_id) },
-                    );
+                    return api.utilizadores.criar({
+                      ...dados,
+                      ...extra,
+                      perfil_id: Number(utilizadorForm.perfil_id),
+                    });
                   },
                   "Utilizador criado",
                 )
               }
-              onUpdate={() =>
+              onUpdate={(extra = {}) =>
                 withAction(
                   () =>
-                    api.utilizadores.atualizar(
-                      utilizadorForm.id,
-                      {
-                        nome: utilizadorForm.nome,
-                        username: utilizadorForm.username,
-                        email: utilizadorForm.email,
-                        perfil_id: Number(utilizadorForm.perfil_id),
-                        palavra_passe: utilizadorForm.palavra_passe || undefined,
-                      },
-                    ),
+                    api.utilizadores.atualizar(utilizadorForm.id, {
+                      nome: utilizadorForm.nome,
+                      username: utilizadorForm.username,
+                      email: extra.email ?? utilizadorForm.email,
+                      perfil_id: Number(utilizadorForm.perfil_id),
+                      palavra_passe: utilizadorForm.palavra_passe || undefined,
+                    }),
                   "Utilizador atualizado",
                 )
               }

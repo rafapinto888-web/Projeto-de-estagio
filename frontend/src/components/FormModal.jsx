@@ -63,16 +63,17 @@ export default function FormModal({ open, onClose, title, subtitle, wide, titleI
           </Typography>
         ) : null}
       </DialogTitle>
-      <DialogContent sx={{ p: { xs: 1.8, sm: 2.4 }, bgcolor: "transparent" }}>
+      <DialogContent sx={{ p: { xs: 2, sm: 3 }, bgcolor: "transparent" }}>
         {children}
       </DialogContent>
       {footer ? (
         <DialogActions
           sx={{
-            px: { xs: 1.8, sm: 2.4 },
-            py: 1.7,
+            px: { xs: 2, sm: 3 },
+            py: 2,
+            gap: 1,
             borderTop: "1px solid #e2e8f0",
-            bgcolor: "rgba(248,250,252,0.9)",
+            bgcolor: "rgba(248,250,252,0.95)",
             justifyContent: "flex-end",
           }}
         >
