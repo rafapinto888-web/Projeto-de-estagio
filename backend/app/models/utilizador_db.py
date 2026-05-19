@@ -1,4 +1,4 @@
-﻿"""Modelo ORM da tabela utilizadores (credenciais e perfil)."""
+"""Modelo ORM da tabela utilizadores (credenciais e perfil)."""
 
 # Modelo ORM dos utilizadores da aplicacao.
 from __future__ import annotations
@@ -28,6 +28,7 @@ class UtilizadorDB(Base):
         back_populates="utilizador_responsavel"
     )
     logs_sistema: Mapped[list["LogSistemaDB"]] = relationship(
-        back_populates="utilizador"
+        back_populates="utilizador",
+        cascade="all, delete-orphan",
     )
 

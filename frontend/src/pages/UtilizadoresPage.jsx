@@ -7,15 +7,16 @@ import { Button, MenuItem, Stack, TableCell, TableRow, TextField, Typography } f
 import DataTable from "../components/DataTable";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
+import { perfilNomeExibicao } from "../domain/perfil/index.js";
 
 /** Nome do perfil na tabela: a lista de utilizadores só traz `perfil_id`; cruza com `perfis`. */
 function nomePerfilParaExibir(utilizador, perfis) {
   const direto = utilizador?.perfil_nome;
-  if (direto && String(direto).trim()) return String(direto).trim();
+  if (direto && String(direto).trim()) return perfilNomeExibicao(direto);
   const id = utilizador?.perfil_id;
   if (id == null || id === "") return "—";
   const p = (perfis || []).find((x) => String(x.id) === String(id));
-  return p?.nome && String(p.nome).trim() ? String(p.nome).trim() : "—";
+  return p?.nome && String(p.nome).trim() ? perfilNomeExibicao(p.nome) : "—";
 }
 
 export default function UtilizadoresPage({
@@ -80,12 +81,13 @@ export default function UtilizadoresPage({
     >
       {!isAdmin ? (
         <Typography variant="body2" color="text.secondary" mb={1.2}>
-          Contas só podem ser geridas por um administrador.
+          Estás com perfil de utilizador normal: só vês a tua conta. Para gerir todas as contas,
+          inicia sessão com um administrador (ex.: utilizador <strong>admin</strong>).
         </Typography>
       ) : null}
 
       <DataTable
-        columns={["Nome", "Username", "Email", "Perfil", "Ações"]}
+        columns={["Nome", "Utilizador", "Email", "Perfil", "Ações"]}
         tableClassName="table-shell--responsive"
         rows={utilizadores}
         loading={loading}
@@ -159,8 +161,8 @@ export default function UtilizadoresPage({
               fullWidth
             />
             <TextField
-              label="Username"
-              placeholder="Identificador de login"
+              label="Utilizador"
+              placeholder="Nome de utilizador para login"
               value={utilizadorForm.username}
               onChange={(e) => setUtilizadorForm((p) => ({ ...p, username: e.target.value }))}
               autoComplete="username"
@@ -188,7 +190,7 @@ export default function UtilizadoresPage({
               <MenuItem value="">Escolhe um perfil…</MenuItem>
               {perfis.map((item) => (
                 <MenuItem key={item.id} value={item.id}>
-                  {item.nome}
+                  {perfilNomeExibicao(item.nome)}
                 </MenuItem>
               ))}
             </TextField>

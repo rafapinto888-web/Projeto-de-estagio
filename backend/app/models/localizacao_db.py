@@ -1,4 +1,4 @@
-﻿"""Modelo ORM da tabela localizacoes fisicas."""
+"""Modelo ORM da tabela localizacoes fisicas."""
 
 # Modelo ORM das localizacoes fisicas dos equipamentos.
 from __future__ import annotations

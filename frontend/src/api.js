@@ -108,6 +108,11 @@ export const api = {
       request(`/inventarios/${id}/computadores/pesquisar?termo=${encodeURIComponent(termo || "")}`, {}, token),
     logsDispositivos: (id, params, token) =>
       request(`/inventarios/${id}/logs/dispositivos-descobertos?${new URLSearchParams(params).toString()}`, {}, token),
+    recolherLogsDispositivos: (id, payload, token) =>
+      request(`/inventarios/${id}/logs/dispositivos-descobertos/recolher`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }, token),
     atualizarDispositivo: (inventarioId, dispositivoId, payload, token) =>
       request(
         `/inventarios/${inventarioId}/dispositivos-descobertos/${dispositivoId}`,

@@ -7,6 +7,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.config import ALLOW_SWAGGER_BYPASS
 from app.core.security import descodificar_access_token, verificar_palavra_passe
 from app.database.connection import get_db
 from app.models.utilizador_db import UtilizadorDB
@@ -44,8 +45,8 @@ def get_current_user(
     db: Session = Depends(get_db),
 ) -> UtilizadorDB:
     """Resolve o utilizador autenticado via Bearer JWT, Basic ou modo Swagger."""
-    # No Swagger/ReDoc, permite testar endpoints sem exigir login manual.
-    if _is_swagger_request(request):
+    # No Swagger/ReDoc (so se INVENTARIO_ALLOW_SWAGGER_BYPASS=true), facilita testes locais.
+    if ALLOW_SWAGGER_BYPASS and _is_swagger_request(request):
         candidatos = (
             db.query(UtilizadorDB)
             .options(joinedload(UtilizadorDB.perfil))

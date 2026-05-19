@@ -1,4 +1,4 @@
-﻿"""Modelo ORM da tabela inventarios (normal ou sub-rede)."""
+"""Modelo ORM da tabela inventarios (normal ou sub-rede)."""
 
 # Modelo ORM dos inventarios de equipamentos.
 from __future__ import annotations

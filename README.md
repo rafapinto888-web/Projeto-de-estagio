@@ -38,7 +38,7 @@ backend/app/
   schemas/       # contratos Pydantic
   services/      # scan de rede, logs Windows, etc.
 frontend/src/
-  pages/         # Dashboard, Inventários, Scan, Computadores, …
+    pages/         # Dashboard, Inventários, Scan, Computadores, …
   components/    # Sidebar, Topbar, tabelas, modais
   api.js         # cliente HTTP
   App.jsx        # estado global e navegação por abas (#hash)
@@ -58,8 +58,13 @@ Variáveis importantes:
 | Variável | Uso |
 |----------|-----|
 | `DATABASE_URL` | Ligação PostgreSQL (ex.: `postgresql+psycopg2://user:pass@localhost:5432/inventario`) |
-| `SECRET_KEY` | Chave JWT (produção) |
+| `SECRET_KEY` | Chave JWT (obrigatório alterar em produção) |
+| `INVENTARIO_CORS_ORIGINS` | Origens do frontend separadas por vírgula (ex.: `http://localhost:5173`) |
+| `INVENTARIO_ALLOW_SWAGGER_BYPASS` | `true` só em dev para testar no `/docs` sem JWT |
+| `INVENTARIO_APP_ENV` | `development` ou `production` |
 | `VITE_API_BASE` | URL da API no build do frontend (Docker) |
+
+Exemplo completo: `backend/.env.example`. Tarefas futuras: `docs/pendencias-melhorias.txt`.
 
 ## Como executar (no teu PC)
 

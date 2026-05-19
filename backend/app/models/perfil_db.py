@@ -1,4 +1,4 @@
-﻿"""Modelo ORM da tabela perfis (ex.: Admin, Utilizador)."""
+"""Modelo ORM da tabela perfis (ex.: Admin, Utilizador)."""
 
 # Modelo ORM dos perfis de utilizador.
 from __future__ import annotations

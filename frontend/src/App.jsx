@@ -352,10 +352,20 @@ export default function App() {
 
   // --- Mutações CRUD com feedback e auditoria ---
 
-  async function withAction(action, successMessage) {
+  function removerUtilizadorDoEstado(utilizadorId) {
+    const id = Number(utilizadorId);
+    if (Number.isNaN(id)) return;
+    setUtilizadores((prev) => prev.filter((u) => Number(u.id) !== id));
+  }
+
+  async function withAction(action, successMessage, options = {}) {
+    const { onSuccess } = options;
     setActionLoading(true);
     try {
-      await action();
+      const result = await action();
+      if (typeof onSuccess === "function") {
+        await onSuccess(result);
+      }
       await loadAllData();
       if (selectedInventarioId) {
         await refreshAtivos(selectedInventarioId, ativoPesquisa);
@@ -476,11 +486,11 @@ export default function App() {
               <span className="material-symbols-outlined">inventory_2</span>
             </span>
             <div>
-              <h1>Inventario IT</h1>
-              <p>Entrar no painel de gestao.</p>
+              <h1>Inventário IT</h1>
+              <p>Entrar no painel de gestão.</p>
             </div>
           </div>
-          <input name="identificador" placeholder="Username ou email" required autoComplete="username" />
+          <input name="identificador" placeholder="Utilizador ou email" required autoComplete="username" />
           <input
             name="password"
             type="password"
@@ -893,11 +903,13 @@ export default function App() {
               perfis={perfis}
               onCreate={() =>
                 withAction(
-                  () =>
-                    api.utilizadores.criar(
-                      { ...utilizadorForm, perfil_id: Number(utilizadorForm.perfil_id) },
+                  () => {
+                    const { id: _id, ...dados } = utilizadorForm;
+                    return api.utilizadores.criar(
+                      { ...dados, perfil_id: Number(utilizadorForm.perfil_id) },
                       token,
-                    ),
+                    );
+                  },
                   "Utilizador criado",
                 )
               }
@@ -920,10 +932,19 @@ export default function App() {
               }
               onDeleteByForm={async () => {
                 if (!window.confirm("Confirmar apagar utilizador?")) return false;
-                return withAction(
-                  () => api.utilizadores.apagar(utilizadorForm.id, token),
+                const alvoId = utilizadorForm.id;
+                const apagarPropriaConta = String(alvoId) === String(user?.id);
+                const ok = await withAction(
+                  () => api.utilizadores.apagar(alvoId, token),
                   "Utilizador apagado",
+                  {
+                    onSuccess: () => removerUtilizadorDoEstado(alvoId),
+                  },
                 );
+                if (ok && apagarPropriaConta) {
+                  handleLogout();
+                }
+                return ok;
               }}
               onCancel={() => setUtilizadorForm(emptyUserForm())}
               utilizadores={utilizadores}
@@ -938,9 +959,19 @@ export default function App() {
                   palavra_passe: "",
                 })
               }
-              onDeleteRow={(u) => {
+              onDeleteRow={async (u) => {
                 if (!window.confirm(`Confirmar apagar utilizador "${u.username}"?`)) return;
-                withAction(() => api.utilizadores.apagar(u.id, token), "Utilizador apagado");
+                const apagarPropriaConta = String(u.id) === String(user?.id);
+                const ok = await withAction(
+                  () => api.utilizadores.apagar(u.id, token),
+                  "Utilizador apagado",
+                  {
+                    onSuccess: () => removerUtilizadorDoEstado(u.id),
+                  },
+                );
+                if (ok && apagarPropriaConta) {
+                  handleLogout();
+                }
               }}
             />
           )}
@@ -1065,19 +1096,20 @@ export default function App() {
                   if (!utilizador || !password) {
                     throw new Error("Credenciais de rede obrigatórias para recolher logs");
                   }
-                  const query = { ...logInventarioParams };
-                  delete query.inventario_id;
-                  query.coletar_agora = "true";
-                  query.utilizador = utilizador;
-                  query.password = password;
-                  if (Array.isArray(tiposSelecionados) && tiposSelecionados.length === 1) {
-                    query.tipo_log = tiposSelecionados[0];
-                  } else {
-                    delete query.tipo_log;
+                  const payload = {
+                    utilizador,
+                    password,
+                  };
+                  const dispositivoId = logInventarioParams.dispositivo_id;
+                  if (dispositivoId) {
+                    payload.dispositivo_id = Number(dispositivoId);
                   }
-                  const data = await api.inventarios.logsDispositivos(
+                  if (Array.isArray(tiposSelecionados) && tiposSelecionados.length === 1) {
+                    payload.tipo_log = tiposSelecionados[0];
+                  }
+                  const data = await api.inventarios.recolherLogsDispositivos(
                     invId,
-                    limparQueryVazia(query),
+                    payload,
                     token,
                   );
                   setLogsOutput(JSON.stringify(data, null, 2));

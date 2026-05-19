@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.deps import require_admin
+from app.core.deps import get_current_user, require_admin
+from app.models.utilizador_db import UtilizadorDB
 from app.database.connection import get_db
 from app.models.perfil_db import PerfilDB
 from app.schemas.perfil import (
@@ -59,7 +60,10 @@ def _carregar_perfil_com_utilizadores(db: Session, perfil_id: int) -> PerfilDB:
 
 
 @router.get("/", response_model=list[PerfilResponse])
-def listar_perfis(db: Session = Depends(get_db)):
+def listar_perfis(
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
     perfis = (
         db.query(PerfilDB)
         .options(selectinload(PerfilDB.utilizadores))
@@ -70,7 +74,11 @@ def listar_perfis(db: Session = Depends(get_db)):
 
 
 @router.get("/{perfil_id}", response_model=PerfilResponse)
-def obter_perfil(perfil_id: int, db: Session = Depends(get_db)):
+def obter_perfil(
+    perfil_id: int,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
     perfil = _carregar_perfil_com_utilizadores(db, perfil_id)
     return perfil_para_resposta(perfil)
 

@@ -166,12 +166,6 @@ def apagar_utilizador(
     if utilizador is None:
         raise HTTPException(status_code=404, detail="Utilizador nao encontrado")
 
-    if current_user.id == utilizador_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Nao podes apagar a tua propria conta enquanto tens sessao iniciada",
-        )
-
     # Desassocia computadores (mantem o equipamento; remove apenas o responsavel).
     db.query(ComputadorDB).filter(
         ComputadorDB.utilizador_responsavel_id == utilizador_id
@@ -181,15 +175,20 @@ def apagar_utilizador(
     db.query(LogSistemaDB).filter(LogSistemaDB.utilizador_id == utilizador_id).delete(
         synchronize_session=False
     )
+    db.flush()
 
     db.delete(utilizador)
     try:
         db.commit()
-    except IntegrityError:
+    except IntegrityError as exc:
         db.rollback()
+        origem = getattr(getattr(exc, "orig", None), "diag", None)
+        extra = ""
+        if origem is not None and getattr(origem, "message_primary", None):
+            extra = f" ({origem.message_primary})"
         raise HTTPException(
             status_code=400,
-            detail="Nao foi possivel apagar o utilizador",
-        ) from None
+            detail=f"Nao foi possivel apagar o utilizador{extra}",
+        ) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

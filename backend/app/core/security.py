@@ -1,4 +1,4 @@
-﻿"""Hash de passwords (Argon2/bcrypt), emissao e validacao de tokens JWT."""
+"""Hash de passwords (Argon2/bcrypt), emissao e validacao de tokens JWT."""
 
 import os
 from datetime import UTC, datetime, timedelta

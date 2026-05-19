@@ -1,0 +1,78 @@
+PENDENCIAS E MELHORIAS — Projeto Inventario IT
+==============================================
+(Trabalho futuro — seguranca base ja aplicada em maio 2026)
+
+Feito na parte de SEGURANCA:
+[ x ] Login obrigatorio em GET /pesquisar, GET /localizacoes, GET /perfis
+[ x ] Pesquisa global filtra resultados para utilizador normal (nao admin)
+[ x ] Credenciais de rede nos logs via POST (nao na URL)
+[ x ] Swagger bypass desligado por defeito (INVENTARIO_ALLOW_SWAGGER_BYPASS)
+[ x ] CORS por lista de origens (INVENTARIO_CORS_ORIGINS)
+[ x ] Aviso se SECRET_KEY por defeito em producao
+[ x ] Ficheiro backend/.env.example
+
+----------------------------------------------------------------------
+PRIORIDADE ALTA (funcionalidade / UX)
+----------------------------------------------------------------------
+
+[ ] Ligar aba «Perfis» no menu (PerfisPage.jsx ja existe)
+      - App.jsx: import PerfisPage, tab no TABS, handlers onCreate/onUpdate/onDelete
+      - SidebarNav: icone perfis
+
+[ ] Validacao no formulario de utilizador (UtilizadoresPage.jsx)
+      - Obrigar perfil escolhido (nao enviar perfil_id=0)
+      - Obrigar password na criacao
+      - Mensagens em portugues antes de chamar API
+
+[ ] Melhorar mensagens de erro em api.js
+      - Quando detail da API e array (erro 422), juntar texto legivel
+
+----------------------------------------------------------------------
+PRIORIDADE MEDIA (qualidade / relatorio)
+----------------------------------------------------------------------
+
+[ ] Testes automaticos (pytest) — minimo:
+      - login ok / login falha
+      - GET /pesquisar sem token -> 401
+      - criar inventario como admin
+
+[ ] Checklist de testes manuais no README (login, CRUD, scan, pesquisa, logs)
+
+[ ] Atualizar RF em docs/estrutura de requisitos do projeto.txt
+      - Auth nas rotas de leitura
+      - POST recolher logs
+
+[ ] Diagrama ER / nota no relatorio: utilizadores.id vs perfis.id vs perfil_id
+
+----------------------------------------------------------------------
+PRIORIDADE BAIXA (nice to have)
+----------------------------------------------------------------------
+
+[ ] Pesquisa global: texto mais claro «dados em cache» vs «resultado da API»
+
+[ ] Code-splitting Vite (aviso bundle > 500 KB) — opcional
+
+[ ] React Router em vez de hash tabs — nao necessario para MVP
+
+[ ] Renumerar perfis na BD para id 1,2 — NAO recomendado (sem ganho real)
+
+[ ] Centralizar token em api.js (getAccessToken) — menos repeticao no App.jsx
+
+----------------------------------------------------------------------
+NOTAS DE AMBIENTE (apos seguranca)
+----------------------------------------------------------------------
+
+Desenvolvimento local:
+  - Copiar backend/.env.example para backend/.env
+  - INVENTARIO_ALLOW_SWAGGER_BYPASS=true  (para testar no /docs)
+  - INVENTARIO_CORS_ORIGINS com a porta do Vite
+
+Producao / demonstracao:
+  - SECRET_KEY unica e forte
+  - INVENTARIO_ALLOW_SWAGGER_BYPASS=false
+  - INVENTARIO_APP_ENV=production
+  - CORS so com o dominio real do frontend
+
+Reiniciar API apos alterar .env:
+  cd backend
+  .venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000

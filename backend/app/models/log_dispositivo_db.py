@@ -1,4 +1,4 @@
-﻿"""Modelo ORM da tabela logs_dispositivo (eventos Windows por computador)."""
+"""Modelo ORM da tabela logs_dispositivo (eventos Windows por computador)."""
 
 # Modelo ORM dos logs associados a computadores.
 from __future__ import annotations

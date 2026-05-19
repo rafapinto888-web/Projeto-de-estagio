@@ -1,10 +1,11 @@
-﻿"""Endpoint GET /pesquisar: pesquisa global em varias tabelas."""
+"""Endpoint GET /pesquisar: pesquisa global em varias tabelas."""
 
 # Rota de pesquisa global por varias entidades do sistema.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import String, cast, or_
 from sqlalchemy.orm import Session
 
+from app.core.deps import get_current_user, is_admin_user
 from app.database.connection import get_db
 from app.models.computador_db import ComputadorDB
 from app.models.inventario_db import InventarioDB
@@ -19,6 +20,7 @@ router = APIRouter(tags=["Pesquisa"])
 def pesquisar_global(
     pesquisa: str = Query(...),
     db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
 ):
     # Limpa e valida o termo de pesquisa global.
     pesquisa_limpa = pesquisa.strip()
@@ -30,50 +32,64 @@ def pesquisar_global(
 
     pesquisa_like = f"%{pesquisa_limpa}%"
 
-    # Pesquisa computadores por id, nome, serie, marca, modelo e estado.
-    computadores = (
-        db.query(ComputadorDB)
-        .filter(
-            or_(
-                cast(ComputadorDB.id, String) == pesquisa_limpa,
-                ComputadorDB.nome.ilike(pesquisa_like),
-                ComputadorDB.numero_serie.ilike(pesquisa_like),
-                ComputadorDB.marca.ilike(pesquisa_like),
-                ComputadorDB.modelo.ilike(pesquisa_like),
-                ComputadorDB.estado.ilike(pesquisa_like),
-            )
-        )
-        .order_by(ComputadorDB.id)
-        .all()
+    filtro_texto = or_(
+        cast(ComputadorDB.id, String) == pesquisa_limpa,
+        ComputadorDB.nome.ilike(pesquisa_like),
+        ComputadorDB.numero_serie.ilike(pesquisa_like),
+        ComputadorDB.marca.ilike(pesquisa_like),
+        ComputadorDB.modelo.ilike(pesquisa_like),
+        ComputadorDB.estado.ilike(pesquisa_like),
     )
 
-    # Pesquisa inventarios por id, nome e descricao.
-    inventarios = (
-        db.query(InventarioDB)
-        .filter(
-            or_(
-                cast(InventarioDB.id, String) == pesquisa_limpa,
-                InventarioDB.nome.ilike(pesquisa_like),
-                InventarioDB.descricao.ilike(pesquisa_like),
-            )
+    query_computadores = db.query(ComputadorDB).filter(filtro_texto)
+    if not is_admin_user(current_user):
+        query_computadores = query_computadores.filter(
+            ComputadorDB.utilizador_responsavel_id == current_user.id
         )
-        .order_by(InventarioDB.id)
-        .all()
-    )
+    computadores = query_computadores.order_by(ComputadorDB.id).all()
 
-    # Pesquisa utilizadores por id, nome e email.
-    utilizadores = (
-        db.query(UtilizadorDB)
-        .filter(
-            or_(
-                cast(UtilizadorDB.id, String) == pesquisa_limpa,
-                UtilizadorDB.nome.ilike(pesquisa_like),
-                UtilizadorDB.email.ilike(pesquisa_like),
-            )
-        )
-        .order_by(UtilizadorDB.id)
-        .all()
+    filtro_inv = or_(
+        cast(InventarioDB.id, String) == pesquisa_limpa,
+        InventarioDB.nome.ilike(pesquisa_like),
+        InventarioDB.descricao.ilike(pesquisa_like),
     )
+    query_inventarios = db.query(InventarioDB).filter(filtro_inv)
+    if not is_admin_user(current_user):
+        query_inventarios = (
+            query_inventarios.join(
+                ComputadorDB, ComputadorDB.inventario_id == InventarioDB.id
+            )
+            .filter(ComputadorDB.utilizador_responsavel_id == current_user.id)
+            .distinct()
+        )
+    inventarios = query_inventarios.order_by(InventarioDB.id).all()
+
+    if is_admin_user(current_user):
+        utilizadores = (
+            db.query(UtilizadorDB)
+            .filter(
+                or_(
+                    cast(UtilizadorDB.id, String) == pesquisa_limpa,
+                    UtilizadorDB.nome.ilike(pesquisa_like),
+                    UtilizadorDB.email.ilike(pesquisa_like),
+                )
+            )
+            .order_by(UtilizadorDB.id)
+            .all()
+        )
+    else:
+        filtro_utilizador = or_(
+            cast(UtilizadorDB.id, String) == pesquisa_limpa,
+            UtilizadorDB.nome.ilike(pesquisa_like),
+            UtilizadorDB.email.ilike(pesquisa_like),
+        )
+        u = (
+            db.query(UtilizadorDB)
+            .filter(UtilizadorDB.id == current_user.id)
+            .filter(filtro_utilizador)
+            .first()
+        )
+        utilizadores = [u] if u is not None else []
 
     # Pesquisa localizacoes por id, nome e descricao.
     localizacoes = (

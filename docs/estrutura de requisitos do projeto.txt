@@ -12,7 +12,7 @@ O sistema deverá permitir a gestão de inventário informático de forma centra
 
 
 
-Requisitos funcionais
+Requisitos funcionais 
 
 Convenção de escrita (para revisão e testes)
 - Cada RF tem identificador único (RF-XX), ator, pré-condições e critérios de aceitação verificáveis.

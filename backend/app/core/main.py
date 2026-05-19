@@ -1,12 +1,18 @@
 """Ponto de entrada FastAPI: CORS, migracoes SQLite e registo de routers."""
 
 # Arranque da API FastAPI e registo de routers.
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy import inspect
 
+from app.core.config import APP_ENV, CORS_ORIGINS
+from app.core.security import SECRET_KEY
 from app.database.connection import Base, engine
+
+logger = logging.getLogger(__name__)
 from app.models.computador_db import ComputadorDB
 from app.models.dispositivo_descoberto_db import DispositivoDescobertoDB
 from app.models.inventario_db import InventarioDB
@@ -29,14 +35,19 @@ app = FastAPI(
     description="API para gestao de inventario e computadores.",
 )
 
-# Permite frontend local durante desenvolvimento.
+# CORS restrito (INVENTARIO_CORS_ORIGINS); nao usar "*" com credentials.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if APP_ENV == "production" and SECRET_KEY == "inventario-dev-secret-key-change-in-production":
+    logger.warning(
+        "SECRET_KEY por defeito em producao — define SECRET_KEY no ambiente."
+    )
 
 
 def garantir_compatibilidade_schema_sqlite() -> None:

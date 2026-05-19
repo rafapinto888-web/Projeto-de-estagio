@@ -8,6 +8,7 @@ import DataTable from "../components/DataTable";
 import EmptyState from "../components/EmptyState";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
+import { perfilNomeExibicao } from "../domain/perfil/index.js";
 
 function membrosDoPerfil(perfil, listaUtilizadores, isAdmin) {
   const id = Number(perfil?.id);
@@ -122,7 +123,7 @@ export default function PerfisPage({
             return (
               <TableRow key={p.id}>
                 <TableCell>
-                  <strong className="perfil-table-name">{p.nome}</strong>
+                  <strong className="perfil-table-name">{perfilNomeExibicao(p.nome)}</strong>
                 </TableCell>
                 <TableCell>
                   <span
@@ -165,7 +166,7 @@ export default function PerfisPage({
         open={Boolean(membrosModal) && isAdmin}
         onClose={() => setMembrosModal(null)}
         titleId="modal-perfil-membros-title"
-        title={membrosModal ? `Membros — ${membrosModal.nome}` : "Membros"}
+        title={membrosModal ? `Membros — ${perfilNomeExibicao(membrosModal.nome)}` : "Membros"}
         subtitle={
           membrosModal ? (
             <>
@@ -207,7 +208,7 @@ export default function PerfisPage({
           subtitle={
             editorMode === "edit" && perfilForm?.id ? (
               <>
-                A alterar <strong>{perfilForm.nome || "este perfil"}</strong>
+                A alterar <strong>{perfilNomeExibicao(perfilForm.nome) || "este perfil"}</strong>
               </>
             ) : (
               <>Nome interno do cargo (ex.: Administrador, Operador).</>

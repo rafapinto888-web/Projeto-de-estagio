@@ -1,4 +1,4 @@
-﻿"""Endpoints CRUD de localizacoes fisicas dos equipamentos."""
+"""Endpoints CRUD de localizacoes fisicas dos equipamentos."""
 
 # Rotas CRUD das localizacoes de equipamentos.
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -6,7 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
-from app.core.deps import require_admin
+from app.core.deps import get_current_user, require_admin
+from app.models.utilizador_db import UtilizadorDB
 from app.database.connection import get_db
 from app.models.computador_db import ComputadorDB
 from app.models.localizacao_db import LocalizacaoDB
@@ -38,12 +39,19 @@ def obter_localizacao_duplicada(
 
 
 @router.get("/", response_model=list[LocalizacaoResponse])
-def listar_localizacoes(db: Session = Depends(get_db)):
+def listar_localizacoes(
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
     return db.query(LocalizacaoDB).order_by(LocalizacaoDB.id).all()
 
 
 @router.get("/{localizacao_id}", response_model=LocalizacaoResponse)
-def obter_localizacao(localizacao_id: int, db: Session = Depends(get_db)):
+def obter_localizacao(
+    localizacao_id: int,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
     localizacao = db.get(LocalizacaoDB, localizacao_id)
     if localizacao is None:
         raise HTTPException(status_code=404, detail="Localizacao nao encontrada")

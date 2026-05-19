@@ -1,4 +1,4 @@
-﻿"""Modelo ORM da tabela logs_sistema (auditoria por utilizador)."""
+"""Modelo ORM da tabela logs_sistema (auditoria por utilizador)."""
 
 # Modelo ORM dos logs de acoes do sistema.
 from __future__ import annotations

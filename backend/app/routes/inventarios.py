@@ -26,7 +26,10 @@ from app.schemas.dispositivo_descoberto import (
 )
 from app.services.scan_rede import descobrir_dispositivos_enriquecidos
 from app.services.windows_logs import coletar_logs_windows
-from app.schemas.log_dispositivo import LogsDispositivoConsultaResponse
+from app.schemas.log_dispositivo import (
+    LogsDispositivoConsultaResponse,
+    LogsDispositivoRecolhaIn,
+)
 from app.schemas.inventario import (
     AtivoInventarioItem,
     ComputadorDetalhadoInventarioResponse,
@@ -804,21 +807,18 @@ def apagar_dispositivo_descoberto(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get(
-    "/{inventario_id}/logs/dispositivos-descobertos",
-    response_model=LogsDispositivoConsultaResponse,
-)
-def listar_logs_dos_dispositivos_descobertos(
+def _logs_dispositivos_descobertos_resposta(
+    db: Session,
     inventario_id: int,
-    dispositivo_id: int | None = Query(default=None),
-    coletar_agora: bool = Query(default=False),
-    tipo_log: Literal["seguranca", "rdp"] | None = Query(default=None),
-    utilizador: str | None = Query(default=None),
-    password: str | None = Query(default=None),
-    db: Session = Depends(get_db),
-    current_user: UtilizadorDB = Depends(get_current_user),
-):
-    # Lista logs de um dispositivo especifico ou de todos os dispositivos do inventario.
+    current_user: UtilizadorDB,
+    *,
+    dispositivo_id: int | None,
+    tipo_log: Literal["seguranca", "rdp"] | None,
+    coletar_agora: bool,
+    utilizador_rede: str | None,
+    password_rede: str | None,
+) -> LogsDispositivoConsultaResponse:
+    """Consulta logs na BD; opcionalmente recolhe do Windows (credenciais so via POST)."""
     _garantir_acesso_inventario(db, inventario_id, current_user)
 
     filtros: dict[str, str | int] = {"inventario_id": inventario_id}
@@ -839,12 +839,13 @@ def listar_logs_dos_dispositivos_descobertos(
         )
 
     computadores_ids: set[int] = set()
-    utilizador_rede = (utilizador or "").strip()
-    password_rede = password or ""
-    if coletar_agora and (not utilizador_rede or not password_rede.strip()):
+    user_rede = (utilizador_rede or "").strip()
+    pass_rede = password_rede or ""
+
+    if coletar_agora and (not user_rede or not pass_rede.strip()):
         raise HTTPException(
             status_code=400,
-            detail="Credenciais de rede obrigatorias para recolher logs agora",
+            detail="Credenciais de rede obrigatorias para recolher logs",
         )
 
     for dispositivo in dispositivos:
@@ -856,8 +857,8 @@ def listar_logs_dos_dispositivos_descobertos(
             logs_windows = coletar_logs_windows(
                 dispositivo.hostname or computador.nome,
                 tipos_log=[tipo_log] if tipo_log else None,
-                utilizador=utilizador_rede,
-                password=password_rede,
+                utilizador=user_rede,
+                password=pass_rede,
             )
             _guardar_logs_windows_no_computador(db, computador.id, logs_windows)
 
@@ -878,6 +879,64 @@ def listar_logs_dos_dispositivos_descobertos(
 
     logs = query_logs.all()
     return {"filtros": filtros, "total_logs": len(logs), "logs": logs}
+
+
+@router.post(
+    "/{inventario_id}/logs/dispositivos-descobertos/recolher",
+    response_model=LogsDispositivoConsultaResponse,
+)
+def recolher_logs_dos_dispositivos_descobertos(
+    inventario_id: int,
+    payload: LogsDispositivoRecolhaIn,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    """Recolhe logs Windows com credenciais no corpo (seguro; nao vai para a URL)."""
+    return _logs_dispositivos_descobertos_resposta(
+        db,
+        inventario_id,
+        current_user,
+        dispositivo_id=payload.dispositivo_id,
+        tipo_log=payload.tipo_log,
+        coletar_agora=True,
+        utilizador_rede=payload.utilizador,
+        password_rede=payload.password,
+    )
+
+
+@router.get(
+    "/{inventario_id}/logs/dispositivos-descobertos",
+    response_model=LogsDispositivoConsultaResponse,
+)
+def listar_logs_dos_dispositivos_descobertos(
+    inventario_id: int,
+    dispositivo_id: int | None = Query(default=None),
+    coletar_agora: bool = Query(default=False),
+    tipo_log: Literal["seguranca", "rdp"] | None = Query(default=None),
+    utilizador: str | None = Query(default=None),
+    password: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    """Lista logs ja guardados. Recolha com credenciais: POST .../recolher."""
+    if coletar_agora or utilizador or password:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Para recolher logs com credenciais de rede use "
+                "POST /inventarios/{id}/logs/dispositivos-descobertos/recolher"
+            ),
+        )
+    return _logs_dispositivos_descobertos_resposta(
+        db,
+        inventario_id,
+        current_user,
+        dispositivo_id=dispositivo_id,
+        tipo_log=tipo_log,
+        coletar_agora=False,
+        utilizador_rede=None,
+        password_rede=None,
+    )
 
 
 # --- CRUD de inventarios (apenas admin) ---
