@@ -1,0 +1,39 @@
+@startuml DS-02-criar-inventario
+title Criar inventário
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor Utilizador
+
+boundary "UI" as UI
+control "Controller" as C
+control "Service" as S
+control "Repository" as R
+database "BD" as BD
+
+Utilizador -> UI : 1. preenche formulário inventário
+UI -> C : 2. withAction(criar)
+
+C -> S : 3. criar_inventario()
+S -> S : 4. require_admin()
+
+S -> R : 5. findByNome(nome)
+R -> BD : 6. SELECT inventarios
+BD --> R : null | existente
+R --> S : resultado
+
+alt nome duplicado
+  S --> C : 409
+  C --> UI : erro
+else ok
+  S -> R : 7. insertInventario()
+  R -> BD : 8. INSERT inventarios\nCOMMIT
+  BD --> R : inventario
+  R --> S : InventarioDB
+  S --> C : 9. 201 Created
+  C -> C : 10. loadAllData()
+  C --> UI : 11. lista actualizada
+  UI --> Utilizador : 12. inventário criado
+end
+
+@enduml

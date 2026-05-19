@@ -13,7 +13,7 @@ function normalizeBase(url) {
   return url.replace(/\/$/, "");
 }
 
-/** Build de producao (Docker): browser em :5173 → API no host :8000. Em `npm run dev` nao forca. */
+/** Build de producao (Docker): browser em :5173 → API no host :8000. */
 function apiBaseParaSiteDocker5173() {
   if (!import.meta.env.PROD) return null;
   if (typeof window === "undefined") return null;
@@ -32,7 +32,6 @@ function localStorageApiBaseUsavel(saved) {
   return true;
 }
 
-/** URL base efetiva (env, Docker, localStorage ou fallback localhost:8000). */
 export function getApiBase() {
   if (ENV_BASE) return normalizeBase(ENV_BASE);
   const dockerHint = apiBaseParaSiteDocker5173();
@@ -42,7 +41,6 @@ export function getApiBase() {
   return FALLBACK_API_BASE;
 }
 
-/** Persiste URL base escolhida pelo utilizador. */
 export function setApiBase(value) {
   localStorage.setItem("api_base", value);
 }

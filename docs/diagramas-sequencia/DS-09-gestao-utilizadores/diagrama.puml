@@ -1,0 +1,30 @@
+@startuml DS-09-criar-utilizador
+title Criar utilizador (admin)
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor Administrador
+
+boundary "UI" as UI
+control "Controller" as C
+control "Service" as S
+control "Repository" as R
+database "BD" as BD
+
+Administrador -> UI : 1. preenche novo utilizador
+UI -> C : 2. withAction(criar)
+
+C -> S : 3. criar_utilizador()
+S -> S : 4. require_admin()\nvalidar_perfil()\nvalidar_email_unico()\nvalidar_username_unico()\ngerar_hash_palavra_passe()
+
+S -> R : 5. insertUtilizador()
+R -> BD : 6. INSERT utilizadores\nCOMMIT
+BD --> R : utilizador
+R --> S : UtilizadorDB
+S --> C : 7. 201 Created
+
+C -> C : 8. loadAllData()
+C --> UI : 9. lista actualizada
+UI --> Administrador : 10. utilizador criado
+
+@enduml

@@ -1,270 +1,299 @@
-# Sistema de inventario informatico
+# Sistema de inventário informático
 
-Painel web para gestao de inventario de TI: inventarios, computadores, localizacoes, utilizadores com perfis, descoberta na rede (scan) e consulta de logs. Projeto **full stack** com FastAPI e React, concebido para uso interno / demonstracao em contexto de estagio.
+Aplicação web para **gestão de inventário de TI**: inventários, computadores, localizações, utilizadores com perfis, descoberta na rede (scan), pesquisa global, logs e exportação para Excel. Projeto **full stack** (FastAPI + React + PostgreSQL), desenvolvido em contexto de estágio.
 
-## Visão geral
+## Funcionalidades
 
-- **Inventários** (tipos normal / sub-rede) agrupam equipamento e apoiam scans.
-- **Computadores** ligam-se a inventário, localização opcional e responsável.
-- **Scan** lista ativos do inventário selecionado e (admin) dispara scan de rede credenciado por modal, com escolha/criação de inventário no mesmo fluxo.
-- **Utilizadores e perfis** controlam quem acede e o que pode alterar (operações administrativas condicionadas ao perfil).
-- **Pesquisa global** e **logs** consultam dados agregados ou por filtros.
-
-## Estado atual
-
-| Área | Situação |
+| Área | Descrição |
 |------|-----------|
-| **API** | Funcional para CRUD principal, auth por JWT e documentação Swagger. Rotas organizadas (`inventarios`, `computadores`, `utilizadores`, `perfis`, `localizacoes`, `pesquisa`, `auth`). |
-| **Frontend** | SPA React (Vite) com navegação por abas, estado global em `App.jsx` e cliente em `api.js`. |
-| **UX** | Criação/edição de entidades (**Inventários, Computadores, Utilizadores, Perfis, Localizações**) em **modais** com formulário em grelha; evita formulários inline “em linha” na página. Na área **Scan**, o fluxo principal é iniciar scan por modal (com separadores para inventário existente/criar inventário), pedir rede, credenciais e opções de logs. Em **Pesquisa global**, a interface foca resultados e filtros (sem ação de “ver detalhes” nem vista de JSON bruto). Em **Logs**, os filtros (por computador / por inventário) estão em modais e o resultado JSON aparece na página. |
-| **Design** | Tema único (`styles.css`), tipografia definida nos tokens CSS, tabelas, cartões em perfis, feedback global de operações (`StatusAlert`). |
-| **Produção / Docker** | Há **`docker-compose.yml`** na raiz. Por defeito sobe **apenas o frontend** em container (`web`); `api` e `db` são opcionais via perfis (`docker-api`, `bundled-db`). |
-| **Testes / qualidade** | Sem suíte de testes automatizados documentada aqui; validação feita ao correr backend + frontend manualmente contra a API real. |
+| **Dashboard** | Resumo e métricas do inventário |
+| **Inventários** | CRUD de inventários (normal / sub-rede) |
+| **Scan** | Listagem de ativos e scan de rede com credenciais (admin) |
+| **Computadores** | Registo e gestão de equipamento; export Excel |
+| **Utilizadores / perfis** | Contas e permissões (operações admin condicionadas ao perfil) |
+| **Localizações** | CRUD de localizações físicas |
+| **Pesquisa global** | Pesquisa por texto e filtros (tipo, estado, localização) |
+| **Histórico** | Auditoria das ações da conta autenticada |
+| **Logs** | Consulta de logs por computador ou inventário |
 
-**Limitações esperáveis**: dependência de Postgres acessível, credenciais e `DATABASE_URL` corretos, e permissões rede/WMI para scans — falhas são tratidas no cliente com mensagens de erro da API.
+Autenticação por **JWT**; após login o painel carrega inventários, computadores, utilizadores, perfis, localizações e histórico.
 
-## Stack tecnologico
+## Stack
 
-- **Backend**: Python 3.11+, FastAPI, Uvicorn, SQLAlchemy, Pydantic, PostgreSQL (`psycopg2-binary`), JWT, hashing de passwords.
-- **Frontend**: React 18, Vite 5, Material UI (MUI) e Emotion.
-- **API**: OpenAPI/Swagger em `/docs`.
-
-## Bibliotecas do frontend
-
-- `react` e `react-dom`: base da interface (componentes, estado, renderizacao no browser).
-- `vite`: bundler/dev server rapido para desenvolvimento e build.
-- `@mui/material`: biblioteca de componentes UI (AppBar, Drawer, Dialog, Table, Alert, etc.) usada no remake visual.
-- `@emotion/react` e `@emotion/styled`: motor de estilos CSS-in-JS usado internamente pelo MUI para tema e personalizacao.
-- `@mui/icons-material`: pacote de icones Material para complementar interfaces MUI quando necessario.
+| Camada | Tecnologias |
+|--------|-------------|
+| Backend | Python 3.11+, FastAPI, Uvicorn, SQLAlchemy, Pydantic, PostgreSQL, JWT |
+| Frontend | React 18, Vite 5, Material UI (MUI), Emotion, `xlsx` (export) |
+| Infra | Docker Compose (frontend por defeito; API e BD opcionais) |
+| API docs | Swagger em `/docs`, ReDoc em `/redoc` |
 
 ## Estrutura do repositório
 
 ```text
-backend/
-  app/
-    core/          # arranque, auth, deps, main
-    database/      # sessão e ligação à BD
-    models/        # modelos SQLAlchemy
-    routes/        # endpoints FastAPI
-    schemas/       # contratos entrada/saída
-    services/      # scan, logs e lógica de domínio
-frontend/
-  src/
-    components/    # Sidebar, Topbar, FormModal, tabelas, etc.
-    pages/         # Dashboard, Inventários, Scan, Computadores, …
-    api.js         # cliente HTTP para a API
-    authz.js       # heurísticas perfil administrador
-    App.jsx        # estado global e navegação por abas
-    theme.js       # tema MUI global (paleta, tipografia, componentes)
-    styles.css     # tema e layout
-docker-compose.yml   # Postgres + api + web (raiz)
-README.md
+backend/app/
+  core/          # arranque, segurança, dependências
+  database/      # acesso à BD
+  models/        # SQLAlchemy
+  routes/        # endpoints (auth, inventarios, computadores, …)
+  schemas/       # contratos Pydantic
+  services/      # scan de rede, logs Windows, etc.
+frontend/src/
+  pages/         # Dashboard, Inventários, Scan, Computadores, …
+  components/    # Sidebar, Topbar, tabelas, modais
+  api.js         # cliente HTTP
+  App.jsx        # estado global e navegação por abas (#hash)
+docs/            # requisitos, diagramas, comandos Docker
+scripts/         # atalhos PowerShell para Docker
+docker-compose.yml
 ```
-
-Pastas opcionais (`script de rede`, `docs`) podem existir conforme tens no disco; não são obrigatórias ao arranque mínimo.
 
 ## Requisitos
 
 - Python 3.11+
 - Node.js 18+ (npm)
-- PostgreSQL em execução com base de dados criada **ou** [Docker Desktop](https://www.docker.com/products/docker-desktop/) para subir o Postgres (e opcionalmente API + frontend) via Compose
+- PostgreSQL acessível **ou** Docker Desktop
 
-### Opcional: só sincronizar o lock do frontend
+Variáveis importantes:
 
-Se quiseres voltar a usar `npm ci` dentro do Docker (imagens mais reproduzíveis), corre uma vez na pasta `frontend`:
+| Variável | Uso |
+|----------|-----|
+| `DATABASE_URL` | Ligação PostgreSQL (ex.: `postgresql+psycopg2://user:pass@localhost:5432/inventario`) |
+| `SECRET_KEY` | Chave JWT (produção) |
+| `VITE_API_BASE` | URL da API no build do frontend (Docker) |
 
-```bash
-npm install
+## Como executar (no teu PC)
+
+Precisas de **dois processos** a correr em paralelo: **API** (porta 8000) e **frontend** (porta 5173). A base de dados PostgreSQL tem de estar acessível antes de arrancar a API.
+
+### 1. Base de dados PostgreSQL
+
+1. Instala e inicia o PostgreSQL (ou usa o que já tens no PC).
+2. Cria a base de dados (exemplo no `psql` ou pgAdmin):
+
+```sql
+CREATE DATABASE inventario;
 ```
 
-e faz commit do `package-lock.json` atualizado.
+3. Ajusta utilizador, palavra-passe e porta aos teus dados. O backend usa por defeito (se não definires `DATABASE_URL`):
 
-## Instalação
+```text
+postgresql+psycopg2://postgres:12345a.@127.0.0.1:5432/inventario
+```
 
-Na **raiz do repositório** (ajusta os caminhos ao teu SO).
+Altera em `backend/app/database/connection.py` ou define a variável de ambiente `DATABASE_URL` com os teus valores.
 
-### Backend
+**Primeira execução da API:** ao arrancar, o FastAPI cria/atualiza as tabelas automaticamente (`create_all`). Precisas de **pelo menos um utilizador** na BD para fazer login (cria via pgAdmin, dump de outra máquina, ou endpoint admin no Swagger se já existir).
 
-```bash
+### 2. Backend (API)
+
+```powershell
 cd backend
 python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Windows (ativação opcional não necessária se usas o interpreter direto):
+Define a ligação (substitui user, password e porta):
 
-```bash
-cd backend
-.venv\Scripts\python.exe -m pip install -r requirements.txt
+```powershell
+$env:DATABASE_URL = "postgresql+psycopg2://postgres:TU_PASSWORD@127.0.0.1:5432/inventario"
+.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Linux/macOS:
 
 ```bash
 cd backend
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+export DATABASE_URL="postgresql+psycopg2://postgres:TU_PASSWORD@127.0.0.1:5432/inventario"
+python -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-### Frontend
+Confirma que a API responde: abre [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
-```bash
+### 3. Frontend (interface web)
+
+Noutro terminal:
+
+```powershell
 cd frontend
 npm install
+npm run dev
 ```
 
-## Execução com Docker
+Abre [http://127.0.0.1:5173](http://127.0.0.1:5173) e faz login com um utilizador existente na BD.
 
-### Outro PC (primeira vez)
+### 4. Ordem de arranque (resumo)
 
-1. Instalar [Docker Desktop](https://www.docker.com/products/docker-desktop/).
-2. Copiar o projeto completo (incluir `frontend/package-lock.json`).
-3. Na raiz do projeto:
+| Passo | O quê | URL |
+|-------|--------|-----|
+| 1 | PostgreSQL a correr | — |
+| 2 | `uvicorn` na pasta `backend` | [http://127.0.0.1:8000](http://127.0.0.1:8000) |
+| 3 | `npm run dev` na pasta `frontend` | [http://127.0.0.1:5173](http://127.0.0.1:5173) |
+
+Se o login falhar com erro de rede, verifica se o Swagger abre no browser — o frontend chama `http://localhost:8000` por defeito (`frontend/src/api.js`).
+
+### 5. Parar
+
+- `Ctrl+C` nos terminais da API e do frontend.
+- PostgreSQL pode ficar sempre ligado (serviço Windows).
+
+---
+
+## Como executar com Docker
+
+Útil para **demonstrar só a interface** ou para **não instalar Node** no PC. O cenário habitual em estágio mantém a **API no Windows** (scan e logs WMI/RDP funcionam melhor no host).
+
+### Modo recomendado (frontend Docker + API local)
+
+Terminal 1 — frontend em container:
 
 ```powershell
 cd "caminho\para\Projeto de estagio"
+docker compose up -d --build web
+```
+
+Terminal 2 — API no host (como na secção anterior):
+
+```powershell
+cd backend
+$env:DATABASE_URL = "postgresql+psycopg2://postgres:TU_PASSWORD@127.0.0.1:5432/inventario"
+.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+- Site: [http://localhost:5173](http://localhost:5173) (nginx no container)
+- API: [http://localhost:8000](http://localhost:8000) (no PC)
+
+### Modo desenvolvimento (hot reload no browser)
+
+```powershell
 .\scripts\docker-subir-dev.ps1
 ```
 
-Isto faz `build` do `web-dev`, corre `npm ci` com o lock file (instala `xlsx` e resto) e abre [http://localhost:5173](http://localhost:5173).
+Abre [http://localhost:5173](http://localhost:5173). Continua a precisar da API em `localhost:8000` (local ou em Docker).
 
-Stack completo (frontend + API + Postgres em Docker):
+### Stack completo em Docker (outro PC sem Postgres instalado)
 
 ```powershell
 .\scripts\docker-subir-tudo.ps1
 ```
 
-### Modo recomendado (estável)
+Sobe frontend dev + API + Postgres:
 
-Por defeito, o Compose sobe só o site (`web`) no Docker. A API continua no Windows em `localhost:8000` e usa a mesma base de dados PostgreSQL que já tinhas.
+| Serviço | URL / porta |
+|---------|-------------|
+| Frontend | [http://localhost:5173](http://localhost:5173) |
+| API | [http://localhost:8000](http://localhost:8000) |
+| Postgres | `localhost:5433` — user `postgres`, password `inventario-docker`, BD `inventario` |
 
-```powershell
-cd "caminho\para\Projeto de estagio"
-docker compose down
-docker rm -f backend base-de-dados 2>$null
-docker compose up -d --build web
-```
+Neste modo, define `DATABASE_URL` no Compose ou usa o valor por defeito do perfil `bundled-db`. BD nova = tabelas criadas ao arrancar a API; **cria utilizadores** para login.
 
-Depois, noutro terminal:
+### Perfis Compose (referência)
 
-```powershell
-cd "caminho\para\Projeto de estagio\backend"
-.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
-```
+| Perfil | Serviço | Uso |
+|--------|---------|-----|
+| (default) | `web` | Frontend produção (nginx) |
+| `dev-live` | `web-dev` | Vite com reload |
+| `docker-api` | `api` | Backend em container |
+| `bundled-db` | `db` | Postgres em container (host `5433`) |
 
-URLs:
-- Frontend (Docker): [http://localhost:5173](http://localhost:5173)
-- API (local): [http://localhost:8000](http://localhost:8000)
-- Swagger: [http://localhost:8000/docs](http://localhost:8000/docs)
-
-Nomes dos containers (quando ativos no Docker Desktop):
-- `frontend`
-- `backend`
-- `base-de-dados`
-
-### Modos opcionais
-
-- **Frontend em Docker com auto-atualização (hot reload)**:  
-  `docker compose --profile dev-live up -d --build web-dev`  
-  ou `.\scripts\docker-subir-dev.ps1`  
-  (edites no Cursor refletem no browser; `npm ci` no arranque alinha dependências noutro PC)
-- **API também no Docker**:  
-  `docker compose --profile docker-api up -d --build`
-- **Postgres também no Docker** (isolado para testes):  
-  `docker compose --profile bundled-db up -d --build`  
-  (host `5433 -> container 5432`)
-- **Os 3 em Docker (frontend + backend + base de dados)**:  
-  `docker compose --profile docker-api --profile bundled-db up -d --build`
-
-### Comandos rápidos 
-
-```powershell
-cd "caminho\para\Projeto de estagio"
-
-# ligar só frontend
-docker compose up -d --build web
-
-# frontend com auto-atualização (dev)
-docker compose --profile dev-live up -d --build web-dev
-
-# ligar os 3
-docker compose --profile docker-api --profile bundled-db up -d --build
-
-# estado
-docker ps
-docker compose ps
-
-# logs
-docker compose logs -f
-
-# desligar
-docker compose stop
-docker compose down
-```
-
-Resumo enxuto também em `comandos.txt`.
-
-Ver logs:
-
-```powershell
-docker compose logs -f
-```
-
-Parar tudo do Compose:
-
-```powershell
-docker compose down
-```
-
-**Nota importante**: para o teu cenário (scan/logs Windows), manter API local no Windows costuma ser o caminho mais previsível.
+Mais comandos (logs, parar, volumes): [`docs/comandos.txt`](docs/comandos.txt).
 
 ---
 
-## Execução (desenvolvimento)
+## Executar noutro computador
 
-Definir **`DATABASE_URL`** (exemplo):
+### O que levar / copiar
 
-```bash
-set DATABASE_URL=postgresql+psycopg2://utilizador:password@localhost:5432/inventario
+- **Git:** `git clone <url-do-repositorio>` (recomendado).
+- **Ou pasta ZIP** com o projeto completo, incluindo obrigatoriamente:
+  - `frontend/package.json` e `frontend/package-lock.json`
+  - `backend/requirements.txt`
+  - `docker-compose.yml`
+- **Não é obrigatório** copiar `node_modules/`, `frontend/dist/` nem `backend/.venv/` — voltam a ser criados no destino.
+
+### Software a instalar no PC novo
+
+Escolhe **um** dos caminhos:
+
+| Caminho | Instalar |
+|---------|----------|
+| **A — Desenvolvimento clássico** | Python 3.11+, Node 18+, PostgreSQL |
+| **B — Só Docker (demo)** | [Docker Desktop](https://www.docker.com/products/docker-desktop/) |
+| **C — Docker completo** | Docker Desktop (frontend + API + BD em containers) |
+
+### Primeira vez no PC novo (passo a passo)
+
+1. **Copiar/clonar** o repositório para uma pasta local (ex.: `C:\Projetos\Projeto de estagio`).
+2. **Base de dados**
+   - *Com PostgreSQL no PC:* criar BD `inventario` e importar dump se quiseres os mesmos dados do PC antigo (`pg_dump` / `pg_restore`).
+   - *Só Docker:* usar `.\scripts\docker-subir-tudo.ps1` — Postgres fica na porta **5433** com BD vazia; a API cria tabelas no primeiro arranque.
+3. **Backend**
+   - `cd backend` → criar `.venv` → `pip install -r requirements.txt`.
+   - Definir `DATABASE_URL` com host, user e password **deste** PC (não assumes que é `12345a.` — confirma no pgAdmin ou no `docker-compose.yml`).
+   - Arrancar uvicorn (ver secção «Como executar»).
+4. **Frontend**
+   - *Sem Docker:* `cd frontend` → `npm install` → `npm run dev`.
+   - *Com Docker:* `.\scripts\docker-subir-dev.ps1` (usa `npm ci` com o lock file dentro do container).
+5. **Testar:** Swagger em `:8000/docs` → site em `:5173` → login.
+
+### Cenários típicos noutro PC
+
+| Objetivo | O que fazer |
+|----------|-------------|
+| **Programar / alterar código** | `docker-subir-dev.ps1` + API local com `uvicorn` |
+| **Mostrar ao orientador (sem instalar Node)** | `docker compose up -d --build web` + API local |
+| **Máquina limpa, tudo isolado** | `docker-subir-tudo.ps1` + criar utilizador na BD nova |
+| **Mesmos dados do teu PC** | Exportar Postgres (`pg_dump`) e importar no PC novo **ou** apontar `DATABASE_URL` para um servidor de rede partilhado |
+
+### Variáveis a rever no PC novo
+
+| Variável | Onde | Notas |
+|----------|------|--------|
+| `DATABASE_URL` | Terminal / Docker `api` | User, password, host (`127.0.0.1` vs `host.docker.internal` vs `db` no Compose) |
+| `SECRET_KEY` | API em produção | Alterar valor por defeito |
+| `VITE_API_BASE` | Build Docker do frontend | Por defeito `http://localhost:8000`; o browser no PC novo tem de conseguir chegar a esta URL |
+
+### Problemas comuns noutro PC
+
+| Sintoma | Solução |
+|---------|---------|
+| Login / «Sem ligação à API» | API não está em `:8000` ou firewall bloqueia; abre `http://localhost:8000/docs` |
+| Erro de password PostgreSQL | Ajustar `DATABASE_URL` aos dados locais |
+| Export Excel falha | Correr `npm install` no `frontend` ou rebuild do container `web-dev` (dependência `xlsx` no lock) |
+| Scan / logs não funcionam | API deve correr no **Windows** com acesso à rede; credenciais de domínio corretas no modal de scan |
+| BD Docker vazia, sem login | Criar utilizador na BD ou restaurar dump do PC de desenvolvimento |
+
+### Checklist rápida (outro PC)
+
+```
+[ ] Projeto copiado (com package-lock.json)
+[ ] PostgreSQL OU docker-subir-tudo.ps1
+[ ] DATABASE_URL correto
+[ ] API a responder em /docs
+[ ] Frontend em :5173
+[ ] Utilizador existe na BD para login
 ```
 
-Linux/macOS: `export DATABASE_URL=...`
+## Documentação do projeto
 
-**Backend** (na pasta `backend`):
+- [`docs/estrutura de requisitos do projeto.txt`](docs/estrutura%20de%20requisitos%20do%20projeto.txt) — requisitos funcionais (RF) com critérios de aceitação
+- [`docs/diagramas-sequencia/`](docs/diagramas-sequencia/) — diagramas UML PlantUML (login, CRUD, scan, pesquisa, logs, …)
+- [`docs/comandos.txt`](docs/comandos.txt) — referência rápida Docker
 
-```bash
-.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload
-```
+## Regras de negócio relevantes
 
-ou `./.venv/bin/python -m uvicorn app.core.main:app --reload`
+- **Apagar computador**: bloqueado se existir utilizador responsável associado.
+- **Delete com logs**: sem responsável, logs técnicos do computador são removidos antes do delete (evita bloqueio por FK).
+- **Scan**: credenciais de rede no momento do scan (não são as do login da aplicação).
 
-**Frontend** (na pasta `frontend`):
+## Estado e limitações
 
-```bash
-npm run dev
-```
+- Sem suíte de testes automatizada documentada; validação manual via UI e Swagger.
+- Scan e consulta de logs dependem de rede acessível, credenciais corretas e ambiente Windows onde aplicável.
+- Navegação por **abas** em `App.jsx` (sem React Router nesta fase).
 
-## URLs úteis
+## Licença
 
-- Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- ReDoc: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
-- API base: [http://127.0.0.1:8000](http://127.0.0.1:8000)
-- Frontend Vite: [http://127.0.0.1:5173](http://127.0.0.1:5173) (ou porta indicada no terminal)
-
-## Dependencias principais
-
-- Backend: ver `backend/requirements.txt` (FastAPI, Uvicorn, SQLAlchemy, psycopg2-binary, PyJWT, httpx, hashing de passwords, etc.).
-- Frontend: ver `frontend/package.json` (React, Vite, MUI, Emotion).
-
-## Notas de arquitetura frontend 
-
-- O shell principal (`Sidebar` + `Topbar`) e componentes base estao em MUI.
-- O tema global fica centralizado em `frontend/src/theme.js`.
-- A navegacao continua por `activeTab` em `frontend/src/App.jsx` (sem React Router nesta fase).
-- O consumo de dados reais continua centralizado em `frontend/src/api.js` sem alteracoes de contrato backend.
-
-## Regras funcionais recentes
-
-- **Apagar computador**: a API bloqueia o delete quando existe **utilizador responsável associado** ao computador.
-- **Delete com logs técnicos**: quando não existe utilizador associado, os logs técnicos desse computador são removidos antes do delete para evitar bloqueio por chave estrangeira.
-- **Scan de rede**: usa credenciais de rede fornecidas no momento de execução (não usa credenciais de login da aplicação).
-
+Projeto académico / estágio — uso interno e demonstração.

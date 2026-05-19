@@ -1,0 +1,1 @@
+UI: UtilizadoresPage | Controller: withAction + api.utilizadores.criar | Service: criar_utilizador | Repository: INSERT utilizadores
