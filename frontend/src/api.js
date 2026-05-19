@@ -72,8 +72,7 @@ async function request(path, options = {}, token) {
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    const message = data?.detail || "Erro na comunicacao com a API";
-    throw new Error(message);
+    throw new Error(data?.detail || "Erro na comunicacao com a API");
   }
   return data;
 }

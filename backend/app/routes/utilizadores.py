@@ -166,29 +166,13 @@ def apagar_utilizador(
     if utilizador is None:
         raise HTTPException(status_code=404, detail="Utilizador nao encontrado")
 
-    # Desassocia computadores (mantem o equipamento; remove apenas o responsavel).
     db.query(ComputadorDB).filter(
         ComputadorDB.utilizador_responsavel_id == utilizador_id
     ).update({ComputadorDB.utilizador_responsavel_id: None}, synchronize_session=False)
-
-    # Remove historico/auditoria do utilizador (FK obrigatoria em logs_sistema).
     db.query(LogSistemaDB).filter(LogSistemaDB.utilizador_id == utilizador_id).delete(
         synchronize_session=False
     )
-    db.flush()
-
     db.delete(utilizador)
-    try:
-        db.commit()
-    except IntegrityError as exc:
-        db.rollback()
-        origem = getattr(getattr(exc, "orig", None), "diag", None)
-        extra = ""
-        if origem is not None and getattr(origem, "message_primary", None):
-            extra = f" ({origem.message_primary})"
-        raise HTTPException(
-            status_code=400,
-            detail=f"Nao foi possivel apagar o utilizador{extra}",
-        ) from exc
+    db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
