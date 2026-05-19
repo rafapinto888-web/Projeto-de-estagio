@@ -1,6 +1,6 @@
 /*
  * Cliente HTTP da API REST (FastAPI).
- * Resolve URL base, pedidos autenticados e agrupamentos por domínio (auth, inventários, …).
+ * Token JWT: setApiToken no login; pedidos autenticados usam-no automaticamente.
  */
 
 // --- Configuração da URL base ---
@@ -13,7 +13,6 @@ function normalizeBase(url) {
   return url.replace(/\/$/, "");
 }
 
-/** Build de producao (Docker): browser em :5173 → API no host :8000. */
 function apiBaseParaSiteDocker5173() {
   if (!import.meta.env.PROD) return null;
   if (typeof window === "undefined") return null;
@@ -24,7 +23,6 @@ function apiBaseParaSiteDocker5173() {
   return null;
 }
 
-/** localStorage antigo pode apontar para hostnames que o browser nao resolve (ex.: API só em Docker). */
 function localStorageApiBaseUsavel(saved) {
   if (!saved?.trim()) return false;
   const lower = saved.trim().toLowerCase();
@@ -45,12 +43,28 @@ export function setApiBase(value) {
   localStorage.setItem("api_base", value);
 }
 
+// --- Token da sessão (Bearer) ---
+
+let authToken = null;
+if (typeof localStorage !== "undefined") {
+  const saved = localStorage.getItem("access_token");
+  if (saved) authToken = saved;
+}
+
+export function setApiToken(token) {
+  authToken = token || null;
+}
+
+export function clearApiToken() {
+  authToken = null;
+}
+
 // --- Pedido HTTP genérico (JSON + Bearer) ---
 
-async function request(path, options = {}, token) {
+async function request(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
   }
 
   const base = getApiBase();
@@ -80,89 +94,87 @@ async function request(path, options = {}, token) {
 // --- Objeto api: módulos por recurso ---
 
 export const api = {
-  // Autenticação e sessão
   login: (identificador, password) =>
     request("/auth/login", {
       method: "POST",
       body: JSON.stringify({ identificador, palavra_passe: password }),
     }),
-  me: (token) => request("/auth/me", {}, token),
-  historicoMeu: (token) => request("/auth/me/historico", {}, token),
-  registarHistorico: (payload, token) =>
-    request("/auth/me/historico", { method: "POST", body: JSON.stringify(payload) }, token),
+  me: () => request("/auth/me"),
+  historicoMeu: () => request("/auth/me/historico"),
+  registarHistorico: (payload) =>
+    request("/auth/me/historico", { method: "POST", body: JSON.stringify(payload) }),
   health: () => fetch(getApiBase()).then((r) => r.ok),
 
-  // Inventários, scan de rede e dispositivos descobertos
   inventarios: {
-    listar: (token) => request("/inventarios/", {}, token),
-    ativosPorInventario: (token) => request("/inventarios/ativos-por-inventario", {}, token),
-    criar: (payload, token) => request("/inventarios", { method: "POST", body: JSON.stringify(payload) }, token),
-    atualizar: (id, payload, token) =>
-      request(`/inventarios/${id}`, { method: "PUT", body: JSON.stringify(payload) }, token),
-    apagar: (id, token) => request(`/inventarios/${id}`, { method: "DELETE" }, token),
-    scan: (id, payload, token) =>
-      request(`/inventarios/${id}/scan`, { method: "POST", body: JSON.stringify(payload) }, token),
-    ativos: (id, token) => request(`/inventarios/${id}/computadores`, {}, token),
-    pesquisarAtivos: (id, termo, token) =>
-      request(`/inventarios/${id}/computadores/pesquisar?termo=${encodeURIComponent(termo || "")}`, {}, token),
-    logsDispositivos: (id, params, token) =>
-      request(`/inventarios/${id}/logs/dispositivos-descobertos?${new URLSearchParams(params).toString()}`, {}, token),
-    recolherLogsDispositivos: (id, payload, token) =>
+    listar: () => request("/inventarios/"),
+    ativosPorInventario: () => request("/inventarios/ativos-por-inventario"),
+    criar: (payload) => request("/inventarios", { method: "POST", body: JSON.stringify(payload) }),
+    atualizar: (id, payload) =>
+      request(`/inventarios/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+    apagar: (id) => request(`/inventarios/${id}`, { method: "DELETE" }),
+    scan: (id, payload) =>
+      request(`/inventarios/${id}/scan`, { method: "POST", body: JSON.stringify(payload) }),
+    ativos: (id) => request(`/inventarios/${id}/computadores`),
+    pesquisarAtivos: (id, termo) =>
+      request(`/inventarios/${id}/computadores/pesquisar?termo=${encodeURIComponent(termo || "")}`),
+    logsDispositivos: (id, params) =>
+      request(`/inventarios/${id}/logs/dispositivos-descobertos?${new URLSearchParams(params).toString()}`),
+    recolherLogsDispositivos: (id, payload) =>
       request(`/inventarios/${id}/logs/dispositivos-descobertos/recolher`, {
         method: "POST",
         body: JSON.stringify(payload),
-      }, token),
-    atualizarDispositivo: (inventarioId, dispositivoId, payload, token) =>
-      request(
-        `/inventarios/${inventarioId}/dispositivos-descobertos/${dispositivoId}`,
-        { method: "PATCH", body: JSON.stringify(payload) },
-        token,
-      ),
-    apagarDispositivo: (inventarioId, dispositivoId, token) =>
-      request(`/inventarios/${inventarioId}/dispositivos-descobertos/${dispositivoId}`, { method: "DELETE" }, token),
+      }),
+    atualizarDispositivo: (inventarioId, dispositivoId, payload) =>
+      request(`/inventarios/${inventarioId}/dispositivos-descobertos/${dispositivoId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }),
+    apagarDispositivo: (inventarioId, dispositivoId) =>
+      request(`/inventarios/${inventarioId}/dispositivos-descobertos/${dispositivoId}`, {
+        method: "DELETE",
+      }),
   },
-  // Computadores registados manualmente
+
   computadores: {
-    listar: (token) => request("/computadores/", {}, token),
-    criar: (payload, token) => request("/computadores", { method: "POST", body: JSON.stringify(payload) }, token),
-    atualizar: (id, payload, token) =>
-      request(`/computadores/${id}`, { method: "PUT", body: JSON.stringify(payload) }, token),
-    patch: (id, payload, token) =>
-      request(`/computadores/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token),
-    apagar: (id, token) => request(`/computadores/${id}`, { method: "DELETE" }, token),
+    listar: () => request("/computadores/"),
+    criar: (payload) => request("/computadores", { method: "POST", body: JSON.stringify(payload) }),
+    atualizar: (id, payload) =>
+      request(`/computadores/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+    patch: (id, payload) =>
+      request(`/computadores/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+    apagar: (id) => request(`/computadores/${id}`, { method: "DELETE" }),
   },
-  // Utilizadores do sistema
+
   utilizadores: {
-    listar: (token) => request("/utilizadores", {}, token),
-    criar: (payload, token) => request("/utilizadores", { method: "POST", body: JSON.stringify(payload) }, token),
-    atualizar: (id, payload, token) =>
-      request(`/utilizadores/${id}`, { method: "PUT", body: JSON.stringify(payload) }, token),
-    apagar: (id, token) => request(`/utilizadores/${id}`, { method: "DELETE" }, token),
+    listar: () => request("/utilizadores"),
+    criar: (payload) => request("/utilizadores", { method: "POST", body: JSON.stringify(payload) }),
+    atualizar: (id, payload) =>
+      request(`/utilizadores/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+    apagar: (id) => request(`/utilizadores/${id}`, { method: "DELETE" }),
   },
-  // Perfis de acesso (roles)
+
   perfis: {
-    listar: (token) => request("/perfis", {}, token),
-    criar: (payload, token) => request("/perfis", { method: "POST", body: JSON.stringify(payload) }, token),
-    atualizar: (id, payload, token) =>
-      request(`/perfis/${id}`, { method: "PUT", body: JSON.stringify(payload) }, token),
-    apagar: (id, token) => request(`/perfis/${id}`, { method: "DELETE" }, token),
+    listar: () => request("/perfis"),
+    criar: (payload) => request("/perfis", { method: "POST", body: JSON.stringify(payload) }),
+    atualizar: (id, payload) =>
+      request(`/perfis/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+    apagar: (id) => request(`/perfis/${id}`, { method: "DELETE" }),
   },
-  // Localizações físicas
+
   localizacoes: {
-    listar: (token) => request("/localizacoes", {}, token),
-    criar: (payload, token) => request("/localizacoes", { method: "POST", body: JSON.stringify(payload) }, token),
-    atualizar: (id, payload, token) =>
-      request(`/localizacoes/${id}`, { method: "PUT", body: JSON.stringify(payload) }, token),
-    apagar: (id, token) => request(`/localizacoes/${id}`, { method: "DELETE" }, token),
+    listar: () => request("/localizacoes"),
+    criar: (payload) => request("/localizacoes", { method: "POST", body: JSON.stringify(payload) }),
+    atualizar: (id, payload) =>
+      request(`/localizacoes/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+    apagar: (id) => request(`/localizacoes/${id}`, { method: "DELETE" }),
   },
-  // Pesquisa global multi-entidade
+
   pesquisa: {
-    global: (termo, token) => request(`/pesquisar?pesquisa=${encodeURIComponent(termo)}`, {}, token),
+    global: (termo) => request(`/pesquisar?pesquisa=${encodeURIComponent(termo)}`),
   },
-  // Logs de dispositivos / computadores
+
   logs: {
-    porComputador: (params, token) =>
-      request(`/computadores/logs/dispositivo?${new URLSearchParams(params).toString()}`, {}, token),
+    porComputador: (params) =>
+      request(`/computadores/logs/dispositivo?${new URLSearchParams(params).toString()}`),
   },
 };
-

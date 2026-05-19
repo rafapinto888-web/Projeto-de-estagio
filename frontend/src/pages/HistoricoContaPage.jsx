@@ -24,7 +24,7 @@ export default function HistoricoContaPage({ token, active, user }) {
       setLoading(true);
       setErro(null);
       try {
-        const data = await api.historicoMeu(token);
+        const data = await api.historicoMeu();
         if (!cancel) setItens(Array.isArray(data?.itens) ? data.itens : []);
       } catch (e) {
         if (!cancel) {
@@ -46,7 +46,7 @@ export default function HistoricoContaPage({ token, active, user }) {
     setLoading(true);
     setErro(null);
     api
-      .historicoMeu(token)
+      .historicoMeu()
       .then((data) => setItens(Array.isArray(data?.itens) ? data.itens : []))
       .catch((e) => {
         setItens([]);

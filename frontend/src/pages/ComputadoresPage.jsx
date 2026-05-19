@@ -320,7 +320,6 @@ export default function ComputadoresPage({
           Number(scanForm.inventario_id),
           Number(scanForm.id),
           payloadScanDispositivo(scanForm),
-          token,
         ),
       "Equipamento do scan atualizado",
     );
@@ -337,7 +336,7 @@ export default function ComputadoresPage({
       return;
     }
     await withPanelAction(
-      () => api.inventarios.apagarDispositivo(inventarioId, ativo.id, token),
+      () => api.inventarios.apagarDispositivo(inventarioId, ativo.id),
       "Equipamento do scan removido",
     );
   }

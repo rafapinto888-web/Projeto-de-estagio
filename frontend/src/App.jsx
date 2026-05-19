@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { api } from "./api";
+import { api, clearApiToken, setApiToken } from "./api";
 import { isAdminProfileName } from "./authz";
 import SidebarNav from "./components/SidebarNav";
 import StatusAlert from "./components/StatusAlert";
@@ -255,6 +255,7 @@ export default function App() {
   async function loadAllData(currentToken, options = {}) {
     const tk = currentToken || token;
     if (!tk) return;
+    setApiToken(tk);
     const { silent = false } = options;
     if (!silent) setDataLoading(true);
     try {
@@ -267,13 +268,13 @@ export default function App() {
         ativosGruposData,
         historicoData,
       ] = await Promise.all([
-        api.inventarios.listar(tk),
-        api.computadores.listar(tk),
-        api.utilizadores.listar(tk),
-        api.perfis.listar(tk),
-        api.localizacoes.listar(tk),
-        api.inventarios.ativosPorInventario(tk),
-        api.historicoMeu(tk),
+        api.inventarios.listar(),
+        api.computadores.listar(),
+        api.utilizadores.listar(),
+        api.perfis.listar(),
+        api.localizacoes.listar(),
+        api.inventarios.ativosPorInventario(),
+        api.historicoMeu(),
       ]);
       setInventarios(inventariosData || []);
       setComputadores(computadoresData || []);
@@ -299,12 +300,12 @@ export default function App() {
     setActionLoading(true);
     try {
       if (searchTerm) {
-        const data = await api.inventarios.pesquisarAtivos(inv, searchTerm, token);
+        const data = await api.inventarios.pesquisarAtivos(inv, searchTerm);
         const all = [...(data?.computadores || []), ...(data?.dispositivos_descobertos || [])];
         setAtivos(all);
         return;
       }
-      const data = await api.inventarios.ativos(inv, token);
+      const data = await api.inventarios.ativos(inv);
       setAtivos(data || []);
     } finally {
       setActionLoading(false);
@@ -322,8 +323,9 @@ export default function App() {
       const accessToken = res?.access_token;
       if (!accessToken) throw new Error("Token nao recebido no login");
       localStorage.setItem("access_token", accessToken);
+      setApiToken(accessToken);
       setToken(accessToken);
-      const me = await api.me(accessToken);
+      const me = await api.me();
       setUser(me);
       await loadAllData(accessToken);
       setStatus({ type: "ok", message: "Sessao iniciada com sucesso" });
@@ -337,6 +339,7 @@ export default function App() {
   // Termina sessão e limpa estado local.
   function handleLogout() {
     localStorage.removeItem("access_token");
+    clearApiToken();
     setToken("");
     setUser(null);
     setInventarios([]);
@@ -371,16 +374,12 @@ export default function App() {
         await refreshAtivos(selectedInventarioId, ativoPesquisa);
       }
       setStatus({ type: "ok", message: successMessage });
-      const tk = token || localStorage.getItem("access_token");
-      if (tk && successMessage) {
+      if (successMessage) {
         try {
-          await api.registarHistorico(
-            {
-              acao: "painel",
-              descricao: String(successMessage).slice(0, 3900),
-            },
-            tk,
-          );
+          await api.registarHistorico({
+            acao: "painel",
+            descricao: String(successMessage).slice(0, 3900),
+          });
         } catch {
           /* não impedir a operação principal se o audit falhar */
         }
@@ -403,11 +402,13 @@ export default function App() {
         return;
       }
       try {
-        const me = await api.me(token);
+        setApiToken(token);
+        const me = await api.me();
         setUser(me);
         await loadAllData(token);
       } catch {
         localStorage.removeItem("access_token");
+        clearApiToken();
         setToken("");
         setUser(null);
       }
@@ -594,7 +595,6 @@ export default function App() {
                         rede: rede || null,
                         descricao: inventarioForm.descricao.trim() || null,
                       },
-                      token,
                     );
                   },
                   "Inventario criado",
@@ -615,7 +615,6 @@ export default function App() {
                         rede: rede || null,
                         descricao: inventarioForm.descricao.trim() || null,
                       },
-                      token,
                     );
                   },
                   "Inventario atualizado",
@@ -624,11 +623,11 @@ export default function App() {
               onCancel={() => setInventarioForm(emptyInventarioForm())}
               onDeleteByForm={async () => {
                 if (!window.confirm("Confirmar apagar inventario?")) return false;
-                return withAction(() => api.inventarios.apagar(inventarioForm.id, token), "Inventario apagado");
+                return withAction(() => api.inventarios.apagar(inventarioForm.id), "Inventario apagado");
               }}
               onDeleteRow={(inv) => {
                 if (!window.confirm("Confirmar apagar inventario?")) return;
-                withAction(() => api.inventarios.apagar(inv.id, token), "Inventario apagado");
+                withAction(() => api.inventarios.apagar(inv.id), "Inventario apagado");
               }}
               onSelectInventario={(inv) => {
                 setSelectedInventarioId(String(inv.id));
@@ -683,26 +682,20 @@ export default function App() {
               onCreateInventarioFromScan={async (payload) => {
                 setActionLoading(true);
                 try {
-                  const created = await api.inventarios.criar(payload, token);
+                  const created = await api.inventarios.criar(payload);
                   await loadAllData();
                   const createdId = created?.id ?? created?.inventario_id ?? null;
                   if (createdId) {
                     setSelectedInventarioId(String(createdId));
                   }
                   setStatus({ type: "ok", message: "Inventário criado para scan" });
-                  const tk = token || localStorage.getItem("access_token");
-                  if (tk) {
-                    try {
-                      await api.registarHistorico(
-                        {
-                          acao: "painel",
-                          descricao: "Inventário criado a partir do fluxo de scan.",
-                        },
-                        tk,
-                      );
-                    } catch {
-                      /* não bloquear operação por falha de auditoria */
-                    }
+                  try {
+                    await api.registarHistorico({
+                      acao: "painel",
+                      descricao: "Inventário criado a partir do fluxo de scan.",
+                    });
+                  } catch {
+                    /* não bloquear operação por falha de auditoria */
                   }
                   return createdId;
                 } catch (err) {
@@ -765,7 +758,6 @@ export default function App() {
                           ...(scanLogsRdp ? ["rdp"] : []),
                         ],
                       },
-                      token,
                     );
                     let totalLogsPreferidos = null;
                     if (scanLogsRdp !== scanLogsSeguranca) {
@@ -774,7 +766,6 @@ export default function App() {
                         const consulta = await api.inventarios.logsDispositivos(
                           selectedInventarioId,
                           { coletar_agora: "false", tipo_log: tipoLog },
-                          token,
                         );
                         totalLogsPreferidos = consulta?.total_logs ?? 0;
                       } catch {
@@ -827,14 +818,14 @@ export default function App() {
               utilizadores={utilizadores}
               onCreate={() =>
                 withAction(
-                  () => api.computadores.criar(payloadComputadorRegisto(computadorForm), token),
+                  () => api.computadores.criar(payloadComputadorRegisto(computadorForm)),
                   "Computador criado",
                 )
               }
               onUpdate={() =>
                 withAction(
                   () =>
-                    api.computadores.atualizar(computadorForm.id, payloadComputadorRegisto(computadorForm), token),
+                    api.computadores.atualizar(computadorForm.id, payloadComputadorRegisto(computadorForm)),
                   "Computador atualizado",
                 )
               }
@@ -854,14 +845,13 @@ export default function App() {
                         mac_address: computadorForm.mac_address?.trim() || undefined,
                         sistema_operativo: computadorForm.sistema_operativo?.trim() || undefined,
                       },
-                      token,
                     ),
                   "Computador atualizado parcial",
                 )
               }
               onDeleteByForm={async () => {
                 if (!window.confirm("Confirmar apagar computador?")) return false;
-                return withAction(() => api.computadores.apagar(computadorForm.id, token), "Computador apagado");
+                return withAction(() => api.computadores.apagar(computadorForm.id), "Computador apagado");
               }}
               onCancel={() => setComputadorForm(emptyComputerForm())}
               computadores={computadores}
@@ -886,7 +876,7 @@ export default function App() {
               }
               onDeleteRow={(pc) =>
                 window.confirm(`Confirmar apagar computador "${pc.nome}"?`)
-                  ? withAction(() => api.computadores.apagar(pc.id, token), "Computador apagado")
+                  ? withAction(() => api.computadores.apagar(pc.id), "Computador apagado")
                   : null
               }
               token={token}
@@ -907,7 +897,6 @@ export default function App() {
                     const { id: _id, ...dados } = utilizadorForm;
                     return api.utilizadores.criar(
                       { ...dados, perfil_id: Number(utilizadorForm.perfil_id) },
-                      token,
                     );
                   },
                   "Utilizador criado",
@@ -925,7 +914,6 @@ export default function App() {
                         perfil_id: Number(utilizadorForm.perfil_id),
                         palavra_passe: utilizadorForm.palavra_passe || undefined,
                       },
-                      token,
                     ),
                   "Utilizador atualizado",
                 )
@@ -935,7 +923,7 @@ export default function App() {
                 const alvoId = utilizadorForm.id;
                 const apagarPropriaConta = String(alvoId) === String(user?.id);
                 const ok = await withAction(
-                  () => api.utilizadores.apagar(alvoId, token),
+                  () => api.utilizadores.apagar(alvoId),
                   "Utilizador apagado",
                   {
                     onSuccess: () => removerUtilizadorDoEstado(alvoId),
@@ -963,7 +951,7 @@ export default function App() {
                 if (!window.confirm(`Confirmar apagar utilizador "${u.username}"?`)) return;
                 const apagarPropriaConta = String(u.id) === String(user?.id);
                 const ok = await withAction(
-                  () => api.utilizadores.apagar(u.id, token),
+                  () => api.utilizadores.apagar(u.id),
                   "Utilizador apagado",
                   {
                     onSuccess: () => removerUtilizadorDoEstado(u.id),
@@ -989,7 +977,6 @@ export default function App() {
                         nome: localizacaoForm.nome,
                         descricao: localizacaoForm.descricao || null,
                       },
-                      token,
                     ),
                   "Localizacao criada",
                 )
@@ -1003,14 +990,13 @@ export default function App() {
                         nome: localizacaoForm.nome,
                         descricao: localizacaoForm.descricao || null,
                       },
-                      token,
                     ),
                   "Localizacao atualizada",
                 )
               }
               onDeleteByForm={async () => {
                 if (!window.confirm("Confirmar apagar localizacao?")) return false;
-                return withAction(() => api.localizacoes.apagar(localizacaoForm.id, token), "Localizacao apagada");
+                return withAction(() => api.localizacoes.apagar(localizacaoForm.id), "Localizacao apagada");
               }}
               onCancel={() => setLocalizacaoForm({ id: "", nome: "", descricao: "" })}
               localizacoes={localizacoes}
@@ -1024,7 +1010,7 @@ export default function App() {
               }
               onDeleteRow={(l) =>
                 window.confirm(`Confirmar apagar localizacao "${l.nome}"?`)
-                  ? withAction(() => api.localizacoes.apagar(l.id, token), "Localizacao apagada")
+                  ? withAction(() => api.localizacoes.apagar(l.id), "Localizacao apagada")
                   : null
               }
             />
@@ -1038,7 +1024,7 @@ export default function App() {
               onPesquisar={async () => {
                 setActionLoading(true);
                 try {
-                  const data = await api.pesquisa.global(globalTermo, token);
+                  const data = await api.pesquisa.global(globalTermo);
                   setGlobalOutput(JSON.stringify(data, null, 2));
                 } catch (error) {
                   setGlobalOutput(JSON.stringify({ erro: error.message }, null, 2));
@@ -1072,7 +1058,7 @@ export default function App() {
                   if (!temIdentificador) {
                     throw new Error("Escolhe um tipo de procura e escreve o valor para consultar logs");
                   }
-                  const data = await api.logs.porComputador(query, token);
+                  const data = await api.logs.porComputador(query);
                   setLogsOutput(JSON.stringify(data, null, 2));
                   return true;
                 } catch (error) {
@@ -1107,11 +1093,7 @@ export default function App() {
                   if (Array.isArray(tiposSelecionados) && tiposSelecionados.length === 1) {
                     payload.tipo_log = tiposSelecionados[0];
                   }
-                  const data = await api.inventarios.recolherLogsDispositivos(
-                    invId,
-                    payload,
-                    token,
-                  );
+                  const data = await api.inventarios.recolherLogsDispositivos(invId, payload);
                   setLogsOutput(JSON.stringify(data, null, 2));
                   return true;
                 } catch (error) {
