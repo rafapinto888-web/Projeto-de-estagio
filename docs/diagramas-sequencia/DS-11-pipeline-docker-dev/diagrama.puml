@@ -1,0 +1,76 @@
+@startuml DS-11-pipeline-docker-dev
+title Pipeline de desenvolvimento/execução — Docker Compose (projeto inventário)
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+skinparam activity {
+  BackgroundColor #E8F4FC
+  BorderColor #2E6DA4
+  DiamondBackgroundColor #FFF8DC
+  DiamondBorderColor #8B7355
+}
+
+legend right
+  **Âmbito:** fluxo atual documentado no README e scripts PowerShell.
+  **Não inclui:** CI no GitHub (Actions), salvo configuração futura.
+end legend
+
+|#E3F2FD|Desenvolvedor|
+start
+:Clonar / ter repositório local;
+note right
+  Repo: frontend/, backend/,
+  docker-compose.yml, scripts/*.ps1
+end note
+
+partition "Modo A — recomendado (README)" {
+  :Executar scripts/docker-subir-dev.ps1\nou docker compose --profile dev-live up -d --build web-dev;
+}
+
+|#E8F5E9|Docker Engine|
+:Build imagem web-dev\n(contexto ./frontend, Dockerfile.dev);
+:Arrancar contentor frontend-dev\n(porta host 5173);
+:Volume bind: ./frontend para /app;
+:Entrypoint: npm ci + npm run dev (Vite);
+note right
+  Hot reload: CHOKIDAR_USEPOLLING, WATCHPACK_POLLING
+end note
+
+|#E3F2FD|Desenvolvedor|
+:Em paralelo no host (Windows):\nuvicorn --reload na pasta backend\n(porta 8000, DATABASE_URL para Postgres local);
+note right
+  Motivo típico: scan/logs WMI\nfuncionam melhor no host
+end note
+
+|#FFF3E0|Runtime|
+:Browser em http://localhost:5173;
+:Frontend chama API (VITE_API_BASE,\npor defeito http://localhost:8000);
+:API persiste em PostgreSQL\n(no PC conforme DATABASE_URL);
+
+stop
+
+newpage DS-11-pipeline-docker-dev — Modo B (stack completo em Docker)
+
+title Pipeline Docker — stack completo (docker-subir-tudo.ps1)
+skinparam backgroundColor #FEFEFE
+
+|#E3F2FD|Desenvolvedor|
+start
+:Executar scripts/docker-subir-tudo.ps1\nou compose com perfis\ndev-live + docker-api + bundled-db;
+
+|#E8F5E9|Docker Compose|
+fork
+  :Serviço db (Postgres 16)\nporta host 5433\nvolume inventario_pgdata;
+fork again
+  :Serviço api\nporta 8000\nmount ./backend, uvicorn --reload;
+fork again
+  :Serviço web-dev\nporta 5173\nmount ./frontend, Vite;
+end fork
+
+|#FFF3E0|Runtime|
+:Browser → frontend (:5173);
+:Frontend → API (:8000);
+:API para Postgres (contentor db);
+
+stop
+
+@enduml
