@@ -2,7 +2,6 @@
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
-docker compose stop web 2>$null
 docker compose --profile dev-live --profile docker-api --profile bundled-db up -d --build
 
 Write-Host ""

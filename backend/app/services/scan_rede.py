@@ -1,18 +1,17 @@
-﻿"""Servico de scan: ping na sub-rede, MAC/hostname e enriquecimento Windows (CIM)."""
+"""Servico de scan: ping na sub-rede, MAC/hostname e enriquecimento Windows (CIM)."""
 
 # Servico responsavel por descobrir IPs ativos e metadados basicos na rede.
 
 # --- Utilitarios de normalizacao ---
 from __future__ import annotations
-
-import platform
-import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import ip_network
+import json
+import os
+import platform
 import re
 import socket
-import os
-import json
+import subprocess
 
 
 def _limpo_ou_none(valor: object) -> str | None:

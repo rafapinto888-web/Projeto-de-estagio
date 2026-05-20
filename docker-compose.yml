@@ -1,11 +1,12 @@
-# Por defeito: só o site (web). A API corre no Windows em localhost:8000 e usa a tua
-# PostgreSQL no PC — assim o login usa os mesmos utilizadores que no pgAdmin.
+# Frontend em Docker: serviço web-dev (Vite + hot reload). A API pode correr no Windows
+# (localhost:8000) ou no container (perfil docker-api). Postgres no PC ou em container (bundled-db).
 #
 # Outro PC (dev, hot reload):  scripts\docker-subir-dev.ps1
 # Outro PC (tudo em Docker):   scripts\docker-subir-tudo.ps1
 #
 # API também em Docker (usa Postgres no PC via host.docker.internal):
 #   docker compose --profile docker-api up -d --build
+# A pasta ./backend está montada em /app e o uvicorn corre com --reload (dev).
 #
 # Postgres só em Docker (BD isolada, host porta 5433):
 #   docker compose --profile bundled-db up -d --build
@@ -46,20 +47,23 @@ services:
       - "8000:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./backend:/app
+    command:
+      [
+        "uvicorn",
+        "app.core.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
+      ]
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://postgres:12345a.@host.docker.internal:5432/inventario}
       SECRET_KEY: ${SECRET_KEY:-inventario-dev-secret-key-change-in-production}
-
-  web:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8000}
-    container_name: frontend
-    restart: unless-stopped
-    ports:
-      - "5173:80"
+      # Docker Desktop (Windows/mac): ajuda o --reload a detetar alterações nos ficheiros
+      WATCHFILES_FORCE_POLLING: "true"
 
   web-dev:
     profiles:

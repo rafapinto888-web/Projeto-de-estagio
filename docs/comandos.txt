@@ -14,9 +14,6 @@ docker compose --profile dev-live up -d --build web-dev
 # ou:
 docker compose --profile dev-live --profile docker-api --profile bundled-db up -d --build
 
-# 3) So frontend producao (nginx, sem hot reload)
-docker compose up -d --build web
-
 # Se deps npm falharem (ex. xlsx), recriar volume e rebuild:
 docker compose --profile dev-live down
 docker volume rm "projeto-de-estagio_frontend_node_modules" 2>$null

@@ -24,7 +24,7 @@ Autenticação por **JWT**; após login o painel carrega inventários, computado
 |--------|-------------|
 | Backend | Python 3.11+, FastAPI, Uvicorn, SQLAlchemy, Pydantic, PostgreSQL, JWT |
 | Frontend | React 18, Vite 5, Material UI (MUI), Emotion, `xlsx` (export) |
-| Infra | Docker Compose (frontend por defeito; API e BD opcionais) |
+| Infra | Docker Compose (`web-dev`, API e BD opcionais por perfil) |
 | API docs | Swagger em `/docs`, ReDoc em `/redoc` |
 
 ## Estrutura do repositório
@@ -152,12 +152,14 @@ Se o login falhar com erro de rede, verifica se o Swagger abre no browser — o 
 
 ### Modo recomendado (frontend Docker + API local)
 
-Terminal 1 — frontend em container:
+Terminal 1 — frontend em container (Vite, hot reload):
 
 ```powershell
 cd "caminho\para\Projeto de estagio"
-docker compose up -d --build web
+docker compose --profile dev-live up -d --build web-dev
 ```
+
+Ou o atalho: `.\scripts\docker-subir-dev.ps1`
 
 Terminal 2 — API no host (como na secção anterior):
 
@@ -167,7 +169,7 @@ $env:DATABASE_URL = "postgresql+psycopg2://postgres:TU_PASSWORD@127.0.0.1:5432/i
 .venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-- Site: [http://localhost:5173](http://localhost:5173) (nginx no container)
+- Site: [http://localhost:5173](http://localhost:5173) (container `web-dev`)
 - API: [http://localhost:8000](http://localhost:8000) (no PC)
 
 ### Modo desenvolvimento (hot reload no browser)
@@ -198,8 +200,7 @@ Neste modo, define `DATABASE_URL` no Compose ou usa o valor por defeito do perfi
 
 | Perfil | Serviço | Uso |
 |--------|---------|-----|
-| (default) | `web` | Frontend produção (nginx) |
-| `dev-live` | `web-dev` | Vite com reload |
+| `dev-live` | `web-dev` | Frontend Vite com hot reload (porta `5173`) |
 | `docker-api` | `api` | Backend em container |
 | `bundled-db` | `db` | Postgres em container (host `5433`) |
 
@@ -248,7 +249,7 @@ Escolhe **um** dos caminhos:
 | Objetivo | O que fazer |
 |----------|-------------|
 | **Programar / alterar código** | `docker-subir-dev.ps1` + API local com `uvicorn` |
-| **Mostrar ao orientador (sem instalar Node)** | `docker compose up -d --build web` + API local |
+| **Mostrar ao orientador (sem instalar Node)** | `.\scripts\docker-subir-dev.ps1` ou `docker compose --profile dev-live up -d --build web-dev` + API local |
 | **Máquina limpa, tudo isolado** | `docker-subir-tudo.ps1` + criar utilizador na BD nova |
 | **Mesmos dados do teu PC** | Exportar Postgres (`pg_dump`) e importar no PC novo **ou** apontar `DATABASE_URL` para um servidor de rede partilhado |
 
