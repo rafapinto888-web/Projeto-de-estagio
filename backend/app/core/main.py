@@ -35,7 +35,7 @@ app = FastAPI(
     description="API para gestao de inventario e computadores.",
 )
 
-# CORS restrito (INVENTARIO_CORS_ORIGINS); nao usar "*" com credentials.
+# CORS: lista em app.core.config (INVENTARIO_CORS_ORIGINS); ver docstring em config.py.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
