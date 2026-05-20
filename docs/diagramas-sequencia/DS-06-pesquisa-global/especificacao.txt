@@ -1,1 +1,0 @@
-UI: PesquisaPage | Controller: onPesquisar | Service: pesquisar_global | Repository: SELECT em 4 tabelas

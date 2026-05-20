@@ -1,1 +1,0 @@
-UI: Scan (ComputadoresPage) | Controller: api.inventarios.scan | Service: executar_scan_do_inventario + descobrir_dispositivos_enriquecidos

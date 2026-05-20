@@ -1,1 +1,0 @@
-UI: ComputadoresPage | Controller: onClick exportar | Service: exportInventarioComputadoresParaExcel (sem pedido BD neste fluxo)

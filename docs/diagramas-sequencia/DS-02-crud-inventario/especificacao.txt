@@ -1,1 +1,0 @@
-UI: InventariosPage | Controller: withAction + api.inventarios.criar | Service: criar_inventario | Repository: queries inventarios

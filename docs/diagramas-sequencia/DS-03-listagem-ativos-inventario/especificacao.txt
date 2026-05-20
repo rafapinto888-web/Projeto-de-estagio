@@ -1,1 +1,0 @@
-UI: ComputadoresPage | Controller: refreshAtivos | Service: listar_computadores_do_inventario / pesquisar_computadores_do_inventario

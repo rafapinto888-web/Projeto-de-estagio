@@ -1,9 +1,0 @@
-Login — versão simples (5 caixas)
-
-UI              → formulário no App.jsx
-AuthController  → handleLogin() + rotas login() e me()
-AuthService     → autenticar_utilizador, criar_access_token, get_current_user
-UserRepository  → queries à tabela utilizadores / logs_sistema
-BD              → PostgreSQL ou SQLite
-
-Lê o diagrama de cima para baixo, passos 1 a 12.

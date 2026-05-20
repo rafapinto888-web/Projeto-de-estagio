@@ -1,1 +1,0 @@
-UI: LogsPage | Controller: onLogsComputador | Service: consultar_logs_dispositivo | Repository: logs_dispositivo

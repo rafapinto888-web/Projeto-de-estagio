@@ -1,1 +1,0 @@
-UI: HistoricoContaPage + withAction | Service: historico_do_utilizador / registar_evento_historico | Repository: logs_sistema

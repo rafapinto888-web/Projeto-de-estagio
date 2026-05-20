@@ -1,1 +1,0 @@
-UI: ComputadoresPage | Controller: withAction + api.computadores.criar | Service: adicionar_computador | Repository: criar_computador_db
