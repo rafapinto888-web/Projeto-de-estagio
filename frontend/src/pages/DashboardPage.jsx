@@ -471,7 +471,7 @@ export default function DashboardPage({
                 <Table
                   size="small"
                   sx={{
-                    minWidth: 1080,
+                    minWidth: 1020,
                     ...tableSxSemQuebra,
                     "& .MuiTableCell-root": { fontSize: 13 },
                   }}
@@ -479,7 +479,6 @@ export default function DashboardPage({
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>ID</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Nome</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Hostname</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>IP</TableCell>
@@ -495,7 +494,7 @@ export default function DashboardPage({
                   <TableBody>
                     {equipamentosRecentesPainel.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={12}>
+                        <TableCell colSpan={11}>
                           <Typography variant="body2" color="text.secondary">
                             Sem equipamentos para mostrar.
                           </Typography>
@@ -505,7 +504,6 @@ export default function DashboardPage({
                       equipamentosRecentesPainel.map((row) => (
                         <TableRow key={`${row.linha}-${row.id}`} hover>
                           <TableCell sx={{ ...tableCellNowrap, minWidth: 72 }}>{row.linha === "manual" ? "Manual" : "Scan"}</TableCell>
-                          <TableCell sx={tableCellMono(44)}>{row.id}</TableCell>
                           <TableCell sx={{ ...tableCellEllipsis(120, 220), fontWeight: 600 }}>{txtBd(row.nome)}</TableCell>
                           <TableCell sx={tableCellMono(110)}>{txtBd(row.hostname)}</TableCell>
                           <TableCell sx={tableCellMono(118)}>{txtBd(row.ip)}</TableCell>

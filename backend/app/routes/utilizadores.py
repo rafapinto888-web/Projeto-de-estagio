@@ -1,4 +1,4 @@
-﻿"""Endpoints CRUD de utilizadores com filtro por perfil admin/normal."""
+"""Endpoints CRUD de utilizadores com filtro por perfil admin/normal."""
 
 # Rotas CRUD dos utilizadores e respetivos perfis.
 from fastapi import APIRouter, Depends, HTTPException, Response, status
