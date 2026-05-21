@@ -2,11 +2,11 @@
 
 # Rotas CRUD dos utilizadores e respetivos perfis.
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from pwdlib import PasswordHash
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, is_admin_user, require_admin
+from app.core.security import password_hash
 from app.database.connection import get_db
 from app.models.computador_db import ComputadorDB
 from app.models.log_sistema_db import LogSistemaDB
@@ -20,11 +20,10 @@ from app.schemas.utilizador import (
 )
 
 router = APIRouter(prefix="/utilizadores", tags=["Utilizadores"])
-password_hash = PasswordHash.recommended()
 
 
 def gerar_hash_palavra_passe(palavra_passe: str) -> str:
-    # Nunca guardar password em claro; persistimos apenas o hash.
+    # Nunca guardar password em claro; persistimos apenas o hash Argon2 (mesmo motor que o login).
     return password_hash.hash(palavra_passe)
 
 

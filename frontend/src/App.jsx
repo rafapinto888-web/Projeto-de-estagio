@@ -337,8 +337,17 @@ export default function App() {
     }
   }
 
-  // Termina sessão e limpa estado local.
-  function handleLogout() {
+  // Termina sessão e limpa estado local (regista saída na auditoria antes de invalidar o token).
+  async function handleLogout() {
+    const nome = user?.nome || user?.username || "";
+    try {
+      await api.registarHistorico({
+        acao: "sessao.logout",
+        descricao: nome ? `Sessão terminada (${nome}).` : "Sessão terminada.",
+      });
+    } catch {
+      /* token expirado ou sem rede — continua a terminar sessão localmente */
+    }
     localStorage.removeItem("access_token");
     clearApiToken();
     setToken("");
@@ -350,7 +359,6 @@ export default function App() {
     setPerfis([]);
     setLocalizacoes([]);
     setAtivos([]);
-    setHistoricoConta([]);
     setStatus({ type: "ok", message: "Sessao terminada" });
   }
 

@@ -1,4 +1,4 @@
-"""Hash de passwords (Argon2/bcrypt), emissao e validacao de tokens JWT."""
+"""Hash de passwords (Argon2), emissao e validacao de tokens JWT."""
 
 import os
 from datetime import UTC, datetime, timedelta
@@ -16,29 +16,19 @@ SECRET_KEY = os.getenv("SECRET_KEY", "inventario-dev-secret-key-change-in-produc
 
 
 def _build_password_hash() -> PasswordHash:
-    # Argon2 e o algoritmo atual recomendado para novas passwords.
-    hashers = [Argon2Hasher()]
-    try:
-        # Suporta hashes bcrypt antigos quando a dependencia estiver instalada.
-        from pwdlib.hashers.bcrypt import BcryptHasher
-
-        hashers.append(BcryptHasher())
-    except Exception:
-        pass
-    return PasswordHash(tuple(hashers))
+    """Apenas Argon2: novas passwords e verificacao de hashes ja guardados neste formato."""
+    return PasswordHash((Argon2Hasher(),))
 
 
 password_hash = _build_password_hash()
 
 
 def verificar_palavra_passe(palavra_passe: str, palavra_passe_hash: str) -> bool:
-    """Compara password em claro com hash Argon2/bcrypt ou texto legado."""
+    """Compara password em claro com hash Argon2 (PHC)."""
     try:
-        # Compara a password em claro com o hash armazenado.
         return password_hash.verify(palavra_passe, palavra_passe_hash)
     except UnknownHashError:
-        # Compatibilidade com registos antigos que possam ter password em texto simples.
-        return palavra_passe == palavra_passe_hash
+        return False
 
 
 def criar_access_token(subject: str) -> str:
@@ -58,4 +48,3 @@ def descodificar_access_token(token: str) -> str | None:
     if not isinstance(subject, str):
         return None
     return subject
-
