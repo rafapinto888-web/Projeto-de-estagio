@@ -100,7 +100,6 @@ export const api = {
       body: JSON.stringify({ identificador, palavra_passe: password }),
     }),
   me: () => request("/auth/me"),
-  historicoMeu: () => request("/auth/me/historico"),
   registarHistorico: (payload) =>
     request("/auth/me/historico", { method: "POST", body: JSON.stringify(payload) }),
   health: () => fetch(getApiBase()).then((r) => r.ok),
@@ -147,6 +146,7 @@ export const api = {
 
   utilizadores: {
     listar: () => request("/utilizadores"),
+    historico: (id) => request(`/utilizadores/${id}/historico`),
     criar: (payload) => request("/utilizadores", { method: "POST", body: JSON.stringify(payload) }),
     atualizar: (id, payload) =>
       request(`/utilizadores/${id}`, { method: "PUT", body: JSON.stringify(payload) }),

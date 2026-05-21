@@ -227,7 +227,6 @@ export default function App() {
   const [globalOutput, setGlobalOutput] = useState("");
   const [globalSearchRequestId, setGlobalSearchRequestId] = useState(0); // força reação na Pesquisa ao vir da topbar
   const [logsOutput, setLogsOutput] = useState("Seleciona filtros para consultar logs.");
-  const [historicoConta, setHistoricoConta] = useState([]);
   const lastInventarioIdForScanRef = useRef(""); // evita repor scanRede ao mudar só outros estados
 
   // Filtros dos modais de logs.
@@ -250,6 +249,11 @@ export default function App() {
     return isAdminProfileName(nomePerfil) || user?.is_admin === true;
   }, [user]);
 
+  const navTabs = useMemo(
+    () => (isAdmin ? TABS : TABS.filter((t) => t.id !== "historico-conta")),
+    [isAdmin],
+  );
+
   // --- Carregamento de dados (API) ---
 
   async function loadAllData(currentToken, options = {}) {
@@ -266,7 +270,6 @@ export default function App() {
         perfisData,
         localizacoesData,
         ativosGruposData,
-        historicoData,
       ] = await Promise.all([
         api.inventarios.listar(),
         api.computadores.listar(),
@@ -274,7 +277,6 @@ export default function App() {
         api.perfis.listar(),
         api.localizacoes.listar(),
         api.inventarios.ativosPorInventario(),
-        api.historicoMeu(),
       ]);
       setInventarios(inventariosData || []);
       setComputadores(computadoresData || []);
@@ -282,7 +284,6 @@ export default function App() {
       setUtilizadores(utilizadoresData || []);
       setPerfis(perfisData || []);
       setLocalizacoes(localizacoesData || []);
-      setHistoricoConta(Array.isArray(historicoData?.itens) ? historicoData.itens : []);
       const firstId = (inventariosData || [])[0]?.id;
       setSelectedInventarioId((prev) => prev || String(firstId || ""));
     } finally {
@@ -456,6 +457,15 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeTab]);
 
+  // Utilizador normal não tem aba Histórico: evita ficar preso no hash #historico-conta.
+  useEffect(() => {
+    if (!token || !user) return;
+    if (!isAdmin && activeTab === "historico-conta") {
+      setActiveTab("dashboard");
+      syncLocationHash("dashboard");
+    }
+  }, [token, user, isAdmin, activeTab]);
+
   // Dashboard aberto: atualiza dados em background a cada 30s (sem spinner principal).
   useEffect(() => {
     if (!token || activeTab !== "dashboard") return undefined;
@@ -517,7 +527,7 @@ export default function App() {
       }}
     >
       <SidebarNav
-        tabs={TABS}
+        tabs={navTabs}
         activeTab={activeTab}
         onSelect={handleSelectTab}
         mobile={isMobileNav}
@@ -562,7 +572,7 @@ export default function App() {
               ativosPorInventario={ativosPorInventario}
               utilizadores={utilizadores}
               localizacoes={localizacoes}
-              historicoConta={historicoConta}
+              isAdmin={isAdmin}
               loading={loading}
               onNavigate={handleSelectTab}
               onOpenHistorico={() => handleSelectTab("historico-conta")}
@@ -570,7 +580,12 @@ export default function App() {
           )}
 
           {activeTab === "historico-conta" && (
-            <HistoricoContaPage token={token} active={activeTab === "historico-conta"} user={user} />
+            <HistoricoContaPage
+              token={token}
+              active={activeTab === "historico-conta"}
+              isAdmin={isAdmin}
+              utilizadores={utilizadores}
+            />
           )}
 
           {/* Inventários, scan e computadores */}

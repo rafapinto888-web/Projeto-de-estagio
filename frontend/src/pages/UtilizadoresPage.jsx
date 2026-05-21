@@ -8,11 +8,7 @@ import {
   Box,
   Button,
   Divider,
-  FormControl,
-  InputAdornment,
-  InputLabel,
   MenuItem,
-  OutlinedInput,
   Paper,
   Stack,
   TableCell,
@@ -106,64 +102,58 @@ function nomePerfilParaExibir(utilizador, perfis) {
   return p?.nome && String(p.nome).trim() ? perfilNomeExibicao(p.nome) : "—";
 }
 
-/** Campo email estilo Google: parte editável à esquerda; domínio fixo à direita. */
-function CampoEmailInstitucional({ value, onChange }) {
-  const id = "email-institucional-utilizador";
+/** Uma linha à largura do formulário: escreves só a parte local; `@irn.mg.pt` fica fixo à direita. */
+function LinhaEmailInstitucional({ localPart, onLocalChange }) {
   return (
-    <FormControl fullWidth variant="outlined" sx={campoSx}>
-      <InputLabel htmlFor={id} shrink sx={{ fontWeight: 500 }}>
-        Email institucional
-      </InputLabel>
-      <OutlinedInput
-        id={id}
+    <Box
+      sx={{
+        gridColumn: "1 / -1",
+        display: "flex",
+        alignItems: "stretch",
+        width: "100%",
+        minWidth: 0,
+      }}
+    >
+      <TextField
         label="Email institucional"
-        notched
-        value={value}
-        onChange={onChange}
         placeholder="nome.apelido"
+        value={localPart}
+        onChange={(e) => onLocalChange(e.target.value)}
         autoComplete="email"
-        endAdornment={
-          <InputAdornment position="end" sx={{ m: 0, p: 0, maxHeight: "unset" }}>
-            <Box
-              component="span"
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                ml: 0.75,
-                mr: -1.75,
-                my: -1,
-                pl: 2.25,
-                pr: 2,
-                minHeight: 48,
-                borderLeft: "1px solid #e2e8f0",
-                bgcolor: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)",
-                color: "#334155",
-                fontWeight: 600,
-                fontSize: "0.9rem",
-                letterSpacing: "0.01em",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {DOMINIO_EMAIL}
-            </Box>
-          </InputAdornment>
-        }
+        fullWidth
         sx={{
-          pr: 0,
-          borderRadius: 2,
-          overflow: "hidden",
-          bgcolor: "#fff",
-          "& .MuiOutlinedInput-input": {
-            flex: 1,
-            minWidth: 0,
-            py: 1.35,
-            px: 0.5,
-            fontSize: "0.95rem",
+          ...campoSx,
+          flex: 1,
+          minWidth: 0,
+          "& .MuiOutlinedInput-root": {
+            borderTopRightRadius: 0,
+            borderBottomRightRadius: 0,
           },
-          "&.Mui-focused": { boxShadow: "0 0 0 3px rgba(37, 99, 235, 0.12)" },
         }}
       />
-    </FormControl>
+      <Box
+        aria-hidden
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          alignSelf: "stretch",
+          px: { xs: 1.25, sm: 1.75 },
+          border: "1px solid rgba(0, 0, 0, 0.23)",
+          borderLeft: "none",
+          borderTopRightRadius: 8,
+          borderBottomRightRadius: 8,
+          bgcolor: "#f1f5f9",
+          color: "#334155",
+          fontWeight: 600,
+          fontSize: { xs: "0.8rem", sm: "0.9rem" },
+          letterSpacing: "0.01em",
+          whiteSpace: "nowrap",
+          flexShrink: 0,
+        }}
+      >
+        {DOMINIO_EMAIL}
+      </Box>
+    </Box>
   );
 }
 
@@ -536,18 +526,15 @@ export default function UtilizadoresPage({
                 sx={campoSx}
               />
 
-              <TituloSecaoForm>Contacto</TituloSecaoForm>
-              <Box sx={{ gridColumn: "1 / -1" }}>
-                <CampoEmailInstitucional
-                  value={emailLocal}
-                  onChange={(e) =>
-                    setUtilizadorForm((p) => ({
-                      ...p,
-                      email: emailCompletoDeLocal(e.target.value),
-                    }))
-                  }
-                />
-              </Box>
+              <LinhaEmailInstitucional
+                localPart={emailLocal}
+                onLocalChange={(texto) =>
+                  setUtilizadorForm((p) => ({
+                    ...p,
+                    email: emailCompletoDeLocal(texto),
+                  }))
+                }
+              />
 
               <Divider sx={{ gridColumn: "1 / -1", borderColor: "#e8eef5" }} />
 

@@ -12,6 +12,7 @@ from app.models.computador_db import ComputadorDB
 from app.models.log_sistema_db import LogSistemaDB
 from app.models.perfil_db import PerfilDB
 from app.models.utilizador_db import UtilizadorDB
+from app.schemas.auth import HistoricoUtilizadorItem, HistoricoUtilizadorLista
 from app.schemas.utilizador import (
     UtilizadorCreate,
     UtilizadorResponse,
@@ -62,6 +63,29 @@ def listar_utilizadores(
     if not is_admin_user(current_user):
         return [current_user]
     return db.query(UtilizadorDB).order_by(UtilizadorDB.id).all()
+
+
+@router.get(
+    "/{utilizador_id}/historico",
+    response_model=HistoricoUtilizadorLista,
+    dependencies=[Depends(require_admin)],
+)
+def historico_auditoria_do_utilizador(
+    utilizador_id: int,
+    db: Session = Depends(get_db),
+):
+    """Auditoria (logs_sistema) de um utilizador — só administradores; um pedido = um utilizador."""
+    if db.get(UtilizadorDB, utilizador_id) is None:
+        raise HTTPException(status_code=404, detail="Utilizador nao encontrado")
+    registos = (
+        db.query(LogSistemaDB)
+        .filter(LogSistemaDB.utilizador_id == utilizador_id)
+        .order_by(LogSistemaDB.data_evento.desc())
+        .all()
+    )
+    return HistoricoUtilizadorLista(
+        itens=[HistoricoUtilizadorItem.model_validate(r) for r in registos]
+    )
 
 
 @router.get("/{utilizador_id}", response_model=UtilizadorResponse)

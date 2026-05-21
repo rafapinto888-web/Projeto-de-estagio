@@ -13,8 +13,6 @@ from app.schemas.auth import (
     AuthMeResponse,
     AuthTokenResponse,
     HistoricoRegistoIn,
-    HistoricoUtilizadorItem,
-    HistoricoUtilizadorLista,
     LoginRequest,
 )
 
@@ -84,24 +82,6 @@ def me(current_user: UtilizadorDB = Depends(get_current_user)):
         "perfil_id": current_user.perfil_id,
         "perfil_nome": current_user.perfil.nome if current_user.perfil else None,
     }
-
-
-@router.get("/me/historico", response_model=HistoricoUtilizadorLista)
-def historico_do_utilizador(
-    db: Session = Depends(get_db),
-    current_user: UtilizadorDB = Depends(get_current_user),
-):
-    """Lista auditada só para o próprio utilizador (cada conta vê apenas as suas entradas)."""
-    registos = (
-        db.query(LogSistemaDB)
-        .filter(LogSistemaDB.utilizador_id == current_user.id)
-        .order_by(LogSistemaDB.data_evento.desc())
-        .limit(500)
-        .all()
-    )
-    return HistoricoUtilizadorLista(
-        itens=[HistoricoUtilizadorItem.model_validate(r) for r in registos]
-    )
 
 
 @router.post("/me/historico", status_code=status.HTTP_201_CREATED)

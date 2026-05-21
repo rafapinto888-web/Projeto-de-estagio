@@ -93,11 +93,12 @@ export default function DashboardPage({
   ativosPorInventario = [],
   utilizadores,
   localizacoes: _localizacoes,
-  historicoConta = [],
+  isAdmin = false,
   loading,
   onNavigate,
   onOpenHistorico,
 }) {
+  const historicoConta = [];
   const abrirMeuHistorico =
     typeof onOpenHistorico === "function" ? onOpenHistorico : () => onNavigate("historico-conta");
 
@@ -232,10 +233,10 @@ export default function DashboardPage({
     {
       key: "alertas",
       label: "Alertas recentes",
-      value: alertasEdicaoRemocao.length,
+      value: isAdmin ? alertasEdicaoRemocao.length : "—",
       icon: "notifications",
-      tone: alertasEdicaoRemocao.length > 0 ? "warning" : "neutral",
-      hint: "Edições e remoções de dados",
+      tone: isAdmin && alertasEdicaoRemocao.length > 0 ? "warning" : "neutral",
+      hint: isAdmin ? "Edições e remoções de dados" : "Só na aba Histórico (admin)",
     },
   ];
 
@@ -327,6 +328,16 @@ export default function DashboardPage({
             >
               Logs
             </Button>
+            {isAdmin ? (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<span className="material-symbols-outlined">history</span>}
+                onClick={() => onNavigate("historico-conta")}
+              >
+                Histórico
+              </Button>
+            ) : null}
           </Stack>
         </Box>
 
@@ -336,7 +347,7 @@ export default function DashboardPage({
             gap: 2,
             gridTemplateColumns: {
               xs: "1fr",
-              lg: "repeat(3, minmax(0, 1fr))",
+              lg: isAdmin ? "repeat(3, minmax(0, 1fr))" : "repeat(2, minmax(0, 1fr))",
             },
           }}
         >
@@ -388,7 +399,8 @@ export default function DashboardPage({
             </Panel>
           </Box>
 
-          <Box>
+          {isAdmin ? (
+            <Box>
             <Panel
               title="Atividade recente"
               action={
@@ -405,7 +417,7 @@ export default function DashboardPage({
                 </Stack>
               ) : atividadeRede.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  Sem atividade recente.
+                  Escolhe um utilizador na aba <strong>Histórico</strong> para ver a auditoria por conta.
                 </Typography>
               ) : (
                 <Box sx={listaScrollSx}>
@@ -430,6 +442,7 @@ export default function DashboardPage({
               )}
             </Panel>
           </Box>
+          ) : null}
         </Box>
 
         <Box
@@ -438,7 +451,7 @@ export default function DashboardPage({
             gap: 2,
             gridTemplateColumns: {
               xs: "1fr",
-              lg: "minmax(0, 2fr) minmax(0, 1fr)",
+              lg: isAdmin ? "minmax(0, 2fr) minmax(0, 1fr)" : "1fr",
             },
           }}
         >
@@ -514,6 +527,7 @@ export default function DashboardPage({
               </Box>
             </Panel>
           </Box>
+          {isAdmin ? (
           <Box>
             <Panel
               title="Alertas"
@@ -527,7 +541,7 @@ export default function DashboardPage({
             >
               {alertasEdicaoRemocao.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  Sem alterações ou remoções recentes.
+                  Escolhe um utilizador na aba <strong>Histórico</strong> para rever edições e remoções por conta.
                 </Typography>
               ) : (
                 <Box sx={{ ...listaScrollSx, maxHeight: { xs: 210, lg: 235 } }}>
@@ -570,6 +584,7 @@ export default function DashboardPage({
               )}
             </Panel>
           </Box>
+          ) : null}
         </Box>
 
         <Panel
