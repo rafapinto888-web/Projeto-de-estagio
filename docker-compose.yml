@@ -1,40 +1,17 @@
-# Frontend em Docker: serviço web-dev (Vite + hot reload). A API pode correr no Windows
-# (localhost:8000) ou no container (perfil docker-api). Postgres no PC ou em container (bundled-db).
+# Frontend em Docker: serviço web-dev (Vite + hot reload). A API (perfil docker-api) está
+# sem camada de base de dados no código — só GET / e CORS ate reintroduzires rotas/BD.
 #
 # Outro PC (dev, hot reload):  scripts\docker-subir-dev.ps1
 # Outro PC (tudo em Docker):   scripts\docker-subir-tudo.ps1
 #
-# API também em Docker (usa Postgres no PC via host.docker.internal):
+# API também em Docker:
 #   docker compose --profile docker-api up -d --build
 # A pasta ./backend está montada em /app e o uvicorn corre com --reload (dev).
-#
-# Postgres só em Docker (BD isolada, host porta 5433):
-#   docker compose --profile bundled-db up -d --build
 #
 # Obrigatorio no repo: frontend/package.json + frontend/package-lock.json
 # (npm ci no arranque do web-dev instala xlsx e restantes deps).
 
 services:
-  db:
-    profiles:
-      - bundled-db
-    image: postgres:16-alpine
-    container_name: base-de-dados
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: inventario
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: inventario-docker
-    ports:
-      - "5433:5432"
-    volumes:
-      - inventario_pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d inventario"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   api:
     profiles:
       - docker-api
@@ -60,7 +37,6 @@ services:
         "--reload",
       ]
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://postgres:12345a.@host.docker.internal:5432/inventario}
       SECRET_KEY: ${SECRET_KEY:-inventario-dev-secret-key-change-in-production}
       # Docker Desktop (Windows/mac): ajuda o --reload a detetar alterações nos ficheiros
       WATCHFILES_FORCE_POLLING: "true"
@@ -85,5 +61,4 @@ services:
       - "5173:5173"
 
 volumes:
-  inventario_pgdata:
   frontend_node_modules:

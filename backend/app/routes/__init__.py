@@ -1,5 +1,1 @@
-﻿"""Subpacote de routers FastAPI (endpoints HTTP)."""
-
-# Pacote com os endpoints HTTP da API.
-"""Rotas da API."""
-
+﻿"""Pacote de rotas HTTP (vazio ate reintroducao com a nova BD)."""

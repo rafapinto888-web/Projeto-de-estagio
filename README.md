@@ -51,13 +51,13 @@ docker-compose.yml
 
 - Python 3.11+
 - Node.js 18+ (npm)
-- PostgreSQL acessível **ou** Docker Desktop
+- Docker Desktop **ou** PostgreSQL (a API precisa de `DATABASE_URL` ao correr no host; o `docker-compose` do projeto define um default para o contentor `api`)
 
 Variáveis importantes:
 
 | Variável | Uso |
 |----------|-----|
-| `DATABASE_URL` | Ligação PostgreSQL (ex.: `postgresql+psycopg2://user:pass@localhost:5432/inventario`) |
+| `DATABASE_URL` | **Obrigatoria** ao correr `uvicorn` no PC (ex.: Postgres). No Docker, o `docker-compose.yml` define um default para o servico `api` se nao tiveres `.env`. |
 | `SECRET_KEY` | Chave JWT (obrigatório alterar em produção) |
 | `INVENTARIO_CORS_ORIGINS` | Origens do frontend separadas por vírgula (ex.: `http://localhost:5173`) |
 | `INVENTARIO_ALLOW_SWAGGER_BYPASS` | `true` só em dev para testar no `/docs` sem JWT |
@@ -68,26 +68,18 @@ Exemplo completo: `backend/.env.example`. Tarefas futuras: `docs/pendencias-melh
 
 ## Como executar (no teu PC)
 
-Precisas de **dois processos** a correr em paralelo: **API** (porta 8000) e **frontend** (porta 5173). A base de dados PostgreSQL tem de estar acessível antes de arrancar a API.
+Precisas de **dois processos** a correr em paralelo: **API** (porta 8000) e **frontend** (porta 5173). A API exige **`DATABASE_URL`** definida no terminal (ou ficheiro `.env` que o teu arranque carregue). O **schema** da base (tabelas) deve existir **fora** deste repositório (SQL / equipa DBA); o codigo da API **nao** executa `create_all` no arranque.
 
-### 1. Base de dados PostgreSQL
+### 1. Base de dados
 
-1. Instala e inicia o PostgreSQL (ou usa o que já tens no PC).
-2. Cria a base de dados (exemplo no `psql` ou pgAdmin):
-
-```sql
-CREATE DATABASE inventario;
-```
-
-3. Ajusta utilizador, palavra-passe e porta aos teus dados. O backend usa por defeito (se não definires `DATABASE_URL`):
+- Cria a base e as **tabelas** conforme o modelo da equipa (SQL, pgAdmin, etc.).
+- Define **`DATABASE_URL`** com user, password e host, por exemplo:
 
 ```text
-postgresql+psycopg2://postgres:12345a.@127.0.0.1:5432/inventario
+postgresql+psycopg2://postgres:TU_PASSWORD@127.0.0.1:5432/inventario
 ```
 
-Altera em `backend/app/database/connection.py` ou define a variável de ambiente `DATABASE_URL` com os teus valores.
-
-**Primeira execução da API:** ao arrancar, o FastAPI cria/atualiza as tabelas automaticamente (`create_all`). Precisas de **pelo menos um utilizador** na BD para fazer login (cria via pgAdmin, dump de outra máquina, ou endpoint admin no Swagger se já existir).
+**Primeira execução:** precisas de **pelo menos um utilizador** para login (cria via API/Swagger, pgAdmin se usares Postgres, ou importa dados).
 
 ### 2. Backend (API)
 
@@ -95,14 +87,11 @@ Altera em `backend/app/database/connection.py` ou define a variável de ambiente
 cd backend
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
-Define a ligação (substitui user, password e porta):
-
-```powershell
 $env:DATABASE_URL = "postgresql+psycopg2://postgres:TU_PASSWORD@127.0.0.1:5432/inventario"
 .venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
 ```
+
+Sem `DATABASE_URL`, o modulo `connection.py` falha ao importar — define sempre antes do `uvicorn`.
 
 Linux/macOS:
 
@@ -133,7 +122,7 @@ Abre [http://127.0.0.1:5173](http://127.0.0.1:5173) e faz login com um utilizado
 
 | Passo | O quê | URL |
 |-------|--------|-----|
-| 1 | PostgreSQL a correr | — |
+| 1 | PostgreSQL (ou outra BD suportada) com schema criado | — |
 | 2 | `uvicorn` na pasta `backend` | [http://127.0.0.1:8000](http://127.0.0.1:8000) |
 | 3 | `npm run dev` na pasta `frontend` | [http://127.0.0.1:5173](http://127.0.0.1:5173) |
 
@@ -142,7 +131,7 @@ Se o login falhar com erro de rede, verifica se o Swagger abre no browser — o 
 ### 5. Parar
 
 - `Ctrl+C` nos terminais da API e do frontend.
-- PostgreSQL pode ficar sempre ligado (serviço Windows).
+- PostgreSQL pode ficar sempre ligado (serviço Windows), se o usares.
 
 ---
 
@@ -161,7 +150,7 @@ docker compose --profile dev-live up -d --build web-dev
 
 Ou o atalho: `.\scripts\docker-subir-dev.ps1`
 
-Terminal 2 — API no host (como na secção anterior):
+Terminal 2 — API no host (obrigatorio `DATABASE_URL`):
 
 ```powershell
 cd backend
@@ -186,15 +175,14 @@ Abre [http://localhost:5173](http://localhost:5173). Continua a precisar da API 
 .\scripts\docker-subir-tudo.ps1
 ```
 
-Sobe frontend dev + API + Postgres:
+Sobe **frontend dev** + **API**. O `docker-compose` define um **default** de `DATABASE_URL` para Postgres no host (`host.docker.internal:5432`); ajusta user/password no `.env` da raiz ou no compose se precisares.
 
 | Serviço | URL / porta |
 |---------|-------------|
 | Frontend | [http://localhost:5173](http://localhost:5173) |
 | API | [http://localhost:8000](http://localhost:8000) |
-| Postgres | `localhost:5433` — user `postgres`, password `inventario-docker`, BD `inventario` |
 
-Neste modo, define `DATABASE_URL` no Compose ou usa o valor por defeito do perfil `bundled-db`. BD nova = tabelas criadas ao arrancar a API; **cria utilizadores** para login.
+As **tabelas** devem existir na BD alvo (o arranque da API **nao** as cria). **Cria utilizadores** para login.
 
 ### Perfis Compose (referência)
 
@@ -202,7 +190,6 @@ Neste modo, define `DATABASE_URL` no Compose ou usa o valor por defeito do perfi
 |--------|---------|-----|
 | `dev-live` | `web-dev` | Frontend Vite com hot reload (porta `5173`) |
 | `docker-api` | `api` | Backend em container |
-| `bundled-db` | `db` | Postgres em container (host `5433`) |
 
 Mais comandos (logs, parar, volumes): [`docs/comandos.txt`](docs/comandos.txt).
 
@@ -225,19 +212,20 @@ Escolhe **um** dos caminhos:
 
 | Caminho | Instalar |
 |---------|----------|
-| **A — Desenvolvimento clássico** | Python 3.11+, Node 18+, PostgreSQL |
+| **A — Desenvolvimento clássico** | Python 3.11+, Node 18+ |
 | **B — Só Docker (demo)** | [Docker Desktop](https://www.docker.com/products/docker-desktop/) |
-| **C — Docker completo** | Docker Desktop (frontend + API + BD em containers) |
+| **C — Docker completo** | Docker Desktop (frontend + API; `DATABASE_URL` no compose por defeito) |
 
 ### Primeira vez no PC novo (passo a passo)
 
 1. **Copiar/clonar** o repositório para uma pasta local (ex.: `C:\Projetos\Projeto de estagio`).
 2. **Base de dados**
-   - *Com PostgreSQL no PC:* criar BD `inventario` e importar dump se quiseres os mesmos dados do PC antigo (`pg_dump` / `pg_restore`).
-   - *Só Docker:* usar `.\scripts\docker-subir-tudo.ps1` — Postgres fica na porta **5433** com BD vazia; a API cria tabelas no primeiro arranque.
+   - Criar BD e tabelas conforme modelo (fora deste repo, se a equipa assim o definir).
+   - *API no PC:* definir `DATABASE_URL` antes do `uvicorn`.
+   - *Só Docker:* `.\scripts\docker-subir-tudo.ps1` — ver default de `DATABASE_URL` no `docker-compose.yml`.
 3. **Backend**
    - `cd backend` → criar `.venv` → `pip install -r requirements.txt`.
-   - Definir `DATABASE_URL` com host, user e password **deste** PC (não assumes que é `12345a.` — confirma no pgAdmin ou no `docker-compose.yml`).
+   - Definir `DATABASE_URL` ao correr no host (no Docker usa-se o default do compose salvo `.env`).
    - Arrancar uvicorn (ver secção «Como executar»).
 4. **Frontend**
    - *Sem Docker:* `cd frontend` → `npm install` → `npm run dev`.
@@ -250,14 +238,14 @@ Escolhe **um** dos caminhos:
 |----------|-------------|
 | **Programar / alterar código** | `docker-subir-dev.ps1` + API local com `uvicorn` |
 | **Mostrar ao orientador (sem instalar Node)** | `.\scripts\docker-subir-dev.ps1` ou `docker compose --profile dev-live up -d --build web-dev` + API local |
-| **Máquina limpa, tudo isolado** | `docker-subir-tudo.ps1` + criar utilizador na BD nova |
+| **Máquina limpa, tudo isolado** | `docker-subir-tudo.ps1` + BD com schema + utilizador |
 | **Mesmos dados do teu PC** | Exportar Postgres (`pg_dump`) e importar no PC novo **ou** apontar `DATABASE_URL` para um servidor de rede partilhado |
 
 ### Variáveis a rever no PC novo
 
 | Variável | Onde | Notas |
 |----------|------|--------|
-| `DATABASE_URL` | Terminal / Docker `api` | User, password, host (`127.0.0.1` vs `host.docker.internal` vs `db` no Compose) |
+| `DATABASE_URL` | Terminal / Docker `api` | Obrigatoria no host; no Docker ver default no `docker-compose.yml`. |
 | `SECRET_KEY` | API em produção | Alterar valor por defeito |
 | `VITE_API_BASE` | Build Docker do frontend | Por defeito `http://localhost:8000`; o browser no PC novo tem de conseguir chegar a esta URL |
 
