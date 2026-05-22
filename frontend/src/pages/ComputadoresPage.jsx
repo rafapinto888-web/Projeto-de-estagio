@@ -593,27 +593,27 @@ export default function ComputadoresPage({
                     <div className="computadores-inv-card-head-main">
                       <span className="computadores-inv-card-folder material-symbols-outlined" aria-hidden>
                         folder
-                    </span>
+                      </span>
                       <div className="computadores-inv-card-head-text">
                         <div className="computadores-inv-card-title-row">
                           <h3 className="computadores-inv-card-title">{grupo.inventario_nome}</h3>
                           <span className="pill badge-info">{tipoInventarioLabel(grupo.tipo_inventario)}</span>
                           <span className="computadores-inv-card-index">#{idxInv + 1}</span>
-                      </div>
+                        </div>
                         <dl className="computadores-inv-kpis computadores-inv-kpis--inline">
-                      <div className="computadores-inv-kpi">
-                        <dt>Total</dt>
-                        <dd>{nTot}</dd>
-                      </div>
-                      <div className="computadores-inv-kpi computadores-inv-kpi--manual">
-                        <dt>Manuais</dt>
-                        <dd>{nReg}</dd>
-                      </div>
-                      <div className="computadores-inv-kpi computadores-inv-kpi--scan">
-                        <dt>Scan</dt>
-                        <dd>{nScan}</dd>
-                      </div>
-                    </dl>
+                          <div className="computadores-inv-kpi">
+                            <dt>Total</dt>
+                            <dd>{nTot}</dd>
+                          </div>
+                          <div className="computadores-inv-kpi computadores-inv-kpi--manual">
+                            <dt>Manuais</dt>
+                            <dd>{nReg}</dd>
+                          </div>
+                          <div className="computadores-inv-kpi computadores-inv-kpi--scan">
+                            <dt>Scan</dt>
+                            <dd>{nScan}</dd>
+                          </div>
+                        </dl>
                       </div>
                     </div>
                     <div className="computadores-inv-card-export-wrap">
@@ -632,7 +632,7 @@ export default function ComputadoresPage({
                         startIcon={
                           <span className="material-symbols-outlined computadores-inv-card-export-icon" aria-hidden>
                             download
-                        </span>
+                          </span>
                         }
                         onClick={() => exportInventarioComputadoresParaExcel(grupo, linhasUnificadas)}
                       >
@@ -660,7 +660,7 @@ export default function ComputadoresPage({
                               <InputAdornment position="start">
                                 <span className="material-symbols-outlined computadores-search-field-icon" aria-hidden>
                                   search
-                                  </span>
+                                </span>
                               </InputAdornment>
                             ),
                           }}
@@ -787,40 +787,40 @@ export default function ComputadoresPage({
                                       <TableCell>{a.tipo === "computador" ? txtBd(a.utilizador_responsavel_nome) : "—"}</TableCell>
                                       <TableCell sx={{ whiteSpace: "nowrap" }}>
                                         <Typography variant="body2" color="text.secondary" component="span">
-                                  {a.tipo === "dispositivo_descoberto"
+                                          {a.tipo === "dispositivo_descoberto"
                                             ? formatarDataPtCurta(a.ultima_vez_ativo_em)
-                                    : "—"}
+                                            : "—"}
                                         </Typography>
                                       </TableCell>
                                       <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                                  {isAdmin ? (
+                                        {isAdmin ? (
                                           <Stack direction="row" spacing={0.5} justifyContent="flex-end" flexWrap="wrap" useFlexGap>
                                             {a.tipo === "computador" ? (
                                               <>
                                                 <Button size="small" variant="text" onClick={() => handleRowEdit(a)}>
-                                          Editar
+                                                  Editar
                                                 </Button>
                                                 <Button
                                                   size="small"
                                                   variant="text"
                                                   color="error"
-                                          onClick={() => onDeleteRow?.(a)}
-                                        >
-                                          Apagar
+                                                  onClick={() => onDeleteRow?.(a)}
+                                                >
+                                                  Apagar
                                                 </Button>
-                                      </>
-                                    ) : (
-                                      <>
+                                              </>
+                                            ) : (
+                                              <>
                                                 <Button size="small" variant="text" onClick={() => openScanEdit(a, grupo.inventario_id)}>
-                                          Editar
+                                                  Editar
                                                 </Button>
                                                 <Button
                                                   size="small"
                                                   variant="text"
                                                   color="error"
-                                          onClick={() => handleScanDeleteRow(a, grupo.inventario_id)}
-                                        >
-                                          Apagar
+                                                  onClick={() => handleScanDeleteRow(a, grupo.inventario_id)}
+                                                >
+                                                  Apagar
                                                 </Button>
                                               </>
                                             )}
@@ -882,7 +882,7 @@ export default function ComputadoresPage({
                             </Button>
                           </Box>
                         </footer>
-                  </div>
+                    </div>
                 </article>
               );
               })
@@ -944,122 +944,122 @@ export default function ComputadoresPage({
           <Stack spacing={1.2}>
             <TextField
               label="Nome"
-                placeholder="Identificação do equipamento"
-                value={computadorForm.nome}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, nome: e.target.value }))}
+              placeholder="Identificação do equipamento"
+              value={computadorForm.nome}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, nome: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="Estado"
-                placeholder="ativo, manutenção, …"
-                value={computadorForm.estado}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, estado: e.target.value }))}
+              placeholder="ativo, manutenção, …"
+              value={computadorForm.estado}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, estado: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="Marca"
-                placeholder="Marca"
-                value={computadorForm.marca}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, marca: e.target.value }))}
+              placeholder="Marca"
+              value={computadorForm.marca}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, marca: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="Modelo"
-                placeholder="Modelo"
-                value={computadorForm.modelo}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, modelo: e.target.value }))}
+              placeholder="Modelo"
+              value={computadorForm.modelo}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, modelo: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="Número de série"
-                placeholder="S/N ou etiqueta"
-                value={computadorForm.numero_serie}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, numero_serie: e.target.value }))}
+              placeholder="S/N ou etiqueta"
+              value={computadorForm.numero_serie}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, numero_serie: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="Hostname (rede)"
-                placeholder="Ex.: PC-LAB-03"
-                value={computadorForm.hostname}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, hostname: e.target.value }))}
+              placeholder="Ex.: PC-LAB-03"
+              value={computadorForm.hostname}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, hostname: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="Endereço IP"
-                placeholder="Ex.: 192.168.1.10"
-                value={computadorForm.endereco_ip}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, endereco_ip: e.target.value }))}
+              placeholder="Ex.: 192.168.1.10"
+              value={computadorForm.endereco_ip}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, endereco_ip: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="MAC"
-                placeholder="Ex.: AA:BB:CC:DD:EE:FF"
-                value={computadorForm.mac_address}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, mac_address: e.target.value }))}
+              placeholder="Ex.: AA:BB:CC:DD:EE:FF"
+              value={computadorForm.mac_address}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, mac_address: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="Sistema operativo"
-                placeholder="Ex.: Windows 11 Pro"
-                value={computadorForm.sistema_operativo}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, sistema_operativo: e.target.value }))}
+              placeholder="Ex.: Windows 11 Pro"
+              value={computadorForm.sistema_operativo}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, sistema_operativo: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               select
               label="Inventário"
-                value={computadorForm.inventario_id}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, inventario_id: e.target.value }))}
+              value={computadorForm.inventario_id}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, inventario_id: e.target.value }))}
               size="small"
               fullWidth
-              >
+            >
               <MenuItem value="">Escolhe inventário…</MenuItem>
-                {inventarios.map((item) => (
+              {inventarios.map((item) => (
                 <MenuItem key={item.id} value={item.id}>
-                    {item.nome}
+                  {item.nome}
                 </MenuItem>
               ))}
             </TextField>
             <TextField
               select
               label="Localização (opcional)"
-                value={computadorForm.localizacao_id}
-                onChange={(e) => setComputadorForm((p) => ({ ...p, localizacao_id: e.target.value }))}
+              value={computadorForm.localizacao_id}
+              onChange={(e) => setComputadorForm((p) => ({ ...p, localizacao_id: e.target.value }))}
               size="small"
               fullWidth
-              >
+            >
               <MenuItem value="">—</MenuItem>
-                {localizacoes.map((item) => (
+              {localizacoes.map((item) => (
                 <MenuItem key={item.id} value={item.id}>
-                    {item.nome}
+                  {item.nome}
                 </MenuItem>
               ))}
             </TextField>
             <TextField
               select
               label="Responsável (opcional)"
-                value={computadorForm.utilizador_responsavel_id}
-                onChange={(e) =>
-                  setComputadorForm((p) => ({ ...p, utilizador_responsavel_id: e.target.value }))
-                }
+              value={computadorForm.utilizador_responsavel_id}
+              onChange={(e) =>
+                setComputadorForm((p) => ({ ...p, utilizador_responsavel_id: e.target.value }))
+              }
               size="small"
               fullWidth
-              >
+            >
               <MenuItem value="">—</MenuItem>
-                {utilizadores.map((item) => (
+              {utilizadores.map((item) => (
                 <MenuItem key={item.id} value={item.id}>
-                    {item.nome}
+                  {item.nome}
                 </MenuItem>
-                ))}
+              ))}
             </TextField>
           </Stack>
         </FormModal>
@@ -1090,63 +1090,63 @@ export default function ComputadoresPage({
           <Stack spacing={1.2}>
             <TextField
               label="Endereço IP *"
-                placeholder="192.168.x.x"
-                value={scanForm.ip}
-                onChange={(e) => setScanForm((p) => ({ ...p, ip: e.target.value }))}
+              placeholder="192.168.x.x"
+              value={scanForm.ip}
+              onChange={(e) => setScanForm((p) => ({ ...p, ip: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="Estado *"
-                placeholder="ativo, inativo…"
-                value={scanForm.estado}
-                onChange={(e) => setScanForm((p) => ({ ...p, estado: e.target.value }))}
+              placeholder="ativo, inativo…"
+              value={scanForm.estado}
+              onChange={(e) => setScanForm((p) => ({ ...p, estado: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="Hostname"
-                value={scanForm.hostname}
-                onChange={(e) => setScanForm((p) => ({ ...p, hostname: e.target.value }))}
+              value={scanForm.hostname}
+              onChange={(e) => setScanForm((p) => ({ ...p, hostname: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="MAC"
-                placeholder="AA:BB:CC:DD:EE:FF"
-                value={scanForm.mac_address}
-                onChange={(e) => setScanForm((p) => ({ ...p, mac_address: e.target.value }))}
+              placeholder="AA:BB:CC:DD:EE:FF"
+              value={scanForm.mac_address}
+              onChange={(e) => setScanForm((p) => ({ ...p, mac_address: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="Marca"
-                value={scanForm.marca}
-                onChange={(e) => setScanForm((p) => ({ ...p, marca: e.target.value }))}
+              value={scanForm.marca}
+              onChange={(e) => setScanForm((p) => ({ ...p, marca: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="Modelo"
-                value={scanForm.modelo}
-                onChange={(e) => setScanForm((p) => ({ ...p, modelo: e.target.value }))}
+              value={scanForm.modelo}
+              onChange={(e) => setScanForm((p) => ({ ...p, modelo: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="N.º série"
-                value={scanForm.numero_serie}
-                onChange={(e) => setScanForm((p) => ({ ...p, numero_serie: e.target.value }))}
+              value={scanForm.numero_serie}
+              onChange={(e) => setScanForm((p) => ({ ...p, numero_serie: e.target.value }))}
               size="small"
               fullWidth
             />
             <TextField
               label="Sistema operativo"
-                value={scanForm.sistema_operativo}
-                onChange={(e) => setScanForm((p) => ({ ...p, sistema_operativo: e.target.value }))}
+              value={scanForm.sistema_operativo}
+              onChange={(e) => setScanForm((p) => ({ ...p, sistema_operativo: e.target.value }))}
               size="small"
               fullWidth
-              />
+            />
           </Stack>
         </FormModal>
         </>

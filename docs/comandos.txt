@@ -9,10 +9,10 @@ cd "C:\Users\Jose\Desktop\Projeto de estagio"
 # ou:
 docker compose --profile dev-live up -d --build web-dev
 
-# 2) Tudo em Docker (frontend dev + API minima sem BD no codigo)
+# 2) Tudo em Docker (frontend dev + API + Postgres)
 .\scripts\docker-subir-tudo.ps1
 # ou:
-docker compose --profile dev-live --profile docker-api up -d --build
+docker compose --profile dev-live --profile docker-api --profile bundled-db up -d --build
 
 # Se deps npm falharem (ex. xlsx), recriar volume e rebuild:
 docker compose --profile dev-live down
@@ -24,10 +24,10 @@ docker compose --profile dev-live up -d --build web-dev
 # Subir frontend DEV (auto-atualiza ao editar)
 docker compose --profile dev-live up -d --build web-dev
 
-# Subir frontend + backend (API so GET / ate nova BD)
-docker compose --profile dev-live --profile docker-api up -d --build
+# Subir frontend + backend + base de dados
+docker compose --profile dev-live --profile docker-api --profile bundled-db up -d --build
 
-# Subir só API em Docker (útil com frontend já a correr)
+# Subir frontend + backend (API usa Postgres do PC via host.docker.internal)
 docker compose --profile docker-api up -d --build
 
 # Ver estado

@@ -1,0 +1,1036 @@
+"""Endpoints de inventarios: CRUD, scan de rede, ativos unificados e logs."""
+
+# Rotas para gestao de inventarios, scan e dispositivos descobertos.
+
+# --- Helpers: contagens, dispositivos por IP e logs Windows ---
+from datetime import datetime
+from typing import Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import String, cast, func, or_
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, contains_eager, joinedload
+
+from app.core.deps import get_current_user, is_admin_user, require_admin
+from app.database.connection import get_db
+from app.models.computador_db import ComputadorDB
+from app.models.dispositivo_descoberto_db import DispositivoDescobertoDB
+from app.models.inventario_db import InventarioDB
+from app.models.localizacao_db import LocalizacaoDB
+from app.models.log_dispositivo_db import LogDispositivoDB
+from app.models.utilizador_db import UtilizadorDB
+from app.schemas.dispositivo_descoberto import (
+    DispositivoDescobertoResponse,
+    DispositivoDescobertoScanResponse,
+    DispositivoDescobertoUpdate,
+)
+from app.services.scan_rede import descobrir_dispositivos_enriquecidos
+from app.services.windows_logs import coletar_logs_windows
+from app.schemas.log_dispositivo import (
+    LogsDispositivoConsultaResponse,
+    LogsDispositivoRecolhaIn,
+)
+from app.schemas.inventario import (
+    AtivoInventarioItem,
+    ComputadorDetalhadoInventarioResponse,
+    ComputadorPesquisaInventarioItem,
+    DispositivoDescobertoPesquisaInventarioItem,
+    InventarioAtivosGrupoResponse,
+    InventarioComContagensResponse,
+    InventarioCreate,
+    InventarioDetalhesResponse,
+    InventarioResponse,
+    InventarioScanInfo,
+    TipoInventarioEnum,
+    InventarioUpdate,
+    PesquisaInventarioResponse,
+    ScanRedeRequest,
+    ScanRedeResponse,
+)
+
+router = APIRouter(prefix="/inventarios", tags=["Inventarios"])
+
+
+def _contagens_por_inventario_ids(
+    db: Session, inventario_ids: list[int]
+) -> tuple[dict[int, int], dict[int, int]]:
+    """Conta computadores e dispositivos de scan por inventario_id."""
+    if not inventario_ids:
+        return {}, {}
+    contagem_pc = (
+        db.query(
+            ComputadorDB.inventario_id,
+            func.count(ComputadorDB.id),
+        )
+        .filter(ComputadorDB.inventario_id.in_(inventario_ids))
+        .group_by(ComputadorDB.inventario_id)
+        .all()
+    )
+    cmap = {row[0]: row[1] for row in contagem_pc}
+
+    contagem_scan = (
+        db.query(
+            DispositivoDescobertoDB.inventario_id,
+            func.count(DispositivoDescobertoDB.id),
+        )
+        .filter(DispositivoDescobertoDB.inventario_id.in_(inventario_ids))
+        .group_by(DispositivoDescobertoDB.inventario_id)
+        .all()
+    )
+    dmap = {row[0]: row[1] for row in contagem_scan}
+    return cmap, dmap
+
+
+def _inventario_com_contagens(
+    inv: InventarioDB,
+    cmap: dict[int, int],
+    dmap: dict[int, int],
+) -> InventarioComContagensResponse:
+    base = InventarioResponse.model_validate(inv).model_dump()
+    base["total_computadores"] = cmap.get(inv.id, 0)
+    base["total_dispositivos_scan"] = dmap.get(inv.id, 0)
+    return InventarioComContagensResponse(**base)
+
+
+def obter_inventario_ou_404(db: Session, inventario_id: int) -> InventarioDB:
+    """Carrega inventario ou HTTP 404."""
+    inventario = db.get(InventarioDB, inventario_id)
+    if inventario is None:
+        raise HTTPException(status_code=404, detail="Inventario nao encontrado")
+    return inventario
+
+
+def obter_dispositivo_descoberto_ou_404(
+    db: Session,
+    inventario_id: int,
+    dispositivo_id: int,
+) -> DispositivoDescobertoDB:
+    dispositivo = db.get(DispositivoDescobertoDB, dispositivo_id)
+    if dispositivo is None or dispositivo.inventario_id != inventario_id:
+        raise HTTPException(
+            status_code=404,
+            detail="Dispositivo descoberto nao encontrado neste inventario",
+        )
+    return dispositivo
+
+
+def obter_dispositivos_descobertos_por_ips(
+    db: Session,
+    inventario_id: int,
+    ips: list[str],
+) -> dict[str, DispositivoDescobertoDB]:
+    if not ips:
+        return {}
+
+    dispositivos = (
+        db.query(DispositivoDescobertoDB)
+        .filter(
+            DispositivoDescobertoDB.inventario_id == inventario_id,
+            DispositivoDescobertoDB.ip.in_(ips),
+        )
+        .all()
+    )
+    return {dispositivo.ip: dispositivo for dispositivo in dispositivos}
+
+
+def _resolver_computador_para_dispositivo(
+    db: Session,
+    inventario_id: int,
+    dispositivo: DispositivoDescobertoDB,
+) -> ComputadorDB | None:
+    # Tenta resolver computador por numero de serie, hostname/nome ou IP.
+    if dispositivo.numero_serie:
+        por_serie = (
+            db.query(ComputadorDB)
+            .filter(
+                ComputadorDB.inventario_id == inventario_id,
+                ComputadorDB.numero_serie == dispositivo.numero_serie,
+            )
+            .first()
+        )
+        if por_serie is not None:
+            return por_serie
+
+    if dispositivo.hostname:
+        hostname = dispositivo.hostname.strip()
+        if hostname:
+            por_host_ou_nome = (
+                db.query(ComputadorDB)
+                .filter(
+                    ComputadorDB.inventario_id == inventario_id,
+                    (ComputadorDB.nome.ilike(hostname))
+                    | (ComputadorDB.hostname.ilike(hostname))
+                    | (ComputadorDB.nome.ilike(f"%{hostname}%"))
+                    | (ComputadorDB.hostname.ilike(f"%{hostname}%")),
+                )
+                .first()
+            )
+            if por_host_ou_nome is not None:
+                return por_host_ou_nome
+
+    if dispositivo.ip:
+        ip = dispositivo.ip.strip()
+        if ip:
+            por_ip = (
+                db.query(ComputadorDB)
+                .filter(
+                    ComputadorDB.inventario_id == inventario_id,
+                    ComputadorDB.endereco_ip == ip,
+                )
+                .first()
+            )
+            if por_ip is not None:
+                return por_ip
+
+    return None
+
+
+def _guardar_logs_windows_no_computador(
+    db: Session,
+    computador_id: int,
+    logs: list[dict[str, str]],
+) -> int:
+    # Guarda logs evitando duplicados basicos por computador+tipo+data_evento+descricao.
+    guardados = 0
+    for log in logs:
+        existente = (
+            db.query(LogDispositivoDB)
+            .filter(
+                LogDispositivoDB.computador_id == computador_id,
+                LogDispositivoDB.tipo_log == log["tipo_log"],
+                LogDispositivoDB.data_evento == datetime.fromisoformat(log["data_evento"]),
+                LogDispositivoDB.descricao == log["descricao"],
+            )
+            .first()
+        )
+        if existente is not None:
+            continue
+        db.add(
+            LogDispositivoDB(
+                computador_id=computador_id,
+                tipo_log=log["tipo_log"],
+                descricao=log["descricao"],
+                data_evento=datetime.fromisoformat(log["data_evento"]),
+            )
+        )
+        guardados += 1
+    return guardados
+
+
+# --- Controlo de acesso e vista unificada de ativos ---
+
+def _inventarios_visiveis_query(db: Session, current_user: UtilizadorDB):
+    # Admin ve todos; utilizador normal apenas inventarios dos seus computadores.
+    if is_admin_user(current_user):
+        return db.query(InventarioDB)
+    return (
+        db.query(InventarioDB)
+        .join(ComputadorDB, ComputadorDB.inventario_id == InventarioDB.id)
+        .filter(ComputadorDB.utilizador_responsavel_id == current_user.id)
+        .distinct()
+    )
+
+
+def _ativos_unificados_do_inventario(
+    db: Session,
+    inventario_id: int,
+    current_user: UtilizadorDB,
+) -> list[AtivoInventarioItem]:
+    """Computadores registados + dispositivos do scan para um inventário (regras igual à rota por ID)."""
+    computadores = (
+        db.query(ComputadorDB)
+        .options(
+            joinedload(ComputadorDB.localizacao),
+            joinedload(ComputadorDB.utilizador_responsavel),
+        )
+        .filter(ComputadorDB.inventario_id == inventario_id)
+        .order_by(ComputadorDB.id)
+        .all()
+    )
+    if not is_admin_user(current_user):
+        computadores = [
+            c for c in computadores if c.utilizador_responsavel_id == current_user.id
+        ]
+
+    dispositivos = (
+        db.query(DispositivoDescobertoDB)
+        .filter(DispositivoDescobertoDB.inventario_id == inventario_id)
+        .order_by(DispositivoDescobertoDB.id)
+        .all()
+    )
+
+    ativos: list[AtivoInventarioItem] = []
+    ativos.extend(
+        AtivoInventarioItem(
+            tipo="computador",
+            id=c.id,
+            inventario_id=c.inventario_id,
+            nome=c.nome,
+            ip=c.endereco_ip,
+            hostname=c.hostname,
+            numero_serie=c.numero_serie,
+            estado=c.estado,
+            marca=c.marca,
+            modelo=c.modelo,
+            mac_address=c.mac_address,
+            sistema_operativo=c.sistema_operativo,
+            localizacao_nome=c.localizacao_nome,
+            utilizador_responsavel_nome=c.utilizador_responsavel_nome,
+            ultima_vez_ativo_em=None,
+            criado_em=None,
+            origem_registo=None,
+        )
+        for c in computadores
+    )
+    ativos.extend(
+        AtivoInventarioItem(
+            tipo="dispositivo_descoberto",
+            id=d.id,
+            inventario_id=d.inventario_id,
+            nome=None,
+            hostname=d.hostname,
+            ip=d.ip,
+            numero_serie=d.numero_serie,
+            estado=d.estado,
+            marca=d.marca,
+            modelo=d.modelo,
+            mac_address=d.mac_address,
+            sistema_operativo=d.sistema_operativo,
+            localizacao_nome=None,
+            utilizador_responsavel_nome=None,
+            ultima_vez_ativo_em=d.ultima_vez_ativo_em,
+            criado_em=d.criado_em,
+            origem_registo=d.origem_registo,
+        )
+        for d in dispositivos
+    )
+    return ativos
+
+
+def _garantir_acesso_inventario(
+    db: Session, inventario_id: int, current_user: UtilizadorDB
+) -> InventarioDB:
+    inventario = obter_inventario_ou_404(db, inventario_id)
+    if is_admin_user(current_user):
+        return inventario
+    permitido = (
+        db.query(ComputadorDB.id)
+        .filter(
+            ComputadorDB.inventario_id == inventario_id,
+            ComputadorDB.utilizador_responsavel_id == current_user.id,
+        )
+        .first()
+    )
+    if permitido is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Sem permissao para aceder a este inventario",
+        )
+    return inventario
+
+
+# --- Listagem e consulta de inventarios ---
+
+@router.get("/", response_model=list[InventarioComContagensResponse])
+def listar_inventarios(
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    inventarios = _inventarios_visiveis_query(db, current_user).order_by(InventarioDB.id).all()
+    ids = [i.id for i in inventarios]
+    cmap, dmap = _contagens_por_inventario_ids(db, ids)
+    return [_inventario_com_contagens(inv, cmap, dmap) for inv in inventarios]
+
+
+@router.get("/ativos-por-inventario", response_model=list[InventarioAtivosGrupoResponse])
+def listar_ativos_agrupados_por_inventario(
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    # Mesmos inventários que GET /inventarios/; em cada um, PCs registados + descobertos pelo scan.
+    inventarios = (
+        _inventarios_visiveis_query(db, current_user)
+        .order_by(InventarioDB.nome.asc(), InventarioDB.id.asc())
+        .all()
+    )
+    return [
+        InventarioAtivosGrupoResponse(
+            inventario_id=inv.id,
+            inventario_nome=inv.nome,
+            tipo_inventario=TipoInventarioEnum(inv.tipo_inventario),
+            ativos=_ativos_unificados_do_inventario(db, inv.id, current_user),
+        )
+        for inv in inventarios
+    ]
+
+
+@router.get("/{inventario_id}", response_model=InventarioComContagensResponse)
+def obter_inventario(
+    inventario_id: int,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    inv = _garantir_acesso_inventario(db, inventario_id, current_user)
+    cmap, dmap = _contagens_por_inventario_ids(db, [inv.id])
+    return _inventario_com_contagens(inv, cmap, dmap)
+
+
+@router.post(
+    "/criar-rapido",
+    response_model=InventarioResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
+def criar_inventario_rapido(
+    nome: str = Query(..., min_length=1),
+    tipo_inventario: TipoInventarioEnum = Query(default=TipoInventarioEnum.normal),
+    descricao: str | None = Query(default=None),
+    rede: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    # Endpoint alternativo para Swagger com opcoes no tipo_inventario.
+    payload = InventarioCreate(
+        nome=nome,
+        descricao=descricao,
+        tipo_inventario=tipo_inventario,
+        rede=rede,
+    )
+
+    existente = db.query(InventarioDB).filter(InventarioDB.nome == payload.nome).first()
+    if existente is not None:
+        raise HTTPException(status_code=409, detail="Nome de inventario ja existe")
+
+    novo_inventario = InventarioDB(
+        nome=payload.nome,
+        descricao=payload.descricao,
+        tipo_inventario=payload.tipo_inventario.value,
+        rede=payload.rede,
+    )
+    db.add(novo_inventario)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Nao foi possivel criar o inventario",
+        ) from None
+    db.refresh(novo_inventario)
+    return novo_inventario
+
+
+@router.get("/{inventario_id}/computadores", response_model=list[AtivoInventarioItem])
+def listar_computadores_do_inventario(
+    inventario_id: int,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    # Devolve lista unificada de computadores manuais e dispositivos do scan.
+    _garantir_acesso_inventario(db, inventario_id, current_user)
+    return _ativos_unificados_do_inventario(db, inventario_id, current_user)
+
+
+@router.get(
+    "/{inventario_id}/computadores/pesquisar",
+    response_model=PesquisaInventarioResponse,
+)
+def pesquisar_computadores_do_inventario(
+    inventario_id: int,
+    termo: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    _garantir_acesso_inventario(db, inventario_id, current_user)
+
+    query_computadores = (
+        db.query(ComputadorDB)
+        .outerjoin(ComputadorDB.localizacao)
+        .outerjoin(ComputadorDB.utilizador_responsavel)
+        .options(
+            contains_eager(ComputadorDB.localizacao),
+            contains_eager(ComputadorDB.utilizador_responsavel),
+        )
+        .filter(ComputadorDB.inventario_id == inventario_id)
+    )
+    if not is_admin_user(current_user):
+        query_computadores = query_computadores.filter(
+            ComputadorDB.utilizador_responsavel_id == current_user.id
+        )
+
+    termo_limpo = termo.strip() if termo is not None else ""
+    if termo_limpo:
+        termo_like = f"%{termo_limpo}%"
+        query_computadores = query_computadores.filter(
+            or_(
+                cast(ComputadorDB.id, String) == termo_limpo,
+                ComputadorDB.nome.ilike(termo_like),
+                ComputadorDB.marca.ilike(termo_like),
+                ComputadorDB.modelo.ilike(termo_like),
+                ComputadorDB.numero_serie.ilike(termo_like),
+                ComputadorDB.estado.ilike(termo_like),
+                LocalizacaoDB.nome.ilike(termo_like),
+                UtilizadorDB.nome.ilike(termo_like),
+                UtilizadorDB.email.ilike(termo_like),
+            )
+        )
+
+    computadores = query_computadores.order_by(ComputadorDB.id).all()
+
+    query_dispositivos = db.query(DispositivoDescobertoDB).filter(
+        DispositivoDescobertoDB.inventario_id == inventario_id
+    )
+    if termo_limpo:
+        termo_like = f"%{termo_limpo}%"
+        query_dispositivos = query_dispositivos.filter(
+            or_(
+                cast(DispositivoDescobertoDB.id, String) == termo_limpo,
+                DispositivoDescobertoDB.ip.ilike(termo_like),
+                DispositivoDescobertoDB.estado.ilike(termo_like),
+                DispositivoDescobertoDB.hostname.ilike(termo_like),
+                DispositivoDescobertoDB.marca.ilike(termo_like),
+                DispositivoDescobertoDB.modelo.ilike(termo_like),
+                DispositivoDescobertoDB.numero_serie.ilike(termo_like),
+                DispositivoDescobertoDB.sistema_operativo.ilike(termo_like),
+            )
+        )
+
+    dispositivos_descobertos = (
+        query_dispositivos.order_by(DispositivoDescobertoDB.id).all()
+    )
+
+    return {
+        "computadores": [
+            ComputadorPesquisaInventarioItem.model_validate(computador)
+            for computador in computadores
+        ],
+        "dispositivos_descobertos": [
+            DispositivoDescobertoPesquisaInventarioItem.model_validate(dispositivo)
+            for dispositivo in dispositivos_descobertos
+        ],
+    }
+
+
+@router.get("/{inventario_id}/detalhes", response_model=InventarioDetalhesResponse)
+def obter_detalhes_do_inventario(
+    inventario_id: int,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    inventario = _garantir_acesso_inventario(db, inventario_id, current_user)
+
+    computadores = (
+        db.query(ComputadorDB)
+        .options(
+            joinedload(ComputadorDB.localizacao),
+            joinedload(ComputadorDB.utilizador_responsavel),
+        )
+        .filter(ComputadorDB.inventario_id == inventario_id)
+        .order_by(ComputadorDB.id)
+        .all()
+    )
+    if not is_admin_user(current_user):
+        computadores = [
+            c for c in computadores if c.utilizador_responsavel_id == current_user.id
+        ]
+    dispositivos_descobertos = (
+        db.query(DispositivoDescobertoDB)
+        .filter(DispositivoDescobertoDB.inventario_id == inventario_id)
+        .order_by(DispositivoDescobertoDB.id)
+        .all()
+    )
+    return {
+        "id": inventario.id,
+        "nome": inventario.nome,
+        "descricao": inventario.descricao,
+        "computadores": computadores,
+        "dispositivos_descobertos": dispositivos_descobertos,
+    }
+
+
+# --- Scan de rede e persistencia de dispositivos descobertos ---
+
+@router.post(
+    "/{inventario_id}/scan",
+    response_model=ScanRedeResponse,
+    dependencies=[Depends(require_admin)],
+)
+def executar_scan_do_inventario(
+    inventario_id: int,
+    pedido_scan: ScanRedeRequest,
+    db: Session = Depends(get_db),
+):
+    # Valida inventário e aplica regra: scan so para inventario do tipo sub_rede.
+    inventario = obter_inventario_ou_404(db, inventario_id)
+    if inventario.tipo_inventario != "sub_rede":
+        raise HTTPException(
+            status_code=400,
+            detail="Scan so esta disponivel para inventarios do tipo sub_rede",
+        )
+
+    # Prioriza rede enviada no pedido; se faltar, usa a rede definida no inventario.
+    rede_alvo = pedido_scan.rede or inventario.rede
+    if not rede_alvo:
+        raise HTTPException(
+            status_code=400,
+            detail="Inventario sub_rede precisa de rede definida para executar scan",
+        )
+
+    # Mesmo com admin na aplicacao, scan remoto exige credenciais da rede/host alvo.
+    utilizador_rede = pedido_scan.utilizador.strip()
+    password_rede = pedido_scan.password
+    if not utilizador_rede or not password_rede.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Credenciais de rede obrigatorias para executar scan",
+        )
+
+    # Usa pipeline consolidado do scan (descoberta + enriquecimento tecnico por IP).
+    dispositivos_ativos = descobrir_dispositivos_enriquecidos(
+        rede_alvo,
+        utilizador_rede,
+        password_rede,
+    )
+    ips_ativos = list(dict.fromkeys([d["ip"] for d in dispositivos_ativos if d.get("ip")]))
+    ativos_por_ip = {d["ip"]: d for d in dispositivos_ativos if d.get("ip")}
+    # Carrega os dispositivos já existentes neste inventário (por IP).
+    existentes_por_ip = obter_dispositivos_descobertos_por_ips(
+        db,
+        inventario_id,
+        ips_ativos,
+    )
+    # Guarda timestamp local sem microsegundos para facilitar leitura no frontend.
+    instante_scan = datetime.now().replace(microsecond=0)
+    logs_recolhidos_no_scan = 0
+
+    try:
+        # Cria novos ou atualiza existentes sem duplicar (inventario_id + ip).
+        for ip in ips_ativos:
+            dispositivo = existentes_por_ip.get(ip)
+            dados_scan = ativos_por_ip.get(ip, {})
+            hostname_novo = dados_scan.get("hostname")
+            if dispositivo is None:
+                # Novo IP no inventário: cria registo como ativo.
+                dispositivo = DispositivoDescobertoDB(
+                    inventario_id=inventario_id,
+                    ip=ip,
+                    estado="ativo",
+                    mac_address=dados_scan.get("mac_address"),
+                    hostname=hostname_novo,
+                    marca=dados_scan.get("marca"),
+                    modelo=dados_scan.get("modelo"),
+                    numero_serie=dados_scan.get("numero_serie"),
+                    sistema_operativo=dados_scan.get("sistema_operativo"),
+                    origem_registo="scan",
+                    criado_em=instante_scan,
+                    ultima_vez_ativo_em=instante_scan,
+                )
+                db.add(dispositivo)
+                existentes_por_ip[ip] = dispositivo
+            else:
+                # IP já existe: marca ativo e atualiza campos sem apagar valores antigos.
+                if dispositivo.criado_em is None:
+                    dispositivo.criado_em = (
+                        dispositivo.ultima_vez_ativo_em or instante_scan
+                    )
+                dispositivo.estado = "ativo"
+                dispositivo.ultima_vez_ativo_em = instante_scan
+                dispositivo.mac_address = dados_scan.get("mac_address") or dispositivo.mac_address
+                if hostname_novo and hostname_novo != dispositivo.hostname:
+                    dispositivo.hostname = hostname_novo
+                dispositivo.marca = dados_scan.get("marca") or dispositivo.marca
+                dispositivo.modelo = dados_scan.get("modelo") or dispositivo.modelo
+                dispositivo.numero_serie = dados_scan.get("numero_serie") or dispositivo.numero_serie
+                dispositivo.sistema_operativo = (
+                    dados_scan.get("sistema_operativo") or dispositivo.sistema_operativo
+                )
+
+            # Tenta recolher logs reais do Windows para o dispositivo/computador associado.
+            computador_alvo = _resolver_computador_para_dispositivo(db, inventario_id, dispositivo)
+            if computador_alvo is not None:
+                logs_windows = coletar_logs_windows(
+                    dispositivo.hostname or computador_alvo.nome,
+                    max_eventos=20,
+                    horas=24,
+                    tipos_log=pedido_scan.tipos_log,
+                )
+                logs_recolhidos_no_scan += _guardar_logs_windows_no_computador(
+                    db, computador_alvo.id, logs_windows
+                )
+
+        # Marca como inativos os dispositivos deste inventario que nao responderam neste scan.
+        db.query(DispositivoDescobertoDB).filter(
+            DispositivoDescobertoDB.inventario_id == inventario_id,
+            ~DispositivoDescobertoDB.ip.in_(ips_ativos),
+        ).update({"estado": "inativo"}, synchronize_session=False)
+
+        # Persiste alterações do scan.
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Nao foi possivel guardar o resultado do scan",
+        ) from None
+
+    # Devolve apenas os dispositivos encontrados neste scan.
+    dispositivos_guardados = (
+        db.query(DispositivoDescobertoDB)
+        .filter(
+            DispositivoDescobertoDB.inventario_id == inventario_id,
+            DispositivoDescobertoDB.ip.in_(ips_ativos),
+        )
+        .order_by(DispositivoDescobertoDB.id)
+        .all()
+    )
+
+    return {
+        "inventario": InventarioScanInfo(
+            id=inventario.id,
+            nome=inventario.nome,
+        ),
+        "rede_analisada": rede_alvo,
+        "total_dispositivos_encontrados": len(dispositivos_guardados),
+        "dispositivos_descobertos": [
+            DispositivoDescobertoScanResponse.model_validate(dispositivo)
+            for dispositivo in dispositivos_guardados
+        ],
+        "total_logs_recolhidos": logs_recolhidos_no_scan,
+    }
+
+
+# --- Dispositivos descobertos (listar, editar, apagar, logs) ---
+
+@router.get(
+    "/{inventario_id}/dispositivos-descobertos",
+    response_model=list[DispositivoDescobertoResponse],
+)
+def listar_dispositivos_descobertos_do_inventario(
+    inventario_id: int,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    _garantir_acesso_inventario(db, inventario_id, current_user)
+
+    return (
+        db.query(DispositivoDescobertoDB)
+        .filter(DispositivoDescobertoDB.inventario_id == inventario_id)
+        .order_by(DispositivoDescobertoDB.id)
+        .all()
+    )
+
+
+@router.get(
+    "/{inventario_id}/dispositivos-descobertos/{dispositivo_id}",
+    response_model=DispositivoDescobertoResponse,
+)
+def obter_dispositivo_descoberto(
+    inventario_id: int,
+    dispositivo_id: int,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    _garantir_acesso_inventario(db, inventario_id, current_user)
+    return obter_dispositivo_descoberto_ou_404(db, inventario_id, dispositivo_id)
+
+
+@router.patch(
+    "/{inventario_id}/dispositivos-descobertos/{dispositivo_id}",
+    response_model=DispositivoDescobertoResponse,
+    dependencies=[Depends(require_admin)],
+)
+def atualizar_dispositivo_descoberto(
+    inventario_id: int,
+    dispositivo_id: int,
+    payload: DispositivoDescobertoUpdate,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    _garantir_acesso_inventario(db, inventario_id, current_user)
+    dispositivo = obter_dispositivo_descoberto_ou_404(db, inventario_id, dispositivo_id)
+    dados = payload.model_dump(exclude_unset=True)
+    if not dados:
+        return DispositivoDescobertoResponse.model_validate(dispositivo)
+
+    novo_ip = dados.get("ip")
+    if novo_ip is not None and novo_ip != dispositivo.ip:
+        conflito = (
+            db.query(DispositivoDescobertoDB)
+            .filter(
+                DispositivoDescobertoDB.inventario_id == inventario_id,
+                DispositivoDescobertoDB.ip == novo_ip,
+                DispositivoDescobertoDB.id != dispositivo_id,
+            )
+            .first()
+        )
+        if conflito is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="Ja existe outro dispositivo com este IP neste inventario",
+            )
+
+    for campo, valor in dados.items():
+        setattr(dispositivo, campo, valor)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Nao foi possivel atualizar o dispositivo",
+        ) from None
+    db.refresh(dispositivo)
+    return DispositivoDescobertoResponse.model_validate(dispositivo)
+
+
+@router.delete(
+    "/{inventario_id}/dispositivos-descobertos/{dispositivo_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
+def apagar_dispositivo_descoberto(
+    inventario_id: int,
+    dispositivo_id: int,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    _garantir_acesso_inventario(db, inventario_id, current_user)
+    dispositivo = obter_dispositivo_descoberto_ou_404(db, inventario_id, dispositivo_id)
+    db.delete(dispositivo)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Nao foi possivel apagar o dispositivo",
+        ) from None
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def _logs_dispositivos_descobertos_resposta(
+    db: Session,
+    inventario_id: int,
+    current_user: UtilizadorDB,
+    *,
+    dispositivo_id: int | None,
+    tipo_log: Literal["seguranca", "rdp"] | None,
+    coletar_agora: bool,
+    utilizador_rede: str | None,
+    password_rede: str | None,
+) -> LogsDispositivoConsultaResponse:
+    """Consulta logs na BD; opcionalmente recolhe do Windows (credenciais so via POST)."""
+    _garantir_acesso_inventario(db, inventario_id, current_user)
+
+    filtros: dict[str, str | int] = {"inventario_id": inventario_id}
+    dispositivos_query = db.query(DispositivoDescobertoDB).filter(
+        DispositivoDescobertoDB.inventario_id == inventario_id
+    )
+    if dispositivo_id is not None:
+        dispositivos_query = dispositivos_query.filter(
+            DispositivoDescobertoDB.id == dispositivo_id
+        )
+        filtros["dispositivo_id"] = dispositivo_id
+
+    dispositivos = dispositivos_query.order_by(DispositivoDescobertoDB.id).all()
+    if dispositivo_id is not None and not dispositivos:
+        raise HTTPException(
+            status_code=404,
+            detail="Dispositivo descoberto nao encontrado neste inventario",
+        )
+
+    computadores_ids: set[int] = set()
+    user_rede = (utilizador_rede or "").strip()
+    pass_rede = password_rede or ""
+
+    if coletar_agora and (not user_rede or not pass_rede.strip()):
+        raise HTTPException(
+            status_code=400,
+            detail="Credenciais de rede obrigatorias para recolher logs",
+        )
+
+    for dispositivo in dispositivos:
+        computador = _resolver_computador_para_dispositivo(db, inventario_id, dispositivo)
+        if computador is None:
+            continue
+        computadores_ids.add(computador.id)
+        if coletar_agora:
+            logs_windows = coletar_logs_windows(
+                dispositivo.hostname or computador.nome,
+                tipos_log=[tipo_log] if tipo_log else None,
+                utilizador=user_rede,
+                password=pass_rede,
+            )
+            _guardar_logs_windows_no_computador(db, computador.id, logs_windows)
+
+    if coletar_agora:
+        db.commit()
+
+    if not computadores_ids:
+        return {"filtros": filtros, "total_logs": 0, "logs": []}
+
+    query_logs = (
+        db.query(LogDispositivoDB)
+        .filter(LogDispositivoDB.computador_id.in_(list(computadores_ids)))
+        .order_by(LogDispositivoDB.data_evento.desc(), LogDispositivoDB.id.desc())
+    )
+    if tipo_log is not None:
+        filtros["tipo_log"] = tipo_log
+        query_logs = query_logs.filter(LogDispositivoDB.tipo_log == tipo_log)
+
+    logs = query_logs.all()
+    return {"filtros": filtros, "total_logs": len(logs), "logs": logs}
+
+
+@router.post(
+    "/{inventario_id}/logs/dispositivos-descobertos/recolher",
+    response_model=LogsDispositivoConsultaResponse,
+)
+def recolher_logs_dos_dispositivos_descobertos(
+    inventario_id: int,
+    payload: LogsDispositivoRecolhaIn,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    """Recolhe logs Windows com credenciais no corpo (seguro; nao vai para a URL)."""
+    return _logs_dispositivos_descobertos_resposta(
+        db,
+        inventario_id,
+        current_user,
+        dispositivo_id=payload.dispositivo_id,
+        tipo_log=payload.tipo_log,
+        coletar_agora=True,
+        utilizador_rede=payload.utilizador,
+        password_rede=payload.password,
+    )
+
+
+@router.get(
+    "/{inventario_id}/logs/dispositivos-descobertos",
+    response_model=LogsDispositivoConsultaResponse,
+)
+def listar_logs_dos_dispositivos_descobertos(
+    inventario_id: int,
+    dispositivo_id: int | None = Query(default=None),
+    coletar_agora: bool = Query(default=False),
+    tipo_log: Literal["seguranca", "rdp"] | None = Query(default=None),
+    utilizador: str | None = Query(default=None),
+    password: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    """Lista logs ja guardados. Recolha com credenciais: POST .../recolher."""
+    if coletar_agora or utilizador or password:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Para recolher logs com credenciais de rede use "
+                "POST /inventarios/{id}/logs/dispositivos-descobertos/recolher"
+            ),
+        )
+    return _logs_dispositivos_descobertos_resposta(
+        db,
+        inventario_id,
+        current_user,
+        dispositivo_id=dispositivo_id,
+        tipo_log=tipo_log,
+        coletar_agora=False,
+        utilizador_rede=None,
+        password_rede=None,
+    )
+
+
+# --- CRUD de inventarios (apenas admin) ---
+
+@router.post(
+    "/",
+    response_model=InventarioResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
+def criar_inventario(inventario: InventarioCreate, db: Session = Depends(get_db)):
+    existente = (
+        db.query(InventarioDB).filter(InventarioDB.nome == inventario.nome).first()
+    )
+    if existente is not None:
+        raise HTTPException(status_code=409, detail="Nome de inventario ja existe")
+
+    novo_inventario = InventarioDB(
+        nome=inventario.nome,
+        descricao=inventario.descricao,
+        tipo_inventario=inventario.tipo_inventario,
+        rede=inventario.rede,
+    )
+    db.add(novo_inventario)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Nao foi possivel criar o inventario",
+        ) from None
+    db.refresh(novo_inventario)
+    return novo_inventario
+
+
+@router.put(
+    "/{inventario_id}",
+    response_model=InventarioResponse,
+    dependencies=[Depends(require_admin)],
+)
+def atualizar_inventario(
+    inventario_id: int,
+    inventario_atualizado: InventarioUpdate,
+    db: Session = Depends(get_db),
+):
+    inventario = db.get(InventarioDB, inventario_id)
+    if inventario is None:
+        raise HTTPException(status_code=404, detail="Inventario nao encontrado")
+
+    existente = (
+        db.query(InventarioDB)
+        .filter(InventarioDB.nome == inventario_atualizado.nome)
+        .first()
+    )
+    if existente is not None and existente.id != inventario_id:
+        raise HTTPException(status_code=409, detail="Nome de inventario ja existe")
+
+    inventario.nome = inventario_atualizado.nome
+    inventario.descricao = inventario_atualizado.descricao
+    inventario.tipo_inventario = inventario_atualizado.tipo_inventario
+    inventario.rede = inventario_atualizado.rede
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Nao foi possivel atualizar o inventario",
+        ) from None
+    db.refresh(inventario)
+    return inventario
+
+
+@router.delete(
+    "/{inventario_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
+def apagar_inventario(inventario_id: int, db: Session = Depends(get_db)):
+    inventario = obter_inventario_ou_404(db, inventario_id)
+
+    if inventario.computadores:
+        raise HTTPException(
+            status_code=400,
+            detail="Nao e possivel apagar o inventario porque existem computadores associados",
+        )
+
+    if inventario.dispositivos_descobertos:
+        raise HTTPException(
+            status_code=400,
+            detail="Nao e possivel apagar o inventario porque existem dispositivos descobertos associados",
+        )
+
+    db.delete(inventario)
+    db.commit()
+
