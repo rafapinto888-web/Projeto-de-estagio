@@ -3,7 +3,7 @@
 # Modelo ORM dos logs de acoes do sistema.
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
@@ -24,7 +24,9 @@ class LogSistemaDB(Base):
     utilizador_id: Mapped[int] = mapped_column(ForeignKey("utilizadores.id"))
     acao: Mapped[str] = mapped_column(String(100))
     descricao: Mapped[str | None] = mapped_column(Text)
-    data_evento: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    data_evento: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
 
     utilizador: Mapped["UtilizadorDB"] = relationship(back_populates="logs_sistema")
 

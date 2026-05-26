@@ -1,8 +1,8 @@
 """Schemas de login, token JWT e historico de auditoria do utilizador."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 
 class LoginRequest(BaseModel):
@@ -15,8 +15,22 @@ class LoginRequest(BaseModel):
 
 
 class AuthTokenResponse(BaseModel):
-    """Resposta com token Bearer apos autenticacao bem-sucedida."""
+    """Resposta com access + refresh JWT apos login bem-sucedido."""
 
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+
+class AuthRefreshRequest(BaseModel):
+    """Pedido para obter novo access_token sem voltar a pedir password."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    refresh_token: str = Field(min_length=10)
+
+
+class AuthRefreshResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
@@ -48,6 +62,13 @@ class HistoricoUtilizadorItem(BaseModel):
     acao: str
     descricao: str | None
     data_evento: datetime
+
+    @field_serializer("data_evento", when_used="json")
+    def ser_data_evento_utc(self, v: datetime) -> str:
+        # BD grava naive UTC; JSON sem "Z" faz o browser tratar como hora local e desfasar.
+        if v.tzinfo is None:
+            v = v.replace(tzinfo=UTC)
+        return v.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 class HistoricoUtilizadorLista(BaseModel):

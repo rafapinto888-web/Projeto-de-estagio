@@ -358,8 +358,6 @@ export default function AtivosPage({
             onClick={() => {
               setScanUser("");
               setScanPass("");
-              setScanLogsRdp?.(true);
-              setScanLogsSeguranca?.(true);
               setScanTab("existente");
               setModal("scan");
             }}

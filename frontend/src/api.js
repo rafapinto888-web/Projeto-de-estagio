@@ -87,11 +87,18 @@ export function setApiBase(value) {
   localStorage.setItem("api_base", value);
 }
 
-// --- Token da sessão (Bearer) ---
+// --- Token da sessão (Bearer) + refresh ---
 
 let authToken = null;
+let _refreshPromise = null;
+
+function readStoredAccess() {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem("access_token");
+}
+
 if (typeof localStorage !== "undefined") {
-  const saved = localStorage.getItem("access_token");
+  const saved = readStoredAccess();
   if (saved) authToken = saved;
 }
 
@@ -101,6 +108,62 @@ export function setApiToken(token) {
 
 export function clearApiToken() {
   authToken = null;
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+  }
+}
+
+/** Grava access + refresh (login). */
+export function setSessionTokens(accessToken, refreshToken) {
+  if (typeof localStorage === "undefined") return;
+  if (accessToken) {
+    localStorage.setItem("access_token", accessToken);
+    authToken = accessToken;
+  }
+  if (refreshToken) localStorage.setItem("refresh_token", refreshToken);
+}
+
+async function tryRefreshAccess() {
+  if (typeof localStorage === "undefined") return false;
+  const rt = localStorage.getItem("refresh_token");
+  if (!rt?.trim()) return false;
+
+  if (_refreshPromise) {
+    await _refreshPromise;
+    return Boolean(readStoredAccess());
+  }
+
+  _refreshPromise = (async () => {
+    const base = getApiBase();
+    try {
+      const r = await fetch(`${base}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: rt.trim() }),
+      });
+      const data = await r.json().catch(() => null);
+      if (!r.ok) {
+        // Só invalida sessão quando o servidor rejeita o refresh (expirado / SECRET_KEY / utilizador apagado).
+        if (r.status === 401) clearApiToken();
+        return false;
+      }
+      if (!data?.access_token) {
+        clearApiToken();
+        return false;
+      }
+      localStorage.setItem("access_token", data.access_token);
+      authToken = data.access_token;
+      return true;
+    } catch {
+      // Falha de rede: não apagar refresh_token; o pedido original falha e podes tentar de novo.
+      return false;
+    } finally {
+      _refreshPromise = null;
+    }
+  })();
+
+  return _refreshPromise;
 }
 
 // --- Pedido HTTP genérico (JSON + Bearer) ---
@@ -119,10 +182,11 @@ function mensagemApiDetail(data) {
   return String(d);
 }
 
-async function request(path, options = {}) {
+async function request(path, options = {}, isRetry = false) {
   const { signal, headers: optHeaders, ...fetchRest } = options;
   const headers = { "Content-Type": "application/json", ...(optHeaders || {}), ...(fetchRest.headers || {}) };
-  if (authToken) {
+  // Login não deve enviar Bearer antigo (evita confusão em proxies / logs; o servidor ignora na mesma).
+  if (authToken && path !== "/auth/login") {
     headers.Authorization = `Bearer ${authToken}`;
   }
 
@@ -151,6 +215,22 @@ async function request(path, options = {}) {
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      !isRetry &&
+      path !== "/auth/login" &&
+      path !== "/auth/refresh" &&
+      typeof localStorage !== "undefined" &&
+      localStorage.getItem("refresh_token")
+    ) {
+      const refreshed = await tryRefreshAccess();
+      if (refreshed) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("inventario-access-refreshed"));
+        }
+        return request(path, options, true);
+      }
+    }
     throw new Error(mensagemApiDetail(data));
   }
   return data;

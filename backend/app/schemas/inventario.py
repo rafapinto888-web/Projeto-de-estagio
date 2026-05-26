@@ -82,9 +82,7 @@ class ScanRedeRequest(BaseModel):
     rede: str | None = None
     utilizador: str | None = None
     password: str | None = None
-    tipos_log: list[Literal["seguranca", "rdp"]] = Field(
-        default_factory=lambda: ["seguranca", "rdp"]
-    )
+    tipos_log: list[Literal["seguranca", "rdp"]] = Field(default_factory=list)
 
     @field_validator("rede")
     @classmethod

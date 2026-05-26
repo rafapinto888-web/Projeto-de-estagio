@@ -1,10 +1,52 @@
-COMANDOS DOCKER (RESUMO)
+COMANDOS — inventário IT (resumo)
+Raiz do projeto (ajusta o caminho se for noutro PC):
+  cd "C:\Users\Jose\Desktop\Projeto de estagio"
+
+================================================================================
+1) CORRER SEM DOCKER (recomendado para scan na LAN — API no Windows)
+================================================================================
+Precisas: PostgreSQL a correr, ficheiro backend\.env com DATABASE_URL, SECRET_KEY, CORS, etc.
+
+--- Terminal 1 — API (porta 8000) ---
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
+
+# Para a API ouvir na rede local (outros PCs):
+# .\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 0.0.0.0 --port 8000
+# (define INVENTARIO_CORS_ORIGINS com o URL do frontend, ex.: http://192.168.1.10:5173)
+
+Swagger: http://127.0.0.1:8000/docs
+
+--- Terminal 2 — Frontend (Windows) ---
+cd frontend
+
+# PowerShell bloqueia npm.ps1 (Execution Policy)? Usa npm.cmd:
+npm.cmd install
+npm.cmd run dev
+# Site: http://127.0.0.1:5173
+
+# Se o Docker ja tiver o frontend na porta 5173, corre o Vite LOCAL na 5174 (Docker continua igual):
+npm.cmd run dev:local
+# Site: http://127.0.0.1:5174
+# (acrescenta esta origem em INVENTARIO_CORS_ORIGINS no backend\.env se a API recusar pedidos)
+
+# Alternativa: duplo clique em frontend\dev-local.cmd
+
+--- Parar ---
+Ctrl+C em cada terminal.
+
+================================================================================
+2) DOCKER (resumo)
+================================================================================
 
 cd "C:\Users\Jose\Desktop\Projeto de estagio"
 
 # --- OUTRO PC (copiar projeto + Docker Desktop) ---
 
-# 1) Dev com hot reload (recomendado para programar)
+# 1) Dev com hot reload (só frontend em container; API costuma ser no PC)
 .\scripts\docker-subir-dev.ps1
 # ou:
 docker compose --profile dev-live up -d --build web-dev
@@ -16,7 +58,8 @@ docker compose --profile dev-live --profile docker-api --profile bundled-db up -
 
 # Se deps npm falharem (ex. xlsx), recriar volume e rebuild:
 docker compose --profile dev-live down
-docker volume rm "projeto-de-estagio_frontend_node_modules" 2>$null
+docker volume ls
+# apaga o volume node_modules do frontend se existir, depois:
 docker compose --profile dev-live up -d --build web-dev
 
 # --- MODOS ---
@@ -28,7 +71,7 @@ docker compose --profile dev-live up -d --build web-dev
 docker compose --profile dev-live --profile docker-api --profile bundled-db up -d --build
 
 # Subir frontend + backend (API usa Postgres do PC via host.docker.internal)
-docker compose --profile docker-api up -d --build
+docker compose --profile dev-live --profile docker-api up -d --build
 
 # Ver estado
 docker ps
@@ -43,3 +86,9 @@ docker compose logs -f base-de-dados
 # Parar
 docker compose stop
 docker compose down
+
+================================================================================
+3) JWT (opcional — variáveis no backend\.env ou ambiente)
+================================================================================
+ACCESS_TOKEN_EXPIRE_MINUTES   (ex.: 5 ou 180)
+REFRESH_TOKEN_EXPIRE_DAYS     (ex.: 7)

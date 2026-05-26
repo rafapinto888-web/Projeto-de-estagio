@@ -28,13 +28,14 @@ import Panel from "../components/ui/Panel";
 import { ipEquipamento, txtBd } from "../utils/detalheEquipamento";
 import { tipoInventarioLabel } from "../domain/inventario/index.js";
 import { estadoChipMuiColor } from "../utils/estadoMuiColor";
+import { instanteDataApiParaLocal } from "../domain/equipamento/index.js";
 import { tableCellEllipsis, tableCellMono, tableCellNowrap, tableSxSemQuebra } from "../utils/tableCellSx";
 
 function horaDoEvento(iso, fallback = "—") {
   if (!iso) return fallback;
   try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return fallback;
+    const d = instanteDataApiParaLocal(iso);
+    if (!d || Number.isNaN(d.getTime())) return fallback;
     const hoje = new Date();
     const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).getTime();
     const inicioData = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -182,8 +183,8 @@ export default function DashboardPage({
 
   const historicoOrdenado = useMemo(() => {
     return [...(historicoConta || [])].sort((a, b) => {
-      const ta = a?.data_evento ? new Date(a.data_evento).getTime() : 0;
-      const tb = b?.data_evento ? new Date(b.data_evento).getTime() : 0;
+      const ta = a?.data_evento ? instanteDataApiParaLocal(a.data_evento)?.getTime() ?? 0 : 0;
+      const tb = b?.data_evento ? instanteDataApiParaLocal(b.data_evento)?.getTime() ?? 0 : 0;
       return tb - ta;
     });
   }, [historicoConta]);

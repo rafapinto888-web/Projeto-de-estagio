@@ -5,12 +5,19 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
-from app.core.security import criar_access_token, verificar_palavra_passe
+from app.core.security import (
+    criar_access_token,
+    criar_refresh_token,
+    descodificar_refresh_token,
+    verificar_palavra_passe,
+)
 from app.database.connection import get_db
 from app.models.log_sistema_db import LogSistemaDB
 from app.models.utilizador_db import UtilizadorDB
 from app.schemas.auth import (
     AuthMeResponse,
+    AuthRefreshRequest,
+    AuthRefreshResponse,
     AuthTokenResponse,
     HistoricoRegistoIn,
     LoginRequest,
@@ -69,7 +76,32 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         "sessao.login",
         f'Sessão iniciada como "{utilizador.username}"',
     )
-    return {"access_token": criar_access_token(str(utilizador.id)), "token_type": "bearer"}
+    return {
+        "access_token": criar_access_token(str(utilizador.id)),
+        "refresh_token": criar_refresh_token(str(utilizador.id)),
+        "token_type": "bearer",
+    }
+
+
+@router.post("/refresh", response_model=AuthRefreshResponse)
+def refresh_token(payload: AuthRefreshRequest, db: Session = Depends(get_db)):
+    """Novo access JWT a partir de um refresh JWT valido (sem password)."""
+    uid_txt = descodificar_refresh_token(payload.refresh_token.strip())
+    if uid_txt is None or not uid_txt.isdigit():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token invalido ou expirado",
+        )
+    utilizador = db.get(UtilizadorDB, int(uid_txt))
+    if utilizador is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Utilizador do refresh token nao encontrado",
+        )
+    return {
+        "access_token": criar_access_token(str(utilizador.id)),
+        "token_type": "bearer",
+    }
 
 
 @router.get("/me", response_model=AuthMeResponse)

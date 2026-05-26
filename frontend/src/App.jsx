@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { api, clearApiToken, setApiToken } from "./api";
+import { api, clearApiToken, setApiToken, setSessionTokens } from "./api";
 import { isAdminProfileName } from "./authz";
 import SidebarNav from "./components/SidebarNav";
 import StatusAlert from "./components/StatusAlert";
@@ -237,8 +237,8 @@ export default function App() {
   const [scanRede, setScanRede] = useState("");
   const [scanUser, setScanUser] = useState("");
   const [scanPass, setScanPass] = useState("");
-  const [scanLogsRdp, setScanLogsRdp] = useState(true);
-  const [scanLogsSeguranca, setScanLogsSeguranca] = useState(true);
+  const [scanLogsRdp, setScanLogsRdp] = useState(false);
+  const [scanLogsSeguranca, setScanLogsSeguranca] = useState(false);
   const [scanInfo, setScanInfo] = useState("");
   const [ativoPesquisa, setAtivoPesquisa] = useState(""); // filtro texto na lista de ativos do Scan
 
@@ -277,9 +277,10 @@ export default function App() {
   // --- Carregamento de dados (API) ---
 
   async function loadAllData(currentToken, options = {}) {
-    const tk = currentToken || token;
-    if (!tk) return;
-    setApiToken(tk);
+    if (currentToken != null && String(currentToken).trim() !== "") {
+      setApiToken(String(currentToken).trim());
+    }
+    if (!localStorage.getItem("access_token")) return;
     const { silent = false } = options;
     if (!silent) setDataLoading(true);
     try {
@@ -340,15 +341,25 @@ export default function App() {
     const formData = new FormData(event.currentTarget);
     setActionLoading(true);
     try {
-      const res = await api.login(formData.get("identificador"), formData.get("password"));
+      const identificador = String(formData.get("identificador") ?? "").trim();
+      const palavraPasse = String(formData.get("password") ?? "");
+      const res = await api.login(identificador, palavraPasse);
       const accessToken = res?.access_token;
+      const refreshToken = res?.refresh_token;
       if (!accessToken) throw new Error("Token nao recebido no login");
-      localStorage.setItem("access_token", accessToken);
-      setApiToken(accessToken);
+      setSessionTokens(accessToken, refreshToken || "");
       setToken(accessToken);
       const me = await api.me();
       setUser(me);
-      await loadAllData(accessToken);
+      try {
+        await loadAllData(accessToken);
+      } catch (loadErr) {
+        setStatus({
+          type: "ok",
+          message: `Sessao iniciada, mas falhou o carregamento inicial (${loadErr.message}). Tenta recarregar a pagina.`,
+        });
+        return;
+      }
       setStatus({ type: "ok", message: "Sessao iniciada com sucesso" });
     } catch (error) {
       setStatus({ type: "err", message: `Erro no login: ${error.message}` });
@@ -368,7 +379,6 @@ export default function App() {
     } catch {
       /* token expirado ou sem rede — continua a terminar sessão localmente */
     }
-    localStorage.removeItem("access_token");
     clearApiToken();
     setToken("");
     setUser(null);
@@ -434,17 +444,35 @@ export default function App() {
         setApiToken(token);
         const me = await api.me();
         setUser(me);
-        await loadAllData(token);
       } catch {
-        localStorage.removeItem("access_token");
+        // Só aqui limpamos sessão: token inválido, refresh falhou, ou utilizador apagado.
         clearApiToken();
         setToken("");
         setUser(null);
+        return;
+      }
+      try {
+        await loadAllData(token);
+      } catch {
+        // Sessão válida mas dados iniciais falharam (rede, 500): não deslogar.
+        setStatus({
+          type: "warn",
+          message: "Sessão restaurada; não foi possível carregar todos os dados. Recarrega ou tenta outra vez.",
+        });
       }
     }
     bootstrap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  useEffect(() => {
+    function onAccessRefreshed() {
+      const t = localStorage.getItem("access_token");
+      if (t) setToken(t);
+    }
+    window.addEventListener("inventario-access-refreshed", onAccessRefreshed);
+    return () => window.removeEventListener("inventario-access-refreshed", onAccessRefreshed);
+  }, []);
 
   // Ao mudar inventário ou voltar a logar: recarrega ativos do Scan para esse inventário.
   useEffect(() => {
@@ -498,7 +526,7 @@ export default function App() {
   useEffect(() => {
     if (!token || activeTab !== "dashboard") return undefined;
     const timer = setInterval(() => {
-      loadAllData(token, { silent: true }).catch(() => {
+      loadAllData(undefined, { silent: true }).catch(() => {
         /* atualização automática opcional; falhas pontuais não devem quebrar UI */
       });
     }, 30000);

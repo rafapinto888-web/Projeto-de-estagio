@@ -641,9 +641,9 @@ def executar_scan_do_inventario(
                     dados_scan.get("sistema_operativo") or dispositivo.sistema_operativo
                 )
 
-            # Tenta recolher logs reais do Windows para o dispositivo/computador associado.
+            # Recolhe logs Windows só se o pedido pedir tipos (lista vazia = só descoberta).
             computador_alvo = _resolver_computador_para_dispositivo(db, inventario_id, dispositivo)
-            if computador_alvo is not None:
+            if computador_alvo is not None and pedido_scan.tipos_log:
                 logs_windows = coletar_logs_windows(
                     dispositivo.hostname or computador_alvo.nome,
                     max_eventos=20,

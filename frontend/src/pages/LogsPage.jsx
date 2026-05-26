@@ -21,6 +21,7 @@ import {
 } from "@mui/material";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
+import { formatarDataPtCurta } from "../domain/equipamento/index.js";
 
 export default function LogsPage({
   inventarios = [],
@@ -124,12 +125,7 @@ export default function LogsPage({
               {logsTabela.map((item, idx) => (
                 <TableRow key={item.id || `${item.data_evento || "sem-data"}-${idx}`}>
                   <TableCell sx={{ whiteSpace: "nowrap" }}>
-                    {item.data_evento
-                      ? new Date(item.data_evento).toLocaleString("pt-PT", {
-                          dateStyle: "short",
-                          timeStyle: "short",
-                        })
-                      : "—"}
+                    {item.data_evento ? formatarDataPtCurta(item.data_evento) : "—"}
                   </TableCell>
                   <TableCell sx={{ textTransform: "capitalize" }}>{item.tipo_log || "—"}</TableCell>
                   <TableCell>{item.descricao || "—"}</TableCell>

@@ -234,7 +234,7 @@ export default function InventariosPage({
                   Dispositivos descobertos (scan de rede)
                 </Typography>
                 <DataTable
-                  columns={["IP", "Hostname", "Estado", "MAC", "Marca / modelo"]}
+                  columns={["IP", "Hostname", "Estado", "MAC", "Marca / modelo", "SO"]}
                   tableClassName="table-shell--responsive"
                   rows={detalhesPayload.dispositivos_descobertos || []}
                   loading={false}
@@ -248,6 +248,9 @@ export default function InventariosPage({
                       <TableCell sx={{ fontFamily: "ui-monospace, monospace", fontSize: 12 }}>{d.mac_address || "—"}</TableCell>
                       <TableCell>
                         {[d.marca, d.modelo].filter(Boolean).join(" ") || "—"}
+                      </TableCell>
+                      <TableCell sx={{ maxWidth: 280 }} title={d.sistema_operativo || ""}>
+                        {d.sistema_operativo?.trim() ? d.sistema_operativo.trim() : "—"}
                       </TableCell>
                     </TableRow>
                   )}
