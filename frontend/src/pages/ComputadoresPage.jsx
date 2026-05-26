@@ -24,17 +24,15 @@ import { api } from "../api";
 import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
 import {
-  etiquetaOrigemAmigavel,
   formatarDataPtCurta,
   labelAtivo,
-  origemRegistoVisual,
   textoAtivoBusca,
   txtBd,
 } from "../domain/equipamento/index.js";
 import { tipoInventarioLabel } from "../domain/inventario/index.js";
 import { exportInventarioComputadoresParaExcel } from "../utils/exportInventarioComputadores.js";
 import { estadoChipMuiColor } from "../utils/estadoMuiColor";
-import { tableCellEllipsis, tableCellMono, tableSxSemQuebra } from "../utils/tableCellSx";
+import { tableCellMono, tableSxSemQuebra } from "../utils/tableCellSx";
 
 // --- Helpers: ordenação, payloads e filtros por inventário ---
 
@@ -102,8 +100,23 @@ function estadosUnicosDeAtivos(ativos) {
 }
 
 const LINHAS_POR_PAGINA = 10;
-/** Colunas da tabela unificada por inventário (sem ID/Equipamento … Ações). */
-const COLUNAS_TABELA_INVENTARIO = 15;
+/** Colunas da tabela unificada por inventário (sem Origem / Origem registo). */
+const COLUNAS_TABELA_INVENTARIO = 13;
+
+/** Percentagens por coluna (soma 100) — `table-layout: fixed` para caber sem scroll horizontal. */
+const COLS_INV_WIDTH_PCT = [12, 8, 9, 8, 8, 6, 10, 7, 6, 7, 7, 6, 6];
+
+const cellTextoCortado = {
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const cellMonoCortado = {
+  ...tableCellMono(0),
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
 
 export default function ComputadoresPage({
   isAdmin,
@@ -697,8 +710,8 @@ export default function ComputadoresPage({
                           minHeight: 0,
                           width: "100%",
                           maxHeight: "min(56vh, 440px)",
-                          overflow: "auto",
-                          scrollbarGutter: "stable",
+                          overflowX: "hidden",
+                          overflowY: "auto",
                           border: "none",
                           borderRadius: 0,
                           boxShadow: "none",
@@ -711,28 +724,38 @@ export default function ComputadoresPage({
                           size="small"
                           stickyHeader
                           sx={{
-                            minWidth: 1320,
+                            width: "100%",
+                            minWidth: 0,
+                            tableLayout: "fixed",
                             ...tableSxSemQuebra,
                             "& .MuiTableCell-root": { fontSize: 13 },
                           }}
                         >
                           <TableHead>
                             <TableRow>
-                              <TableCell>Hostname</TableCell>
-                              <TableCell>IP</TableCell>
-                              <TableCell>MAC</TableCell>
-                              <TableCell>Marca</TableCell>
-                              <TableCell>Modelo</TableCell>
-                              <TableCell>N.º série</TableCell>
-                              <TableCell>Sistema</TableCell>
-                              <TableCell>Origem</TableCell>
-                              <TableCell>Origem registo</TableCell>
-                              <TableCell>Primeira vista</TableCell>
-                              <TableCell>Estado</TableCell>
-                              <TableCell>Localiz.</TableCell>
-                              <TableCell>Resp.</TableCell>
-                              <TableCell>Última atualização</TableCell>
-                              <TableCell align="right">Ações</TableCell>
+                              {[
+                                "Hostname",
+                                "IP",
+                                "MAC",
+                                "Marca",
+                                "Modelo",
+                                "N.º série",
+                                "Sistema",
+                                "Primeira vista",
+                                "Estado",
+                                "Localiz.",
+                                "Resp.",
+                                "Última atualização",
+                                "Ações",
+                              ].map((label, i) => (
+                                <TableCell
+                                  key={label}
+                                  align={i === 12 ? "right" : "left"}
+                                  sx={{ width: `${COLS_INV_WIDTH_PCT[i]}%` }}
+                                >
+                                  {label}
+                                </TableCell>
+                              ))}
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -749,50 +772,40 @@ export default function ComputadoresPage({
                             ) : null}
                             {nTot > 0 && totalLinhas > 0
                               ? linhasPagina.map((a) => {
-                                  const manualRow = origemRegistoVisual(a) === "manual";
                                   return (
                                     <TableRow
                                       hover
                                       key={a.tipo === "computador" ? `pc-${a.id}` : `scan-${a.id}`}
                                     >
-                                      <TableCell sx={tableCellMono(120)}>{txtBd(a.hostname)}</TableCell>
-                                      <TableCell sx={tableCellMono(118)}>{txtBd(a.ip || a.endereco_ip)}</TableCell>
-                                      <TableCell sx={tableCellMono(132)}>{txtBd(a.mac_address)}</TableCell>
-                                      <TableCell sx={tableCellEllipsis(88, 140)}>{txtBd(a.marca)}</TableCell>
-                                      <TableCell sx={tableCellEllipsis(88, 140)}>{txtBd(a.modelo)}</TableCell>
-                                      <TableCell sx={tableCellMono(100)}>{txtBd(a.numero_serie)}</TableCell>
-                                      <TableCell sx={tableCellEllipsis(100, 180)}>{txtBd(a.sistema_operativo)}</TableCell>
-                                      <TableCell>
-                                        <Chip
-                                          size="small"
-                                          variant="outlined"
-                                          label={etiquetaOrigemAmigavel(a)}
-                                          color={manualRow ? "primary" : "info"}
-                                        />
-                                      </TableCell>
-                                      <TableCell sx={tableCellMono(88)}>
+                                      <TableCell sx={cellMonoCortado}>{txtBd(a.hostname)}</TableCell>
+                                      <TableCell sx={cellMonoCortado}>{txtBd(a.ip || a.endereco_ip)}</TableCell>
+                                      <TableCell sx={cellMonoCortado}>{txtBd(a.mac_address)}</TableCell>
+                                      <TableCell sx={cellTextoCortado}>{txtBd(a.marca)}</TableCell>
+                                      <TableCell sx={cellTextoCortado}>{txtBd(a.modelo)}</TableCell>
+                                      <TableCell sx={cellMonoCortado}>{txtBd(a.numero_serie)}</TableCell>
+                                      <TableCell sx={cellTextoCortado}>{txtBd(a.sistema_operativo)}</TableCell>
+                                      <TableCell sx={cellTextoCortado}>
                                         <Typography variant="body2" color="text.secondary" component="span" noWrap>
-                                          {a.tipo === "dispositivo_descoberto" ? txtBd(a.origem_registo) : "—"}
-                                        </Typography>
-                                      </TableCell>
-                                      <TableCell sx={{ whiteSpace: "nowrap" }}>
-                                        <Typography variant="body2" color="text.secondary" component="span">
                                           {a.tipo === "dispositivo_descoberto" ? formatarDataPtCurta(a.criado_em) : "—"}
                                         </Typography>
                                       </TableCell>
                                       <TableCell>
                                         <Chip size="small" label={txtBd(a.estado)} color={estadoChipMuiColor(a.estado)} />
                                       </TableCell>
-                                      <TableCell>{a.tipo === "computador" ? txtBd(a.localizacao_nome) : "—"}</TableCell>
-                                      <TableCell>{a.tipo === "computador" ? txtBd(a.utilizador_responsavel_nome) : "—"}</TableCell>
-                                      <TableCell sx={{ whiteSpace: "nowrap" }}>
-                                        <Typography variant="body2" color="text.secondary" component="span">
+                                      <TableCell sx={cellTextoCortado}>
+                                        {a.tipo === "computador" ? txtBd(a.localizacao_nome) : "—"}
+                                      </TableCell>
+                                      <TableCell sx={cellTextoCortado}>
+                                        {a.tipo === "computador" ? txtBd(a.utilizador_responsavel_nome) : "—"}
+                                      </TableCell>
+                                      <TableCell sx={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                        <Typography variant="body2" color="text.secondary" component="span" noWrap>
                                           {a.tipo === "dispositivo_descoberto"
                                             ? formatarDataPtCurta(a.ultima_vez_ativo_em)
                                             : "—"}
                                         </Typography>
                                       </TableCell>
-                                      <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                                      <TableCell align="right" sx={{ whiteSpace: "nowrap", overflow: "hidden" }}>
                                         {isAdmin ? (
                                           <Stack direction="row" spacing={0.5} justifyContent="flex-end" flexWrap="wrap" useFlexGap>
                                             {a.tipo === "computador" ? (

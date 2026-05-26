@@ -38,7 +38,6 @@ export function linhasDetalheEquipamento(item, opts = {}) {
     linhas.push(
       ["Primeira vista (BD)", formatarDataPt(item?.criado_em)],
       ["Última vista (scan)", formatarDataPt(item?.ultima_vez_ativo_em)],
-      ["Origem registo (BD)", txtBd(item?.origem_registo)],
       ["Localização (inventário)", txtBd(item?.localizacao_nome)],
       ["Responsável (inventário)", txtBd(item?.utilizador_responsavel_nome)],
     );
@@ -82,7 +81,7 @@ export function celulasGrelhaPesquisaGlobal(r) {
       localizacao: z(item.localizacao_nome),
       responsavel: z(item.utilizador_responsavel_nome || item.utilizador_nome),
       estado: z(item.estado),
-      extra: item.tipo === "dispositivo_descoberto" ? z(item.origem_registo) : "—",
+      extra: "—",
     };
   }
 

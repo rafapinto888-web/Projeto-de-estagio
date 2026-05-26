@@ -4,7 +4,6 @@
 
 import * as XLSX from "xlsx";
 import {
-  etiquetaOrigemAmigavel,
   formatarDataPtExport,
   ipEquipamento,
   textoExport,
@@ -21,8 +20,6 @@ const HEADERS = [
   "Modelo",
   "N.º série",
   "Sistema",
-  "Origem",
-  "Origem registo",
   "Primeira vista",
   "Estado",
   "Localização",
@@ -63,8 +60,6 @@ function linhaAtivo(grupo, a) {
     textoExport(a?.modelo),
     textoExport(a?.numero_serie),
     textoExport(a?.sistema_operativo),
-    etiquetaOrigemAmigavel(a),
-    isScan ? textoExport(a?.origem_registo) : "",
     isScan ? formatarDataPtExport(a?.criado_em) : "",
     textoExport(a?.estado),
     isPc ? textoExport(a?.localizacao_nome) : "",

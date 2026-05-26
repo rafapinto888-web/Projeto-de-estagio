@@ -2288,9 +2288,10 @@ pre {
   min-height: 0;
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 1100px) {
+  /* auto-fit: com um só inventário o cartão estica à largura útil; com vários, várias colunas quando couber */
   .computadores-por-inv-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
   }
 }
 

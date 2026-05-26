@@ -612,8 +612,9 @@ export default function App() {
           sx={{
             flex: 1,
             width: "100%",
-            maxWidth: 1440,
-            mx: "auto",
+            maxWidth: "100%",
+            minWidth: 0,
+            mx: 0,
             px: { xs: 2, md: 3 },
             py: { xs: 2, md: 3 },
           }}
