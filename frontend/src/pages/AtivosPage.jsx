@@ -188,10 +188,7 @@ export default function AtivosPage({
     (inv) => String(inv?.tipo_inventario || "").toLowerCase() === "sub_rede",
   );
   const inventarioScanValido = inventariosSubRede.some((inv) => String(inv.id) === String(selectedInventarioId || ""));
-  const temTipoLogSelecionado = Boolean(scanLogsRdp || scanLogsSeguranca);
-  const scanPodeExecutar = Boolean(
-    inventarioScanValido && scanUser?.trim() && scanPass && temTipoLogSelecionado && scanTab === "existente",
-  );
+  const scanPodeExecutar = Boolean(inventarioScanValido && scanTab === "existente");
 
   useEffect(() => {
     setSelectedAtivo(null);
@@ -698,7 +695,7 @@ export default function AtivosPage({
           wide
           titleId="modal-scan-rede-title"
           title="Scan de rede"
-          subtitle={<>Credenciais de rede (pedidas só ao executar).</>}
+          subtitle={<>Credenciais de rede são opcionais: vazio usa a conta do serviço (CIM / logs com permissões locais).</>}
           footer={
             <>
               <Button type="button" variant="outlined" onClick={() => setModal(null)}>
@@ -729,7 +726,10 @@ export default function AtivosPage({
             {scanTab === "existente" ? (
               <Stack spacing={1}>
                 <Alert severity="info" variant="outlined">
-                  Indica inventário de rede, intervalo/IP, utilizador de rede e palavra-passe. Escolhe os logs a recolher.
+                  Indica inventário de rede, intervalo/IP e, se quiseres, utilizador e palavra-passe de rede para WMI/CIM
+                  remoto. Se deixares credenciais vazias, o backend usa a identidade do processo (útil na mesma máquina ou
+                  com delegação Kerberos). Os tipos de log (RDP / Segurança) são opcionais: sem nenhum marcado, o scan
+                  descobre e atualiza equipamentos mas não recolhe eventos Windows.
                 </Alert>
 
                 <Box
@@ -770,7 +770,7 @@ export default function AtivosPage({
 
                   <Paper variant="outlined" sx={{ p: 0.8, borderRadius: 2 }}>
                     <Typography variant="body2" fontWeight={700} mb={0.4}>
-                      Logs após scan
+                      Logs após scan (opcional)
                     </Typography>
                     <FormControlLabel
                       control={<Checkbox checked={Boolean(scanLogsRdp)} onChange={(e) => setScanLogsRdp?.(e.target.checked)} />}
@@ -789,10 +789,8 @@ export default function AtivosPage({
                       label="Utilizador (rede)"
                       value={scanUser}
                       onChange={(e) => setScanUser(e.target.value)}
-                      placeholder="Obrigatório"
+                      placeholder="Opcional — vazio = conta do serviço"
                       autoComplete="username"
-                      required
-                      helperText={!scanUser?.trim() ? "Obrigatório para iniciar scan" : " "}
                       size="small"
                       fullWidth
                     />
@@ -801,10 +799,8 @@ export default function AtivosPage({
                       value={scanPass}
                       onChange={(e) => setScanPass(e.target.value)}
                       type="password"
-                      placeholder="Obrigatória"
+                      placeholder="Opcional — preenche em conjunto com o utilizador"
                       autoComplete="current-password"
-                      required
-                      helperText={!scanPass ? "Obrigatória para iniciar scan" : " "}
                       size="small"
                       fullWidth
                     />
@@ -824,16 +820,6 @@ export default function AtivosPage({
                 {selectedInventarioId && !inventarioScanValido ? (
                   <Typography variant="caption" color="error.main">
                     O inventário selecionado não é do tipo Rede (sub-rede).
-                  </Typography>
-                ) : null}
-                {selectedInventarioId && (!scanUser?.trim() || !scanPass) ? (
-                  <Typography variant="caption" color="warning.main">
-                    Preenche as credenciais da rede para executar o scan.
-                  </Typography>
-                ) : null}
-                {!temTipoLogSelecionado ? (
-                  <Typography variant="caption" color="warning.main">
-                    Seleciona pelo menos um tipo de log (RDP ou Segurança).
                   </Typography>
                 ) : null}
               </Stack>

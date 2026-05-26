@@ -77,11 +77,11 @@ class InventarioComContagensResponse(InventarioResponse):
 
 
 class ScanRedeRequest(BaseModel):
-    """Pedido de scan com credenciais de rede e tipos de log a recolher."""
+    """Pedido de scan: credenciais de rede opcionais (vazio = conta do processo / permissões locais no host da API)."""
 
     rede: str | None = None
-    utilizador: str
-    password: str
+    utilizador: str | None = None
+    password: str | None = None
     tipos_log: list[Literal["seguranca", "rdp"]] = Field(
         default_factory=lambda: ["seguranca", "rdp"]
     )
@@ -107,26 +107,38 @@ class ScanRedeRequest(BaseModel):
 
     @field_validator("utilizador")
     @classmethod
-    def validar_utilizador(cls, valor: str) -> str:
-        utilizador = valor.strip()
-        if not utilizador:
-            raise ValueError("utilizador de rede e obrigatorio")
-        return utilizador
+    def validar_utilizador(cls, valor: str | None) -> str | None:
+        if valor is None:
+            return None
+        u = str(valor).strip()
+        return u or None
 
     @field_validator("password")
     @classmethod
-    def validar_password(cls, valor: str) -> str:
-        if not valor or not valor.strip():
-            raise ValueError("password de rede e obrigatoria")
-        return valor
+    def validar_password(cls, valor: str | None) -> str | None:
+        if valor is None:
+            return None
+        p = str(valor)
+        return p if p.strip() else None
+
+    @model_validator(mode="after")
+    def utilizador_e_password_em_conjunto(self):
+        tem_u = bool(self.utilizador)
+        tem_p = bool(self.password)
+        if tem_u != tem_p:
+            raise ValueError(
+                "Indica utilizador e palavra-passe de rede em conjunto, ou deixa ambos vazios para usar a conta do serviço."
+            )
+        return self
 
     @field_validator("tipos_log")
     @classmethod
     def validar_tipos_log(
         cls, valor: list[Literal["seguranca", "rdp"]]
     ) -> list[Literal["seguranca", "rdp"]]:
+        # Lista vazia = scan só descobre/atualiza equipamentos, sem recolher logs Windows.
         if not valor:
-            raise ValueError("seleciona pelo menos um tipo de log")
+            return []
         # Remove duplicados mantendo ordem.
         vistos: set[str] = set()
         limpo: list[Literal["seguranca", "rdp"]] = []

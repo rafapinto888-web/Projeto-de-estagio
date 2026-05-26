@@ -189,27 +189,27 @@ def obter_info_windows_por_ip(
     utilizador: str | None,
     password: str | None,
 ) -> dict[str, str | None]:
-    # Recolhe dados Windows remotos por CIM; se falhar, devolve campos nulos.
-    if not utilizador or not password:
-        return {
-            "hostname": None,
-            "mac_address": None,
-            "marca": None,
-            "modelo": None,
-            "numero_serie": None,
-            "sistema_operativo": None,
-        }
+    # Recolhe dados Windows remotos por CIM; com credenciais explícitas ou identidade do processo.
+    user_ok = bool((utilizador or "").strip())
+    pass_ok = bool((password or "").strip())
+    use_cred = user_ok and pass_ok
 
     ambiente = os.environ.copy()
     ambiente["REDE_SCAN_IP"] = ip
-    ambiente["REDE_SCAN_USER"] = utilizador
-    ambiente["REDE_SCAN_PASSWORD"] = password
+    ambiente["REDE_SCAN_USE_CRED"] = "1" if use_cred else "0"
+    if use_cred:
+        ambiente["REDE_SCAN_USER"] = str(utilizador).strip()
+        ambiente["REDE_SCAN_PASSWORD"] = str(password)
 
     script = r"""
 $ErrorActionPreference = "SilentlyContinue"
 $target = $env:REDE_SCAN_IP
-$securePassword = ConvertTo-SecureString $env:REDE_SCAN_PASSWORD -AsPlainText -Force
-$credential = New-Object System.Management.Automation.PSCredential ($env:REDE_SCAN_USER, $securePassword)
+$useCred = ($env:REDE_SCAN_USE_CRED -eq "1")
+$credential = $null
+if ($useCred) {
+    $securePassword = ConvertTo-SecureString $env:REDE_SCAN_PASSWORD -AsPlainText -Force
+    $credential = New-Object System.Management.Automation.PSCredential ($env:REDE_SCAN_USER, $securePassword)
+}
 
 function Try-CimInfo {
     param([string]$Protocol)
@@ -217,9 +217,17 @@ function Try-CimInfo {
     try {
         if ($Protocol -eq "DCOM") {
             $options = New-CimSessionOption -Protocol Dcom
-            $session = New-CimSession -ComputerName $target -Credential $credential -SessionOption $options
+            if ($credential) {
+                $session = New-CimSession -ComputerName $target -Credential $credential -SessionOption $options
+            } else {
+                $session = New-CimSession -ComputerName $target -SessionOption $options
+            }
         } else {
-            $session = New-CimSession -ComputerName $target -Credential $credential
+            if ($credential) {
+                $session = New-CimSession -ComputerName $target -Credential $credential
+            } else {
+                $session = New-CimSession -ComputerName $target
+            }
         }
 
         $cs = Get-CimInstance -CimSession $session -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue

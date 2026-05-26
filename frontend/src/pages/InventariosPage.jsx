@@ -3,8 +3,20 @@
  */
 
 import { useCallback, useState } from "react";
-import { Box, Button, MenuItem, Stack, TableCell, TableRow, TextField } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  MenuItem,
+  Stack,
+  TableCell,
+  TableRow,
+  TextField,
+  Typography,
+} from "@mui/material";
 
+import { api } from "../api";
 import { tipoInventarioLabel } from "../domain/inventario/index.js";
 import DataTable from "../components/DataTable";
 import FormModal from "../components/FormModal";
@@ -28,10 +40,40 @@ export default function InventariosPage({
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState("create");
 
+  const [detalhesOpen, setDetalhesOpen] = useState(false);
+  const [detalhesTitulo, setDetalhesTitulo] = useState("");
+  const [detalhesLoading, setDetalhesLoading] = useState(false);
+  const [detalhesError, setDetalhesError] = useState("");
+  const [detalhesPayload, setDetalhesPayload] = useState(null);
+
   const closeEditor = useCallback(() => {
     setEditorOpen(false);
     onCancel?.();
   }, [onCancel]);
+
+  const closeDetalhes = useCallback(() => {
+    setDetalhesOpen(false);
+    setDetalhesPayload(null);
+    setDetalhesError("");
+    setDetalhesTitulo("");
+    setDetalhesLoading(false);
+  }, []);
+
+  async function openDetalhes(inv) {
+    setDetalhesTitulo(String(inv?.nome || "").trim() || `Inventário #${inv?.id}`);
+    setDetalhesOpen(true);
+    setDetalhesLoading(true);
+    setDetalhesError("");
+    setDetalhesPayload(null);
+    try {
+      const data = await api.inventarios.detalhes(inv.id);
+      setDetalhesPayload(data);
+    } catch (e) {
+      setDetalhesError(e?.message || "Não foi possível carregar os detalhes.");
+    } finally {
+      setDetalhesLoading(false);
+    }
+  }
 
   function openCreate() {
     setEditorMode("create");
@@ -85,6 +127,9 @@ export default function InventariosPage({
             <TableCell>{(inv.total_computadores ?? 0) + (inv.total_dispositivos_scan ?? 0)}</TableCell>
             <TableCell>{inv.descricao || "—"}</TableCell>
             <TableCell>
+              <Button type="button" variant="text" size="small" onClick={() => openDetalhes(inv)}>
+                Detalhes
+              </Button>
               {isAdmin ? (
                 <>
                   <Button type="button" variant="text" size="small" onClick={() => openEdit(inv)}>
@@ -94,13 +139,124 @@ export default function InventariosPage({
                     Apagar
                   </Button>
                 </>
-              ) : (
-                "-"
-              )}
+              ) : null}
             </TableCell>
           </TableRow>
         )}
       />
+
+      <FormModal
+        open={detalhesOpen}
+        onClose={closeDetalhes}
+        wide
+        titleId="modal-inventario-detalhes-title"
+        title="Detalhes do inventário"
+        subtitle={detalhesTitulo}
+        footer={
+          <Button type="button" variant="contained" onClick={closeDetalhes} sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}>
+            Fechar
+          </Button>
+        }
+      >
+        <Box sx={{ pt: 0.5 }}>
+          {detalhesLoading ? (
+            <Stack direction="row" alignItems="center" spacing={1.5} py={2}>
+              <CircularProgress size={22} />
+              <Typography variant="body2" color="text.secondary">
+                A carregar…
+              </Typography>
+            </Stack>
+          ) : null}
+          {detalhesError ? (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+              {detalhesError}
+            </Alert>
+          ) : null}
+          {!detalhesLoading && detalhesPayload ? (
+            <Stack spacing={2.5}>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                  gap: 1.25,
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <Typography variant="body2">
+                  <strong>Tipo:</strong> {tipoInventarioLabel(detalhesPayload.tipo_inventario)}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Rede:</strong>{" "}
+                  {detalhesPayload.tipo_inventario === "sub_rede"
+                    ? detalhesPayload.rede || "—"
+                    : "—"}
+                </Typography>
+                <Typography variant="body2" sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}>
+                  <strong>Descrição:</strong> {detalhesPayload.descricao?.trim() ? detalhesPayload.descricao : "—"}
+                </Typography>
+                <Typography variant="body2" sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}>
+                  <strong>Totais:</strong> {(detalhesPayload.computadores || []).length} computador(es) registado(s)
+                  {" · "}
+                  {(detalhesPayload.dispositivos_descobertos || []).length} dispositivo(s) do scan
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ mb: 1, letterSpacing: "0.04em" }}>
+                  Computadores (registo manual)
+                </Typography>
+                <DataTable
+                  columns={["Nome", "Marca / modelo", "Estado", "Localização", "Responsável"]}
+                  tableClassName="table-shell--responsive"
+                  rows={detalhesPayload.computadores || []}
+                  loading={false}
+                  emptyTitle="Sem computadores neste inventário"
+                  emptyDescription="Os equipamentos registados manualmente aparecem aqui."
+                  renderRow={(c) => (
+                    <TableRow key={c.id}>
+                      <TableCell>{c.nome || "—"}</TableCell>
+                      <TableCell>
+                        {[c.marca, c.modelo].filter(Boolean).join(" ") || "—"}
+                      </TableCell>
+                      <TableCell>{c.estado || "—"}</TableCell>
+                      <TableCell>{c.localizacao?.nome || "—"}</TableCell>
+                      <TableCell>{c.utilizador_responsavel?.nome || c.utilizador_responsavel?.username || "—"}</TableCell>
+                    </TableRow>
+                  )}
+                />
+              </Box>
+
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ mb: 1, letterSpacing: "0.04em" }}>
+                  Dispositivos descobertos (scan de rede)
+                </Typography>
+                <DataTable
+                  columns={["IP", "Hostname", "Estado", "MAC", "Marca / modelo"]}
+                  tableClassName="table-shell--responsive"
+                  rows={detalhesPayload.dispositivos_descobertos || []}
+                  loading={false}
+                  emptyTitle="Sem dispositivos de scan"
+                  emptyDescription="Após um scan de rede neste inventário, os hosts encontrados aparecem aqui."
+                  renderRow={(d) => (
+                    <TableRow key={d.id}>
+                      <TableCell>{d.ip || "—"}</TableCell>
+                      <TableCell>{d.hostname || "—"}</TableCell>
+                      <TableCell>{d.estado || "—"}</TableCell>
+                      <TableCell sx={{ fontFamily: "ui-monospace, monospace", fontSize: 12 }}>{d.mac_address || "—"}</TableCell>
+                      <TableCell>
+                        {[d.marca, d.modelo].filter(Boolean).join(" ") || "—"}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                />
+              </Box>
+            </Stack>
+          ) : null}
+        </Box>
+      </FormModal>
 
         {isAdmin ? (
           <FormModal

@@ -106,6 +106,7 @@ export const api = {
 
   inventarios: {
     listar: () => request("/inventarios/"),
+    detalhes: (id) => request(`/inventarios/${id}/detalhes`),
     ativosPorInventario: () => request("/inventarios/ativos-por-inventario"),
     criar: (payload) => request("/inventarios", { method: "POST", body: JSON.stringify(payload) }),
     atualizar: (id, payload) =>

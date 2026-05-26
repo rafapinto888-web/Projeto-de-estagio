@@ -21,7 +21,8 @@ import FormModal from "../components/FormModal";
 import SectionCard from "../components/SectionCard";
 import { perfilNomeExibicao } from "../domain/perfil/index.js";
 
-const DOMINIO_EMAIL = "@irn.mg.pt";
+/** Domínio institucional fixo: o utilizador escreve só a parte local à esquerda. */
+const DOMINIO_EMAIL = "@irn.mj.pt";
 
 const campoSx = {
   "& .MuiOutlinedInput-root": {
@@ -81,7 +82,7 @@ function validarUtilizadorForm(form, modo) {
   if (!String(form.nome || "").trim()) return "Indica o nome completo.";
   if (!String(form.username || "").trim()) return "Indica o nome de utilizador para login.";
   const emailLocal = emailLocalDeCompleto(form.email);
-  if (!emailLocal) return "Indica a parte do email antes de @irn.mg.pt.";
+  if (!emailLocal) return `Indica a parte do email antes de ${DOMINIO_EMAIL}.`;
   if (!/^[a-zA-Z0-9._-]+$/.test(emailLocal)) {
     return "O email só pode ter letras, números, pontos, hífens e underscores antes do domínio.";
   }
@@ -102,7 +103,7 @@ function nomePerfilParaExibir(utilizador, perfis) {
   return p?.nome && String(p.nome).trim() ? perfilNomeExibicao(p.nome) : "—";
 }
 
-/** Uma linha à largura do formulário: escreves só a parte local; `@irn.mg.pt` fica fixo à direita. */
+/** Uma linha à largura do formulário: escreves só a parte local; o domínio fica fixo à direita. */
 function LinhaEmailInstitucional({ localPart, onLocalChange }) {
   return (
     <Box

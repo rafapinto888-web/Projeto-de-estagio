@@ -740,12 +740,22 @@ export default function App() {
                   setStatus({ type: "err", message: "O scan só está disponível para inventários do tipo Rede (sub-rede)" });
                   return false;
                 }
-                if (!scanUser.trim() || !scanPass) {
-                  setStatus({ type: "err", message: "Indica as credenciais da rede para iniciar o scan" });
+                const userTrim = scanUser.trim();
+                const passRaw = scanPass != null ? String(scanPass) : "";
+                const passTrim = passRaw.trim();
+                const temCredRede = Boolean(userTrim && passTrim);
+                if (userTrim && !passTrim) {
+                  setStatus({
+                    type: "err",
+                    message: "Indica também a palavra-passe de rede, ou apaga o utilizador para executar só com a conta do serviço.",
+                  });
                   return false;
                 }
-                if (!scanLogsRdp && !scanLogsSeguranca) {
-                  setStatus({ type: "err", message: "Seleciona pelo menos um tipo de log (RDP ou Segurança)" });
+                if (!userTrim && passTrim) {
+                  setStatus({
+                    type: "err",
+                    message: "Indica o utilizador de rede, ou apaga a palavra-passe para executar só com a conta do serviço.",
+                  });
                   return false;
                 }
                 const redeNormalizada = normalizarRedeScan(scanRede);
@@ -753,19 +763,21 @@ export default function App() {
                   setStatus({ type: "err", message: redeNormalizada.message });
                   return false;
                 }
-                const userCred = scanUser.trim();
                 const stamp = new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
                 const alvoRede = redeNormalizada.label;
                 const logsEscolhidos = [];
                 if (scanLogsRdp) logsEscolhidos.push("RDP");
                 if (scanLogsSeguranca) logsEscolhidos.push("Segurança");
                 const modoLogsLabel = logsEscolhidos.length ? logsEscolhidos.join(" + ") : "Nenhum selecionado";
+                const credLabel = temCredRede
+                  ? `${userTrim} (conta explícita)`
+                  : "conta do serviço / permissões locais";
                 setScanInfo(
                   `[${stamp}] Iniciar scan...\n` +
                     `[${stamp}] Inventário: ${selectedInventarioId || "não definido"}\n` +
                     `[${stamp}] Alvo: ${alvoRede}\n` +
                     `[${stamp}] Logs pedidos: ${modoLogsLabel}\n` +
-                    `[${stamp}] Utilizador: ${userCred || "não definido"}\n` +
+                    `[${stamp}] Credenciais: ${credLabel}\n` +
                     `[${stamp}] Estado: em execução`,
                 );
                 const ok = await withAction(
@@ -774,8 +786,8 @@ export default function App() {
                       selectedInventarioId,
                       {
                         rede: redeNormalizada.rede,
-                        utilizador: userCred,
-                        password: scanPass,
+                        utilizador: temCredRede ? userTrim : null,
+                        password: temCredRede ? passRaw : null,
                         tipos_log: [
                           ...(scanLogsSeguranca ? ["seguranca"] : []),
                           ...(scanLogsRdp ? ["rdp"] : []),
@@ -822,7 +834,7 @@ export default function App() {
                   });
                   setScanInfo((prev) => `${prev ? `${prev}\n` : ""}[${errStamp}] Resultado: erro ao executar scan`);
                 }
-                setScanPass("");
+                if (temCredRede) setScanPass("");
                 return ok;
               }}
               scanInfo={scanInfo}

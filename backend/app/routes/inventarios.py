@@ -542,6 +542,8 @@ def obter_detalhes_do_inventario(
         "id": inventario.id,
         "nome": inventario.nome,
         "descricao": inventario.descricao,
+        "tipo_inventario": inventario.tipo_inventario,
+        "rede": inventario.rede,
         "computadores": computadores,
         "dispositivos_descobertos": dispositivos_descobertos,
     }
@@ -575,14 +577,9 @@ def executar_scan_do_inventario(
             detail="Inventario sub_rede precisa de rede definida para executar scan",
         )
 
-    # Mesmo com admin na aplicacao, scan remoto exige credenciais da rede/host alvo.
-    utilizador_rede = pedido_scan.utilizador.strip()
+    # Credenciais opcionais: sem utilizador/palavra-passe usa a identidade do processo (ex.: CIM sem -Credential).
+    utilizador_rede = pedido_scan.utilizador
     password_rede = pedido_scan.password
-    if not utilizador_rede or not password_rede.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Credenciais de rede obrigatorias para executar scan",
-        )
 
     # Usa pipeline consolidado do scan (descoberta + enriquecimento tecnico por IP).
     dispositivos_ativos = descobrir_dispositivos_enriquecidos(
@@ -652,6 +649,8 @@ def executar_scan_do_inventario(
                     max_eventos=20,
                     horas=24,
                     tipos_log=pedido_scan.tipos_log,
+                    utilizador=pedido_scan.utilizador,
+                    password=pedido_scan.password,
                 )
                 logs_recolhidos_no_scan += _guardar_logs_windows_no_computador(
                     db, computador_alvo.id, logs_windows

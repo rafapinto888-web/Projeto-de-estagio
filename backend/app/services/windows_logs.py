@@ -90,7 +90,8 @@ def coletar_logs_windows(
     # Tenta recolher logs Windows por PowerShell; devolve vazio em caso de erro.
     target = (computer_name or "").strip()
     target_remoto = target and target.lower() not in {"localhost", "127.0.0.1"}
-    tipos_permitidos = {str(t).strip().lower() for t in (tipos_log or ["seguranca", "rdp"])}
+    fonte_tipos = ["seguranca", "rdp"] if tipos_log is None else tipos_log
+    tipos_permitidos = {str(t).strip().lower() for t in fonte_tipos}
     if not tipos_permitidos:
         return []
 
