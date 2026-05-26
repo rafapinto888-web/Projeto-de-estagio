@@ -2,9 +2,10 @@
  * Scan de rede — seleção de inventário, execução do scan e lista de dispositivos descobertos.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Backdrop,
   Box,
   Button,
   Checkbox,
@@ -14,6 +15,7 @@ import {
   FormControl,
   FormControlLabel,
   InputLabel,
+  LinearProgress,
   MenuItem,
   Paper,
   Select,
@@ -154,6 +156,21 @@ export default function AtivosPage({
   const [selectedRowKey, setSelectedRowKey] = useState(null);
   const [logExpanded, setLogExpanded] = useState(false);
   const [filtrosOpen, setFiltrosOpen] = useState(false);
+  /** Overlay compacto durante o pedido de scan (progresso visual + cancelar). */
+  const [scanProgress, setScanProgress] = useState(null);
+  /** Modal a sugerir credenciais de domínio/rede (WMI remoto). */
+  const [dominioCredOpen, setDominioCredOpen] = useState(false);
+  const [credModalErro, setCredModalErro] = useState("");
+  const scanAbortRef = useRef(null);
+  const scanFaseTimerRef = useRef(null);
+
+  const SCAN_FASES = [
+    "A descobrir hosts na rede (ping)…",
+    "A contactar equipamentos ativos…",
+    "A enriquecer dados WMI/CIM remotos…",
+    "A guardar resultados no inventário…",
+  ];
+
   const [novoInventario, setNovoInventario] = useState({
     nome: "",
     tipo_inventario: "sub_rede",
@@ -162,10 +179,49 @@ export default function AtivosPage({
   });
 
   async function handleScan() {
-    if (!selectedInventarioId) return;
-    if (!scanUser?.trim() || !scanPass) return;
-    const ok = Boolean(await onScan?.());
-    if (ok) setModal(null);
+    if (!selectedInventarioId || !scanPodeExecutar) return;
+    const ctrl = new AbortController();
+    scanAbortRef.current = ctrl;
+    setModal(null);
+    setDominioCredOpen(false);
+    setScanProgress({ label: SCAN_FASES[0], step: 0 });
+    let fase = 0;
+    scanFaseTimerRef.current = window.setInterval(() => {
+      fase = (fase + 1) % SCAN_FASES.length;
+      setScanProgress({ label: SCAN_FASES[fase], step: fase });
+    }, 2800);
+    try {
+      const res = await onScan?.({ signal: ctrl.signal });
+      if (res?.sugestaoCredenciais) {
+        setCredModalErro("");
+        setDominioCredOpen(true);
+      }
+    } catch {
+      /* erros já tratados em App (status); AbortError incluído */
+    } finally {
+      if (scanFaseTimerRef.current) {
+        window.clearInterval(scanFaseTimerRef.current);
+        scanFaseTimerRef.current = null;
+      }
+      scanAbortRef.current = null;
+      setScanProgress(null);
+    }
+  }
+
+  function cancelarScanEmCurso() {
+    scanAbortRef.current?.abort();
+  }
+
+  async function repetirScanComCredenciaisDominio() {
+    const u = String(scanUser || "").trim();
+    const p = String(scanPass || "").trim();
+    if (!u || !p) {
+      setCredModalErro("Preenche o utilizador e a palavra-passe da conta de rede / domínio.");
+      return;
+    }
+    setCredModalErro("");
+    setDominioCredOpen(false);
+    await handleScan();
   }
 
   async function handleCriarInventarioNoScan() {
@@ -189,6 +245,16 @@ export default function AtivosPage({
   );
   const inventarioScanValido = inventariosSubRede.some((inv) => String(inv.id) === String(selectedInventarioId || ""));
   const scanPodeExecutar = Boolean(inventarioScanValido && scanTab === "existente");
+
+  useEffect(() => {
+    return () => {
+      if (scanFaseTimerRef.current) {
+        window.clearInterval(scanFaseTimerRef.current);
+        scanFaseTimerRef.current = null;
+      }
+      scanAbortRef.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     setSelectedAtivo(null);
@@ -257,9 +323,10 @@ export default function AtivosPage({
   const scanInfoErro =
     typeof scanInfo === "string" && (scanInfo.toLowerCase().includes("erro") || scanInfo.toLowerCase().includes("error"));
 
-  const estadoResumo = loading ? "a_correr" : scanInfoErro ? "erro" : scanInfo?.includes?.("concluíd") ? "ok" : scanInfo ? "ok" : "neutro";
+  const loadingOuScan = loading || Boolean(scanProgress);
+  const estadoResumo = loadingOuScan ? "a_correr" : scanInfoErro ? "erro" : scanInfo?.includes?.("concluíd") ? "ok" : scanInfo ? "ok" : "neutro";
 
-  const ultimoScanLinha = textoResumoUltimoScan(scanInfo, loading, scanInfoErro);
+  const ultimoScanLinha = textoResumoUltimoScan(scanInfo, loadingOuScan, scanInfoErro);
 
   return (
     <Box sx={{ width: "100%", minWidth: 0 }}>
@@ -423,9 +490,9 @@ export default function AtivosPage({
           <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
             <Chip
               size="small"
-              label={loading ? "Em execução" : estadoResumo === "erro" ? "Erro" : scanInfo ? "Concluído" : "Aguardando scan"}
-              color={loading ? "warning" : estadoResumo === "erro" ? "error" : scanInfo ? "success" : "default"}
-              variant={scanInfo || loading ? "filled" : "outlined"}
+              label={loadingOuScan ? "Em execução" : estadoResumo === "erro" ? "Erro" : scanInfo ? "Concluído" : "Aguardando scan"}
+              color={loadingOuScan ? "warning" : estadoResumo === "erro" ? "error" : scanInfo ? "success" : "default"}
+              variant={scanInfo || loadingOuScan ? "filled" : "outlined"}
             />
             <Button size="small" variant="text" onClick={() => setLogExpanded((x) => !x)}>
               {logExpanded ? "Ocultar log" : "Ver log"}
@@ -519,10 +586,10 @@ export default function AtivosPage({
               <Button variant="outlined" size="small" onClick={() => setFiltrosOpen((x) => !x)}>
                 Filtros
               </Button>
-              <Button variant="contained" size="small" onClick={() => onPesquisar?.()} disabled={loading}>
+              <Button variant="contained" size="small" onClick={() => onPesquisar?.()} disabled={loadingOuScan}>
                 Pesquisar
               </Button>
-              <Button variant="outlined" size="small" onClick={() => onRecarregarLista?.()} disabled={loading}>
+              <Button variant="outlined" size="small" onClick={() => onRecarregarLista?.()} disabled={loadingOuScan}>
                 Limpar
               </Button>
               <Button
@@ -564,7 +631,7 @@ export default function AtivosPage({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {loading ? (
+                {loadingOuScan ? (
                   <TableRow>
                     <TableCell colSpan={9}>
                       <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
@@ -689,6 +756,7 @@ export default function AtivosPage({
       </Stack>
 
       {isAdmin ? (
+        <>
         <FormModal
           open={modal === "scan"}
           onClose={() => setModal(null)}
@@ -867,6 +935,104 @@ export default function AtivosPage({
             )}
           </Stack>
         </FormModal>
+
+        <Backdrop
+          open={Boolean(scanProgress)}
+          sx={{
+            zIndex: 1400,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            backdropFilter: "blur(5px)",
+            backgroundColor: "rgba(15, 23, 42, 0.42)",
+          }}
+        >
+          <Paper
+            elevation={10}
+            sx={{
+              p: 2.75,
+              width: "min(440px, 92vw)",
+              borderRadius: 2,
+              border: "1px solid #dbe5f2",
+              boxShadow: "0 20px 50px rgba(15, 23, 42, 0.2)",
+            }}
+          >
+            <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 0.5, color: "#0f172a" }}>
+              Scan em curso
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.75, minHeight: 44 }}>
+              {scanProgress?.label || "A processar…"}
+            </Typography>
+            <LinearProgress sx={{ mb: 2, borderRadius: 1, height: 7 }} />
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.75, lineHeight: 1.45 }}>
+              O trabalho continua no servidor até terminar; cancelar só interrompe a espera neste browser (podes voltar a
+              lançar o scan se precisares).
+            </Typography>
+            <Button fullWidth variant="outlined" color="error" onClick={cancelarScanEmCurso} sx={{ fontWeight: 600 }}>
+              Cancelar scan
+            </Button>
+          </Paper>
+        </Backdrop>
+
+        <FormModal
+          open={dominioCredOpen}
+          onClose={() => {
+            setDominioCredOpen(false);
+            setCredModalErro("");
+          }}
+          titleId="modal-cred-dominio-title"
+          title="Credenciais da rede (domínio)"
+          subtitle={
+            <>
+              O scan não obteve dados WMI com a conta do serviço, ou a API indicou falha de acesso. Usa uma conta de{" "}
+              <strong>Windows / Active Directory</strong> com permissão nos PCs — não são as credenciais de login do
+              site.
+            </>
+          }
+          footer={
+            <Stack direction="row" spacing={1.25} justifyContent="flex-end" width="100%" flexWrap="wrap">
+              <Button
+                type="button"
+                variant="outlined"
+                onClick={() => {
+                  setDominioCredOpen(false);
+                  setCredModalErro("");
+                }}
+              >
+                Fechar
+              </Button>
+              <Button type="button" variant="contained" onClick={() => void repetirScanComCredenciaisDominio()}>
+                Guardar e repetir scan
+              </Button>
+            </Stack>
+          }
+        >
+          <Stack spacing={1.5} sx={{ pt: 0.5 }}>
+            {credModalErro ? (
+              <Alert severity="warning" sx={{ borderRadius: 2 }}>
+                {credModalErro}
+              </Alert>
+            ) : null}
+            <TextField
+              label="Utilizador (domínio / rede)"
+              value={scanUser}
+              onChange={(e) => setScanUser?.(e.target.value)}
+              placeholder="ex.: DOMINIO\\tecnico"
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Palavra-passe"
+              type="password"
+              value={scanPass}
+              onChange={(e) => setScanPass?.(e.target.value)}
+              size="small"
+              fullWidth
+            />
+          </Stack>
+        </FormModal>
+        </>
       ) : null}
     </Box>
   );

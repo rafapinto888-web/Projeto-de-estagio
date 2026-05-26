@@ -1,10 +1,8 @@
 """Servico de scan: ping na sub-rede, MAC/hostname e enriquecimento Windows (CIM)."""
 
-# Servico responsavel por descobrir IPs ativos e metadados basicos na rede.
-
-# --- Utilitarios de normalizacao ---
 from __future__ import annotations
-from concurrent.futures import ThreadPoolExecutor
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from ipaddress import ip_network
 import json
 import os
@@ -15,7 +13,7 @@ import subprocess
 
 
 def _limpo_ou_none(valor: object) -> str | None:
-    # Converte valores vazios/placeholders para None para nao poluir a BD.
+    # Placeholders e vazios -> None (evita gravar lixo na BD).
     texto = str(valor or "").strip()
     if not texto:
         return None
@@ -38,7 +36,6 @@ def _limpo_ou_none(valor: object) -> str | None:
 
 
 def _normalizar_mac(mac: object) -> str | None:
-    # Mantem MAC no formato aa:bb:cc:dd:ee:ff quando possivel.
     limpo = _limpo_ou_none(mac)
     if limpo is None:
         return None
@@ -48,23 +45,36 @@ def _normalizar_mac(mac: object) -> str | None:
     return padrao.group(1).replace("-", ":").lower()
 
 
-# --- Descoberta basica (ping, ARP, DNS) ---
+def _subprocess_sem_janela() -> dict:
+    """Windows: evita abrir janela de consola (CREATE_NO_WINDOW / STARTUPINFO)."""
+    if os.name != "nt":
+        return {}
+    kwargs: dict = {}
+    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    if creationflags:
+        kwargs["creationflags"] = creationflags
+    if hasattr(subprocess, "STARTUPINFO"):
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = 0
+        kwargs["startupinfo"] = startupinfo
+    return kwargs
+
 
 def ping_host(ip: str) -> bool:
-    # Faz ping ao IP (Windows/Linux) para saber se está ativo.
     sistema = platform.system().lower()
     if sistema.startswith("win"):
         comando = ["ping", "-n", "1", "-w", "100", ip]
     else:
-        comando = ["ping", "-c", "1", ip]
+        comando = ["ping", "-c", "1", "-W", "1", ip]
 
     try:
         resultado = subprocess.run(
             comando,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            timeout=2,
             check=False,
+            **_subprocess_sem_janela(),
         )
     except (OSError, subprocess.SubprocessError):
         return False
@@ -73,7 +83,6 @@ def ping_host(ip: str) -> bool:
 
 
 def obter_hostname(ip: str) -> str | None:
-    # Tenta resolver hostname por DNS reverso, sem falhar o scan.
     try:
         hostname, _, _ = socket.gethostbyaddr(ip)
     except (OSError, socket.herror, socket.gaierror, TimeoutError):
@@ -86,16 +95,12 @@ def obter_hostname(ip: str) -> str | None:
 
 
 def obter_mac_address(ip: str) -> str | None:
-    # Tenta obter o MAC via cache ARP/neighbor table (depende do SO).
     sistema = platform.system().lower()
 
-    # Nota: em Windows, depois do ping o IP costuma ficar em cache ARP.
-    # Em Linux/macOS, `arp`/`ip neigh` podem devolver a entrada se existir.
     try:
         if sistema.startswith("win"):
             comando = ["arp", "-a", ip]
         else:
-            # tenta primeiro via `ip neigh` (mais comum em Linux)
             comando = ["ip", "neigh", "show", ip]
 
         resultado = subprocess.run(
@@ -104,17 +109,17 @@ def obter_mac_address(ip: str) -> str | None:
             text=True,
             timeout=2,
             check=False,
+            **_subprocess_sem_janela(),
         )
         saida = (resultado.stdout or "") + "\n" + (resultado.stderr or "")
     except (OSError, subprocess.SubprocessError):
         return None
 
-    # procura padrão MAC
     match = re.search(r"(?i)\b([0-9a-f]{2}(?:[:-][0-9a-f]{2}){5})\b", saida)
     if match:
         return match.group(1).replace("-", ":").lower()
 
-    # fallback para Unix quando `ip neigh` não existe mas `arp` existe
+    # Unix: `ip neigh` pode falhar ou nao existir; tenta `arp -n`.
     if not sistema.startswith("win"):
         try:
             resultado_arp = subprocess.run(
@@ -123,6 +128,7 @@ def obter_mac_address(ip: str) -> str | None:
                 text=True,
                 timeout=2,
                 check=False,
+                **_subprocess_sem_janela(),
             )
             saida_arp = (resultado_arp.stdout or "") + "\n" + (resultado_arp.stderr or "")
             match_arp = re.search(
@@ -138,58 +144,86 @@ def obter_mac_address(ip: str) -> str | None:
 
 
 def descobrir_dispositivos_ativos(rede: str) -> list[dict[str, str | None]]:
-    # Varre a rede: ping -> lista IPs ativos -> tenta MAC e hostname para cada IP.
-    hosts = [str(host) for host in ip_network(rede, strict=False).hosts()]
+    rede_obj = ip_network(rede, strict=False)
+    hosts = [str(h) for h in rede_obj.hosts()]
     if not hosts:
-        return []
+        # /31-/32: `IPv4Network.hosts()` e vazio; usar o unico endereco.
+        if rede_obj.prefixlen >= 31:
+            hosts = [str(rede_obj.network_address)]
+        else:
+            return []
 
-    # Pinga em paralelo para descobrir quais IPs respondem.
-    max_workers = min(64, len(hosts))
+    max_workers = min(50, len(hosts))
+    ativos: list[str] = []
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        resultados_ping = list(executor.map(ping_host, hosts))
+        tarefas = {executor.submit(ping_host, h): h for h in hosts}
+        for tarefa in as_completed(tarefas):
+            ip = tarefas[tarefa]
+            try:
+                if tarefa.result():
+                    ativos.append(ip)
+            except Exception:
+                continue
 
-    # Filtra apenas os IPs que responderam ao ping.
-    ips_ativos = [ip for ip, ativo in zip(hosts, resultados_ping, strict=False) if ativo]
-    if not ips_ativos:
+    ips_ping = sorted(ativos, key=lambda x: tuple(map(int, x.split("."))))
+
+    primeiro_host = next(rede_obj.hosts(), None)
+    if primeiro_host is not None:
+        primeiro = str(primeiro_host)
+        ips_ping = [ip for ip in ips_ping if ip != primeiro]
+
+    if not ips_ping:
         return []
 
-    # Busca MAC em paralelo (pode falhar e voltar None).
-    max_workers_mac = min(64, len(ips_ativos))
+    max_workers_mac = min(50, len(ips_ping))
     with ThreadPoolExecutor(max_workers=max_workers_mac) as executor:
-        macs = list(executor.map(obter_mac_address, ips_ativos))
+        macs = list(executor.map(obter_mac_address, ips_ping))
 
-    # Busca hostname em paralelo (pode falhar e voltar None).
-    max_workers_hostname = min(64, len(ips_ativos))
+    max_workers_hostname = min(50, len(ips_ping))
     with ThreadPoolExecutor(max_workers=max_workers_hostname) as executor:
-        hostnames = list(executor.map(obter_hostname, ips_ativos))
+        hostnames = list(executor.map(obter_hostname, ips_ping))
 
-    # Devolve uma lista de dicts com os dados obtidos por IP ativo.
     return [
         {"ip": ip, "mac_address": mac, "hostname": hostname}
-        for ip, mac, hostname in zip(ips_ativos, macs, hostnames, strict=False)
+        for ip, mac, hostname in zip(ips_ping, macs, hostnames, strict=False)
     ]
 
 
 def descobrir_hosts_ativos(rede: str) -> list[str]:
-    # Versão antiga: só devolve IPs ativos (mantida para compatibilidade).
-    hosts = [str(host) for host in ip_network(rede, strict=False).hosts()]
+    rede_obj = ip_network(rede, strict=False)
+    hosts = [str(h) for h in rede_obj.hosts()]
     if not hosts:
-        return []
+        # /31-/32: `IPv4Network.hosts()` e vazio; usar o unico endereco.
+        if rede_obj.prefixlen >= 31:
+            hosts = [str(rede_obj.network_address)]
+        else:
+            return []
 
-    max_workers = min(64, len(hosts))
+    max_workers = min(50, len(hosts))
+    ativos: list[str] = []
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        resultados = executor.map(ping_host, hosts)
-        return [ip for ip, ativo in zip(hosts, resultados, strict=False) if ativo]
+        tarefas = {executor.submit(ping_host, h): h for h in hosts}
+        for tarefa in as_completed(tarefas):
+            ip = tarefas[tarefa]
+            try:
+                if tarefa.result():
+                    ativos.append(ip)
+            except Exception:
+                continue
 
+    out = sorted(ativos, key=lambda x: tuple(map(int, x.split("."))))
+    primeiro_host = next(rede_obj.hosts(), None)
+    if primeiro_host is not None:
+        primeiro = str(primeiro_host)
+        out = [ip for ip in out if ip != primeiro]
+    return out
 
-# --- Enriquecimento remoto Windows (PowerShell / CIM) ---
 
 def obter_info_windows_por_ip(
     ip: str,
     utilizador: str | None,
     password: str | None,
 ) -> dict[str, str | None]:
-    # Recolhe dados Windows remotos por CIM; com credenciais explícitas ou identidade do processo.
     user_ok = bool((utilizador or "").strip())
     pass_ok = bool((password or "").strip())
     use_cred = user_ok and pass_ok
@@ -197,6 +231,8 @@ def obter_info_windows_por_ip(
     ambiente = os.environ.copy()
     ambiente["REDE_SCAN_IP"] = ip
     ambiente["REDE_SCAN_USE_CRED"] = "1" if use_cred else "0"
+    # Com credenciais: modelo CIM cru; sem credenciais: heuristica por fabricante no PS abaixo.
+    ambiente["REDE_SCAN_SCRIPT_MODEL"] = "1" if use_cred else "0"
     if use_cred:
         ambiente["REDE_SCAN_USER"] = str(utilizador).strip()
         ambiente["REDE_SCAN_PASSWORD"] = str(password)
@@ -236,10 +272,7 @@ function Try-CimInfo {
         $nics = Get-CimInstance -CimSession $session -ClassName Win32_NetworkAdapterConfiguration -ErrorAction SilentlyContinue |
             Where-Object { $_.IPEnabled -eq $true }
 
-        $hostname = $null
-        if ($cs -and $cs.Name) { $hostname = $cs.Name }
-
-        # Prioriza NIC que contenha o IP alvo para obter MAC mais fiavel.
+        # MAC da NIC cujo IP inclui o alvo (evita pegar outra interface).
         $mac = $null
         $nicMatch = $nics | Where-Object { $_.IPAddress -contains $target } | Select-Object -First 1
         if (-not $nicMatch) {
@@ -247,18 +280,26 @@ function Try-CimInfo {
         }
         if ($nicMatch) { $mac = $nicMatch.MACAddress }
 
-        $modelo = $null
-        if ($cs) {
-            $fabricante = ""
-            if ($cs.Manufacturer) { $fabricante = $cs.Manufacturer.ToString().ToLower() }
-            if ($fabricante -match "lenovo" -and $cs.SystemFamily) {
-                $modelo = $cs.SystemFamily
-            } elseif ($fabricante -match "hp|hewlett" -and $cs.Model) {
-                $modelo = $cs.Model
-            } elseif ($cs.Model) {
-                $modelo = $cs.Model
-            } elseif ($cs.SystemFamily) {
-                $modelo = $cs.SystemFamily
+        $hostname = $null
+        if ($cs -and $cs.Name) { $hostname = $cs.Name }
+
+        $modeloOut = $null
+        if ($env:REDE_SCAN_SCRIPT_MODEL -eq "1") {
+            $modeloOut = if ($cs) { $cs.Model } else { $null }
+        } else {
+            $modeloOut = $null
+            if ($cs) {
+                $fabricante = ""
+                if ($cs.Manufacturer) { $fabricante = $cs.Manufacturer.ToString().ToLower() }
+                if ($fabricante -match "lenovo" -and $cs.SystemFamily) {
+                    $modeloOut = $cs.SystemFamily
+                } elseif ($fabricante -match "hp|hewlett" -and $cs.Model) {
+                    $modeloOut = $cs.Model
+                } elseif ($cs.Model) {
+                    $modeloOut = $cs.Model
+                } elseif ($cs.SystemFamily) {
+                    $modeloOut = $cs.SystemFamily
+                }
             }
         }
 
@@ -270,7 +311,7 @@ function Try-CimInfo {
             hostname = $hostname
             mac_address = $mac
             marca = if ($cs) { $cs.Manufacturer } else { $null }
-            modelo = $modelo
+            modelo = $modeloOut
             numero_serie = if ($bios) { $bios.SerialNumber } else { $null }
             sistema_operativo = if ($os) { $os.Caption } else { $null }
         }
@@ -300,8 +341,9 @@ if ($dados) {
             capture_output=True,
             text=True,
             env=ambiente,
-            timeout=20,
+            timeout=25,
             check=False,
+            **_subprocess_sem_janela(),
         )
     except (OSError, subprocess.SubprocessError):
         return {
@@ -335,7 +377,6 @@ def descobrir_dispositivos_enriquecidos(
     utilizador: str | None,
     password: str | None,
 ) -> list[dict[str, str | None]]:
-    # Pipeline unico do scan: descoberta base + enriquecimento Windows por IP.
     dispositivos_base = descobrir_dispositivos_ativos(rede)
     if not dispositivos_base:
         return []

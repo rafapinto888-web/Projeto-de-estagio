@@ -1,9 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
+# PyInstaller: executável do scan de rede (main.py + módulos locais).
+# Correr a partir desta pasta: pyinstaller rede_discovery+logs.spec
 
+from pathlib import Path
+
+block_cipher = None
+spec_dir = Path(SPEC).parent.resolve()
 
 a = Analysis(
-    ['main.py'],
-    pathex=[],
+    [str(spec_dir / "main.py")],
+    pathex=[str(spec_dir)],
     binaries=[],
     datas=[],
     hiddenimports=[],
@@ -11,18 +17,22 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
     noarchive=False,
-    optimize=0,
 )
-pyz = PYZ(a.pure)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
+    a.zipfiles,
     a.datas,
     [],
-    name='rede_discovery+logs',
+    name="rede_discovery+logs",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

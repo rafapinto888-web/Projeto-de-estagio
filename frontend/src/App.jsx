@@ -184,6 +184,26 @@ function normalizarRedeScan(rawValue) {
   return { ok: false, message: "IP ou intervalo de rede inválido." };
 }
 
+/** Resposta do scan: todos os hosts sem marca/modelo/SO → provável falta de acesso WMI remoto. */
+function heuristicaScanSemWmiCompleto(out) {
+  const disps = out?.dispositivos_descobertos;
+  if (!Array.isArray(disps) || disps.length === 0) return false;
+  return disps.every(
+    (d) =>
+      !String(d?.marca || "").trim() &&
+      !String(d?.modelo || "").trim() &&
+      !String(d?.sistema_operativo || "").trim(),
+  );
+}
+
+/** Mensagens de erro da API que sugerem problema de autenticação Windows/rede (domínio). */
+function erroRespostaSugereCredenciaisDominio(msg) {
+  const m = String(msg || "").toLowerCase();
+  return /acesso negado|access denied|autentic|authentication|credencial|credential|logon|log\u00f3n|wmi|cim|rpc|forbidden|negad|unauthorized|winrm|negotiate|logon failure|falha de inicio|falha de início/.test(
+    m,
+  );
+}
+
 export default function App() {
   const theme = useTheme();
   const isMobileNav = useMediaQuery(theme.breakpoints.down("lg"));
@@ -728,17 +748,18 @@ export default function App() {
                   setActionLoading(false);
                 }
               }}
-              onScan={async () => {
+              onScan={async ({ signal } = {}) => {
+                const falha = { ok: false };
                 if (!selectedInventarioId) {
                   setStatus({ type: "err", message: "Seleciona um inventário para executar o scan" });
-                  return false;
+                  return falha;
                 }
                 const inventarioSelecionado = (inventarios || []).find(
                   (inv) => String(inv.id) === String(selectedInventarioId),
                 );
                 if (inventarioSelecionado?.tipo_inventario !== "sub_rede") {
                   setStatus({ type: "err", message: "O scan só está disponível para inventários do tipo Rede (sub-rede)" });
-                  return false;
+                  return falha;
                 }
                 const userTrim = scanUser.trim();
                 const passRaw = scanPass != null ? String(scanPass) : "";
@@ -749,19 +770,19 @@ export default function App() {
                     type: "err",
                     message: "Indica também a palavra-passe de rede, ou apaga o utilizador para executar só com a conta do serviço.",
                   });
-                  return false;
+                  return falha;
                 }
                 if (!userTrim && passTrim) {
                   setStatus({
                     type: "err",
                     message: "Indica o utilizador de rede, ou apaga a palavra-passe para executar só com a conta do serviço.",
                   });
-                  return false;
+                  return falha;
                 }
                 const redeNormalizada = normalizarRedeScan(scanRede);
                 if (!redeNormalizada.ok) {
                   setStatus({ type: "err", message: redeNormalizada.message });
-                  return false;
+                  return falha;
                 }
                 const stamp = new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
                 const alvoRede = redeNormalizada.label;
@@ -780,62 +801,97 @@ export default function App() {
                     `[${stamp}] Credenciais: ${credLabel}\n` +
                     `[${stamp}] Estado: em execução`,
                 );
-                const ok = await withAction(
-                  async () => {
-                    const out = await api.inventarios.scan(
-                      selectedInventarioId,
-                      {
-                        rede: redeNormalizada.rede,
-                        utilizador: temCredRede ? userTrim : null,
-                        password: temCredRede ? passRaw : null,
-                        tipos_log: [
-                          ...(scanLogsSeguranca ? ["seguranca"] : []),
-                          ...(scanLogsRdp ? ["rdp"] : []),
-                        ],
-                      },
-                    );
-                    let totalLogsPreferidos = null;
-                    if (scanLogsRdp !== scanLogsSeguranca) {
-                      const tipoLog = scanLogsRdp ? "rdp" : "seguranca";
-                      try {
-                        const consulta = await api.inventarios.logsDispositivos(
-                          selectedInventarioId,
-                          { coletar_agora: "false", tipo_log: tipoLog },
-                        );
-                        totalLogsPreferidos = consulta?.total_logs ?? 0;
-                      } catch {
-                        totalLogsPreferidos = null;
-                      }
+                try {
+                  const out = await api.inventarios.scan(
+                    selectedInventarioId,
+                    {
+                      rede: redeNormalizada.rede,
+                      utilizador: temCredRede ? userTrim : null,
+                      password: temCredRede ? passRaw : null,
+                      tipos_log: [
+                        ...(scanLogsSeguranca ? ["seguranca"] : []),
+                        ...(scanLogsRdp ? ["rdp"] : []),
+                      ],
+                    },
+                    { signal },
+                  );
+                  let totalLogsPreferidos = null;
+                  if (scanLogsRdp !== scanLogsSeguranca) {
+                    const tipoLog = scanLogsRdp ? "rdp" : "seguranca";
+                    try {
+                      const consulta = await api.inventarios.logsDispositivos(
+                        selectedInventarioId,
+                        { coletar_agora: "false", tipo_log: tipoLog },
+                        { signal },
+                      );
+                      totalLogsPreferidos = consulta?.total_logs ?? 0;
+                    } catch {
+                      totalLogsPreferidos = null;
                     }
-                    const doneStamp = new Date().toLocaleTimeString("pt-PT", {
+                  }
+                  const doneStamp = new Date().toLocaleTimeString("pt-PT", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  });
+                  setScanInfo(
+                    `[${doneStamp}] Iniciar scan...\n` +
+                      `[${doneStamp}] Inventário: ${selectedInventarioId || "não definido"}\n` +
+                      `[${doneStamp}] Alvo: ${alvoRede}\n` +
+                      `[${doneStamp}] Resultado: concluído com sucesso\n` +
+                      `[${doneStamp}] Dispositivos encontrados: ${out?.total_dispositivos_encontrados ?? 0}\n` +
+                      `[${doneStamp}] Logs recolhidos: ${out?.total_logs_recolhidos ?? 0}` +
+                      (totalLogsPreferidos === null
+                        ? ""
+                        : `\n[${doneStamp}] Logs (${scanLogsRdp ? "rdp" : "seguranca"}) disponíveis: ${totalLogsPreferidos}`),
+                  );
+                  await loadAllData();
+                  if (selectedInventarioId) {
+                    await refreshAtivos(selectedInventarioId, ativoPesquisa);
+                  }
+                  setStatus({ type: "ok", message: "Scan concluído com sucesso." });
+                  try {
+                    await api.registarHistorico({
+                      acao: "painel",
+                      descricao: "Scan de rede concluído com sucesso.",
+                    });
+                  } catch {
+                    /* não bloquear */
+                  }
+                  if (temCredRede) setScanPass("");
+                  const sugestaoCredenciais = !temCredRede && heuristicaScanSemWmiCompleto(out);
+                  return { ok: true, sugestaoCredenciais };
+                } catch (error) {
+                  if (error?.name === "AbortError") {
+                    const cStamp = new Date().toLocaleTimeString("pt-PT", {
                       hour: "2-digit",
                       minute: "2-digit",
                       second: "2-digit",
                     });
-                    setScanInfo(
-                      `[${doneStamp}] Iniciar scan...\n` +
-                        `[${doneStamp}] Inventário: ${selectedInventarioId || "não definido"}\n` +
-                        `[${doneStamp}] Alvo: ${alvoRede}\n` +
-                        `[${doneStamp}] Resultado: concluído com sucesso\n` +
-                        `[${doneStamp}] Dispositivos encontrados: ${out?.total_dispositivos_encontrados ?? 0}\n` +
-                        `[${doneStamp}] Logs recolhidos: ${out?.total_logs_recolhidos ?? 0}` +
-                        (totalLogsPreferidos === null
-                          ? ""
-                          : `\n[${doneStamp}] Logs (${scanLogsRdp ? "rdp" : "seguranca"}) disponíveis: ${totalLogsPreferidos}`),
+                    setScanInfo((prev) =>
+                      `${prev ? `${prev}\n` : ""}[${cStamp}] Resultado: scan cancelado (pedido interrompido).`,
                     );
-                  },
-                  "Scan iniciado com sucesso.",
-                );
-                if (!ok) {
+                    setStatus({ type: "warn", message: "Scan cancelado." });
+                    try {
+                      if (selectedInventarioId) {
+                        await refreshAtivos(selectedInventarioId, ativoPesquisa);
+                      }
+                    } catch {
+                      /* ignorar */
+                    }
+                    return { ok: false, cancelled: true };
+                  }
+                  const msg = error?.message || String(error);
+                  setStatus({ type: "err", message: msg });
                   const errStamp = new Date().toLocaleTimeString("pt-PT", {
                     hour: "2-digit",
                     minute: "2-digit",
                     second: "2-digit",
                   });
-                  setScanInfo((prev) => `${prev ? `${prev}\n` : ""}[${errStamp}] Resultado: erro ao executar scan`);
+                  setScanInfo((prev) => `${prev ? `${prev}\n` : ""}[${errStamp}] Erro: ${msg}`);
+                  const sugestaoCredenciais = erroRespostaSugereCredenciaisDominio(msg) && !temCredRede;
+                  return { ok: false, sugestaoCredenciais };
                 }
-                if (temCredRede) setScanPass("");
-                return ok;
               }}
               scanInfo={scanInfo}
               ativos={ativos}

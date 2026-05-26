@@ -30,12 +30,56 @@ function localStorageApiBaseUsavel(saved) {
   return true;
 }
 
+/**
+ * Se abrires o site pelo IP/hostname da rede (ex.: http://192.168.1.10:5173) mas a API estiver
+ * configurada como localhost (ou vazio), o browser chamaria o localhost da MAQUINA DO
+ * UTILIZADOR, nao o PC onde o Vite/API correm. Usa o mesmo hostname da pagina na porta 8000.
+ * Corre em dev e em build de producao — se VITE_API_BASE ja for um host real (ex.: api.empresa.pt),
+ * nao altera nada.
+ */
+function apiBaseMesmoHostQuePaginaQuandoEnvELoopback(explicitEnv) {
+  if (typeof window === "undefined") return null;
+  const pageHost = window.location.hostname;
+  if (!pageHost || pageHost === "localhost" || pageHost === "127.0.0.1") return null;
+
+  let envHost = null;
+  const raw = (explicitEnv || "").trim();
+  if (raw) {
+    try {
+      envHost = new URL(raw).hostname;
+    } catch {
+      envHost = null;
+    }
+  }
+  const envApontaLoopback = !raw || envHost === "localhost" || envHost === "127.0.0.1";
+  if (!envApontaLoopback) return null;
+
+  const proto = window.location.protocol === "https:" ? "https" : "http";
+  return `${proto}://${pageHost}:8000`;
+}
+
 export function getApiBase() {
+  const savedRaw = localStorage.getItem("api_base");
+  const savedOk = savedRaw?.trim() && localStorageApiBaseUsavel(savedRaw);
+  const savedNorm = savedOk ? normalizeBase(savedRaw.trim()) : null;
+  let savedHost = null;
+  if (savedNorm) {
+    try {
+      savedHost = new URL(savedNorm).hostname;
+    } catch {
+      savedHost = null;
+    }
+  }
+  const semOverrideManual =
+    !savedNorm || savedHost === "localhost" || savedHost === "127.0.0.1";
+
+  const lanDev = semOverrideManual ? apiBaseMesmoHostQuePaginaQuandoEnvELoopback(ENV_BASE) : null;
+  if (lanDev) return normalizeBase(lanDev);
+
   if (ENV_BASE) return normalizeBase(ENV_BASE);
   const dockerHint = apiBaseParaSiteDocker5173();
   if (dockerHint) return normalizeBase(dockerHint);
-  const saved = localStorage.getItem("api_base");
-  if (saved?.trim() && localStorageApiBaseUsavel(saved)) return normalizeBase(saved);
+  if (savedNorm) return savedNorm;
   return FALLBACK_API_BASE;
 }
 
@@ -61,8 +105,23 @@ export function clearApiToken() {
 
 // --- Pedido HTTP genérico (JSON + Bearer) ---
 
+/** Extrai mensagem legível de `detail` (string, lista de erros Pydantic, etc.). */
+function mensagemApiDetail(data) {
+  const d = data?.detail;
+  if (d == null) return "Erro na comunicacao com a API";
+  if (typeof d === "string") return d;
+  if (Array.isArray(d)) {
+    return d
+      .map((x) => (typeof x === "object" && x != null ? x.msg || x.message || JSON.stringify(x) : String(x)))
+      .filter(Boolean)
+      .join("; ");
+  }
+  return String(d);
+}
+
 async function request(path, options = {}) {
-  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  const { signal, headers: optHeaders, ...fetchRest } = options;
+  const headers = { "Content-Type": "application/json", ...(optHeaders || {}), ...(fetchRest.headers || {}) };
   if (authToken) {
     headers.Authorization = `Bearer ${authToken}`;
   }
@@ -72,10 +131,16 @@ async function request(path, options = {}) {
   let response;
   try {
     response = await fetch(url, {
-      ...options,
+      ...fetchRest,
       headers,
+      signal,
     });
   } catch (err) {
+    if (err?.name === "AbortError") {
+      const e = new Error("Pedido cancelado");
+      e.name = "AbortError";
+      throw e;
+    }
     const hint =
       "Sem ligacao a API. Abre http://localhost:8000/docs no browser; se nao abrir, na pasta backend corre: " +
       ".venv\\Scripts\\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000";
@@ -86,7 +151,7 @@ async function request(path, options = {}) {
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(data?.detail || "Erro na comunicacao com a API");
+    throw new Error(mensagemApiDetail(data));
   }
   return data;
 }
@@ -112,13 +177,19 @@ export const api = {
     atualizar: (id, payload) =>
       request(`/inventarios/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
     apagar: (id) => request(`/inventarios/${id}`, { method: "DELETE" }),
-    scan: (id, payload) =>
-      request(`/inventarios/${id}/scan`, { method: "POST", body: JSON.stringify(payload) }),
+    scan: (id, payload, opts = {}) =>
+      request(`/inventarios/${id}/scan`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        signal: opts.signal,
+      }),
     ativos: (id) => request(`/inventarios/${id}/computadores`),
     pesquisarAtivos: (id, termo) =>
       request(`/inventarios/${id}/computadores/pesquisar?termo=${encodeURIComponent(termo || "")}`),
-    logsDispositivos: (id, params) =>
-      request(`/inventarios/${id}/logs/dispositivos-descobertos?${new URLSearchParams(params).toString()}`),
+    logsDispositivos: (id, params, opts = {}) =>
+      request(`/inventarios/${id}/logs/dispositivos-descobertos?${new URLSearchParams(params).toString()}`, {
+        signal: opts.signal,
+      }),
     recolherLogsDispositivos: (id, payload) =>
       request(`/inventarios/${id}/logs/dispositivos-descobertos/recolher`, {
         method: "POST",

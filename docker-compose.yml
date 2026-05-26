@@ -35,6 +35,8 @@ services:
       timeout: 5s
       retries: 5
 
+  # Scan de rede (ping/CIM) corre DENTRO deste processo: na rede do container costuma NÃO ver a LAN.
+  # Para scan igual ao PC, corre a API no Windows (uvicorn no host), não só este serviço.
   api:
     profiles:
       - docker-api
