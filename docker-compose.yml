@@ -49,6 +49,8 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./backend:/app
+    env_file:
+      - ./backend/.env
     command:
       [
         "uvicorn",
@@ -60,8 +62,7 @@ services:
         "--reload",
       ]
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://postgres:12345a.@host.docker.internal:5432/inventario}
-      SECRET_KEY: ${SECRET_KEY:-inventario-dev-secret-key-change-in-production}
+      # DATABASE_URL e SECRET_KEY vêm de backend/.env (nao versionar credenciais no compose).
       # Docker Desktop (Windows/mac): ajuda o --reload a detetar alterações nos ficheiros
       WATCHFILES_FORCE_POLLING: "true"
 

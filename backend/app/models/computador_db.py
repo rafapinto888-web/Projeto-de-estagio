@@ -14,28 +14,19 @@ class ComputadorDB(Base):
 
     __tablename__ = "computadores"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    nome: Mapped[str] = mapped_column(String(100), nullable=False)
-    marca: Mapped[str] = mapped_column(String(100), nullable=False)
-    modelo: Mapped[str] = mapped_column(String(100), nullable=False)
-    numero_serie: Mapped[str] = mapped_column(
-        String(100), unique=True, index=True, nullable=False
-    )
-    estado: Mapped[str] = mapped_column(String(50), nullable=False)
-    inventario_id: Mapped[int] = mapped_column(
-        ForeignKey("inventarios.id"), nullable=False, index=True
-    )
-    localizacao_id: Mapped[int | None] = mapped_column(
-        ForeignKey("localizacoes.id"), nullable=True, index=True
-    )
-    utilizador_responsavel_id: Mapped[int | None] = mapped_column(
-        ForeignKey("utilizadores.id"), nullable=True, index=True
-    )
-    # Identificação e rede (opcional no registo manual).
-    hostname: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    endereco_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
-    mac_address: Mapped[str | None] = mapped_column(String(17), nullable=True)
-    sistema_operativo: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    nome: Mapped[str] = mapped_column(String(100))
+    marca: Mapped[str] = mapped_column(String(100))
+    modelo: Mapped[str] = mapped_column(String(100))
+    numero_serie: Mapped[str] = mapped_column(String(100))
+    estado: Mapped[str] = mapped_column(String(50))
+    inventario_id: Mapped[int] = mapped_column(ForeignKey("inventarios.id"))
+    localizacao_id: Mapped[int | None] = mapped_column(ForeignKey("localizacoes.id"))
+    utilizador_responsavel_id: Mapped[int | None] = mapped_column(ForeignKey("utilizadores.id"))
+    hostname: Mapped[str | None] = mapped_column(String(100))
+    endereco_ip: Mapped[str | None] = mapped_column(String(45))
+    mac_address: Mapped[str | None] = mapped_column(String(17))
+    sistema_operativo: Mapped[str | None] = mapped_column(String(120))
 
     inventario: Mapped["InventarioDB"] = relationship(back_populates="computadores")
     localizacao: Mapped["LocalizacaoDB | None"] = relationship(

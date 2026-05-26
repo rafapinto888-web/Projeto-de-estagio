@@ -25,7 +25,7 @@ Autenticação por **JWT**; após login o painel carrega inventários, computado
 | Backend | Python 3.11+, FastAPI, Uvicorn, SQLAlchemy, Pydantic, PostgreSQL, JWT |
 | Frontend | React 18, Vite 5, Material UI (MUI), Emotion, `xlsx` (export) |
 | Infra | Docker Compose (`web-dev`, API e BD opcionais por perfil) |
-| API docs | Swagger em `/docs`, ReDoc em `/redoc` |
+| API docs | Swagger em `/docs` — com `INVENTARIO_ALLOW_SWAGGER_BYPASS=true` as rotas funcionam sem JWT a partir do `/docs`; senão **Authorize**: Bearer (token de `POST /auth/login`) ou Basic (user + password) |
 
 ## Estrutura do repositório
 
@@ -60,11 +60,11 @@ Variáveis importantes:
 | `DATABASE_URL` | Ligação PostgreSQL (ex.: `postgresql+psycopg2://user:pass@localhost:5432/inventario`) |
 | `SECRET_KEY` | Chave JWT (obrigatório alterar em produção) |
 | `INVENTARIO_CORS_ORIGINS` | Origens do frontend separadas por vírgula (ex.: `http://localhost:5173`) |
-| `INVENTARIO_ALLOW_SWAGGER_BYPASS` | `true` só em dev para testar no `/docs` sem JWT |
+| `INVENTARIO_ALLOW_SWAGGER_BYPASS` | `true` em dev: pedidos vindos de `/docs`/`/redoc` não exigem JWT (usa admin ou 1.º user); `false` em produção |
 | `INVENTARIO_APP_ENV` | `development` ou `production` |
 | `VITE_API_BASE` | URL da API no build do frontend (Docker) |
 
-Exemplo completo: `backend/.env.example`. Tarefas futuras: `docs/pendencias-melhorias.txt`.
+Variáveis completas: ficheiro **`backend/.env`** (não versionar passwords em repositório público). Tarefas futuras: `docs/pendencias-melhorias.txt`.
 
 ## Como executar (no teu PC)
 
@@ -79,15 +79,15 @@ Precisas de **dois processos** a correr em paralelo: **API** (porta 8000) e **fr
 CREATE DATABASE inventario;
 ```
 
-3. Ajusta utilizador, palavra-passe e porta aos teus dados. O backend usa por defeito (se não definires `DATABASE_URL`):
+3. Cria ou edita **`backend/.env`** e define **`DATABASE_URL`** (obrigatório; não existe URL de BD no código). Formato:
 
 ```text
-postgresql+psycopg2://postgres:12345a.@127.0.0.1:5432/inventario
+postgresql+psycopg2://postgres:TU_PASSWORD@127.0.0.1:5432/NOME_DA_BASE
 ```
 
-Altera em `backend/app/database/connection.py` ou define a variável de ambiente `DATABASE_URL` com os teus valores.
+**No pgAdmin (Postgres local, não Docker):** (1) Regista o servidor se ainda não existir (*Connection* → host `127.0.0.1`, porta `5432`, user `postgres`, password que definiste). (2) Em **Databases** → cria a base com o nome que quiseres (ex. `inventario`). (3) No **Query Tool** com essa base seleccionada, cria tabelas, `NOT NULL`, `UNIQUE`, FKs e índices — a **fonte de verdade** dessas regras é a base de dados; o código ORM só mapeia colunas para leitura/escrita.
 
-**Primeira execução da API:** ao arrancar, o FastAPI cria/atualiza as tabelas automaticamente (`create_all`). Precisas de **pelo menos um utilizador** na BD para fazer login (cria via pgAdmin, dump de outra máquina, ou endpoint admin no Swagger se já existir).
+Precisas de **pelo menos um utilizador** na BD para fazer login (dados iniciais via pgAdmin, dump ou Swagger se existir endpoint).
 
 ### 2. Backend (API)
 
@@ -194,7 +194,7 @@ Sobe frontend dev + API + Postgres:
 | API | [http://localhost:8000](http://localhost:8000) |
 | Postgres | `localhost:5433` — user `postgres`, password `inventario-docker`, BD `inventario` |
 
-Neste modo, define `DATABASE_URL` no Compose ou usa o valor por defeito do perfil `bundled-db`. BD nova = tabelas criadas ao arrancar a API; **cria utilizadores** para login.
+Neste modo, define `DATABASE_URL` no Compose ou usa o valor por defeito do perfil `bundled-db`. **Cria o schema na BD** (pgAdmin / SQL) antes de usar a API; **cria utilizadores** para login.
 
 ### Perfis Compose (referência)
 
@@ -233,8 +233,8 @@ Escolhe **um** dos caminhos:
 
 1. **Copiar/clonar** o repositório para uma pasta local (ex.: `C:\Projetos\Projeto de estagio`).
 2. **Base de dados**
-   - *Com PostgreSQL no PC:* criar BD `inventario` e importar dump se quiseres os mesmos dados do PC antigo (`pg_dump` / `pg_restore`).
-   - *Só Docker:* usar `.\scripts\docker-subir-tudo.ps1` — Postgres fica na porta **5433** com BD vazia; a API cria tabelas no primeiro arranque.
+   - *Com PostgreSQL no PC:* criar a base no pgAdmin, definir tabelas e constraints em SQL nessa base, `backend/.env` com `DATABASE_URL` a apontar para ela; importar dump se quiseres os mesmos dados (`pg_dump` / `pg_restore`).
+   - *Só Docker:* usar `.\scripts\docker-subir-tudo.ps1` — Postgres na porta **5433**; cria o schema na BD do container antes de usar a API.
 3. **Backend**
    - `cd backend` → criar `.venv` → `pip install -r requirements.txt`.
    - Definir `DATABASE_URL` com host, user e password **deste** PC (não assumes que é `12345a.` — confirma no pgAdmin ou no `docker-compose.yml`).
@@ -242,7 +242,7 @@ Escolhe **um** dos caminhos:
 4. **Frontend**
    - *Sem Docker:* `cd frontend` → `npm install` → `npm run dev`.
    - *Com Docker:* `.\scripts\docker-subir-dev.ps1` (usa `npm ci` com o lock file dentro do container).
-5. **Testar:** Swagger em `:8000/docs` → site em `:5173` → login.
+5. **Testar:** Swagger em `:8000/docs` — com bypass activo não precisas de token; ou `POST /auth/login` → **Authorize** (Bearer); site em `:5173` → login.
 
 ### Cenários típicos noutro PC
 

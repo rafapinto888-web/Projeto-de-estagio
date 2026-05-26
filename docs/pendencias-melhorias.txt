@@ -6,10 +6,10 @@ Feito na parte de SEGURANCA:
 [ x ] Login obrigatorio em GET /pesquisar, GET /localizacoes, GET /perfis
 [ x ] Pesquisa global filtra resultados para utilizador normal (nao admin)
 [ x ] Credenciais de rede nos logs via POST (nao na URL)
-[ x ] Swagger bypass desligado por defeito (INVENTARIO_ALLOW_SWAGGER_BYPASS)
+[ x ] Autenticacao: JWT Bearer + Basic no Swagger; bypass /docs opcional (INVENTARIO_ALLOW_SWAGGER_BYPASS)
 [ x ] CORS por lista de origens (INVENTARIO_CORS_ORIGINS)
 [ x ] Aviso se SECRET_KEY por defeito em producao
-[ x ] Ficheiro backend/.env.example
+[ x ] Ficheiro backend/.env (variaveis locais; nao versionar segredos)
 
 ----------------------------------------------------------------------
 PRIORIDADE ALTA (funcionalidade / UX)
@@ -63,13 +63,13 @@ NOTAS DE AMBIENTE (apos seguranca)
 ----------------------------------------------------------------------
 
 Desenvolvimento local:
-  - Copiar backend/.env.example para backend/.env
-  - INVENTARIO_ALLOW_SWAGGER_BYPASS=true  (para testar no /docs)
-  - INVENTARIO_CORS_ORIGINS com a porta do Vite
+  - Editar backend/.env (DATABASE_URL, SECRET_KEY, etc.)
+  - INVENTARIO_ALLOW_SWAGGER_BYPASS=true: /docs sem JWT (ou Basic user+password no Authorize)
+  - Alternativa Swagger: POST /auth/login, copiar access_token, Authorize Bearer
 
 Producao / demonstracao:
   - SECRET_KEY unica e forte
-  - INVENTARIO_ALLOW_SWAGGER_BYPASS=false
+  - INVENTARIO_ALLOW_SWAGGER_BYPASS=false (ou omitir)
   - INVENTARIO_APP_ENV=production
   - CORS so com o dominio real do frontend
 

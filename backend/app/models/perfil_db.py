@@ -14,8 +14,8 @@ class PerfilDB(Base):
 
     __tablename__ = "perfis"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    nome: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    nome: Mapped[str] = mapped_column(String(50))
 
     utilizadores: Mapped[list["UtilizadorDB"]] = relationship(
         back_populates="perfil"

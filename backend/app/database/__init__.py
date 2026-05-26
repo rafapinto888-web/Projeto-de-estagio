@@ -1,5 +1,1 @@
-﻿"""Subpacote database: ligacao SQLAlchemy e repositorios."""
-
-# Pacote de acesso a dados e utilitarios de BD.
-"""Camada simples de acesso a dados."""
-
+"""Ligacao SQLAlchemy (connection) e repositorios de acesso a dados."""

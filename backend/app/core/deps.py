@@ -1,10 +1,15 @@
-"""Dependencias FastAPI: autenticacao JWT/Basic e controlo de perfil admin."""
+"""Dependencias FastAPI: autenticacao JWT/Basic, bypass Swagger e controlo de perfil admin."""
 
 import base64
 import re
 
 from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.security import (
+    HTTPAuthorizationCredentials,
+    HTTPBasic,
+    HTTPBasicCredentials,
+    HTTPBearer,
+)
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import ALLOW_SWAGGER_BYPASS
@@ -12,6 +17,7 @@ from app.core.security import descodificar_access_token, verificar_palavra_passe
 from app.database.connection import get_db
 from app.models.utilizador_db import UtilizadorDB
 
+http_bearer = HTTPBearer(auto_error=False)
 basic_scheme = HTTPBasic(auto_error=False)
 
 # Palavras de perfil que concedem visao global (logs, inventarios, computadores).
@@ -33,7 +39,7 @@ def is_admin_user(user: UtilizadorDB) -> bool:
 
 
 def _is_swagger_request(request: Request) -> bool:
-    # Permite manter frontend protegido e, ao mesmo tempo, facilitar testes no /docs.
+    """True se o pedido vier do Swagger/ReDoc no browser."""
     referer = (request.headers.get("referer") or "").lower()
     user_agent = (request.headers.get("user-agent") or "").lower()
     return "/docs" in referer or "/redoc" in referer or "swagger-ui" in user_agent
@@ -41,11 +47,12 @@ def _is_swagger_request(request: Request) -> bool:
 
 def get_current_user(
     request: Request,
+    bearer_credentials: HTTPAuthorizationCredentials | None = Depends(http_bearer),
     swagger_credentials: HTTPBasicCredentials | None = Depends(basic_scheme),
     db: Session = Depends(get_db),
 ) -> UtilizadorDB:
-    """Resolve o utilizador autenticado via Bearer JWT, Basic ou modo Swagger."""
-    # No Swagger/ReDoc (so se INVENTARIO_ALLOW_SWAGGER_BYPASS=true), facilita testes locais.
+    """Resolve utilizador via bypass Swagger (opcional), Bearer JWT ou Basic (user/password no Swagger)."""
+    # Modo desenvolvimento: sem login no /docs quando INVENTARIO_ALLOW_SWAGGER_BYPASS=true
     if ALLOW_SWAGGER_BYPASS and _is_swagger_request(request):
         candidatos = (
             db.query(UtilizadorDB)
@@ -63,11 +70,8 @@ def get_current_user(
             headers={"WWW-Authenticate": "Basic"},
         )
 
-    authorization = request.headers.get("Authorization", "").strip()
-
-    # Mantem compatibilidade com frontend atual (Bearer JWT).
-    if authorization.lower().startswith("bearer "):
-        token = authorization[7:].strip()
+    if bearer_credentials is not None and bearer_credentials.scheme.lower() == "bearer":
+        token = (bearer_credentials.credentials or "").strip()
         utilizador_id_txt = descodificar_access_token(token)
         if utilizador_id_txt is None or not utilizador_id_txt.isdigit():
             raise HTTPException(
@@ -75,7 +79,6 @@ def get_current_user(
                 detail="Token invalido",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-
         utilizador_por_token = (
             db.query(UtilizadorDB)
             .options(joinedload(UtilizadorDB.perfil))
@@ -90,27 +93,28 @@ def get_current_user(
             )
         return utilizador_por_token
 
-    # Para Swagger: autenticação simples com username/email + password.
     identificador = None
     palavra_passe = None
     if swagger_credentials is not None:
         identificador = (swagger_credentials.username or "").strip()
         palavra_passe = swagger_credentials.password
-    elif authorization.lower().startswith("basic "):
-        try:
-            token = authorization[6:].strip()
-            decoded = base64.b64decode(token).decode("utf-8")
-            identificador, palavra_passe = decoded.split(":", 1)
-            identificador = identificador.strip()
-        except Exception:
-            identificador = None
-            palavra_passe = None
+    else:
+        authorization = request.headers.get("Authorization", "").strip()
+        if authorization.lower().startswith("basic "):
+            try:
+                token = authorization[6:].strip()
+                decoded = base64.b64decode(token).decode("utf-8")
+                identificador, palavra_passe = decoded.split(":", 1)
+                identificador = identificador.strip()
+            except Exception:
+                identificador = None
+                palavra_passe = None
 
     if not identificador or palavra_passe is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Nao autenticado",
-            headers={"WWW-Authenticate": "Basic"},
+            detail="Nao autenticado — Bearer JWT, ou user/password no Swagger (Authorize)",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     utilizador_por_credencial = (
@@ -147,4 +151,3 @@ def require_admin(current_user: UtilizadorDB = Depends(get_current_user)) -> Uti
             detail="Apenas administradores podem executar esta operacao",
         )
     return current_user
-

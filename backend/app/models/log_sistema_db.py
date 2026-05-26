@@ -20,15 +20,11 @@ class LogSistemaDB(Base):
 
     __tablename__ = "logs_sistema"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    utilizador_id: Mapped[int] = mapped_column(
-        ForeignKey("utilizadores.id"), nullable=False, index=True
-    )
-    acao: Mapped[str] = mapped_column(String(100), nullable=False)
-    descricao: Mapped[str | None] = mapped_column(Text, nullable=True)
-    data_evento: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    utilizador_id: Mapped[int] = mapped_column(ForeignKey("utilizadores.id"))
+    acao: Mapped[str] = mapped_column(String(100))
+    descricao: Mapped[str | None] = mapped_column(Text)
+    data_evento: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     utilizador: Mapped["UtilizadorDB"] = relationship(back_populates="logs_sistema")
 

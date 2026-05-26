@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.connection import Base
@@ -15,26 +15,20 @@ class DispositivoDescobertoDB(Base):
     """Host encontrado no scan; unico por inventario_id + ip."""
 
     __tablename__ = "dispositivos_descobertos"
-    __table_args__ = (
-        UniqueConstraint("inventario_id", "ip", name="uq_dispositivo_descoberto_inventario_ip"),
-    )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    inventario_id: Mapped[int] = mapped_column(
-        ForeignKey("inventarios.id"), nullable=False, index=True
-    )
-    ip: Mapped[str] = mapped_column(String(45), nullable=False, index=True)
-    mac_address: Mapped[str | None] = mapped_column(String(17), nullable=True)
-    hostname: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    marca: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    modelo: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    numero_serie: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    sistema_operativo: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    origem_registo: Mapped[str] = mapped_column(String(30), nullable=False, default="scan")
-    estado: Mapped[str] = mapped_column(String(50), nullable=False)
-    ultima_vez_ativo_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    # Primeira vez que este IP foi visto neste inventário (não altera em updates do scan).
-    criado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    inventario_id: Mapped[int] = mapped_column(ForeignKey("inventarios.id"))
+    ip: Mapped[str] = mapped_column(String(45))
+    mac_address: Mapped[str | None] = mapped_column(String(17))
+    hostname: Mapped[str | None] = mapped_column(String(100))
+    marca: Mapped[str | None] = mapped_column(String(100))
+    modelo: Mapped[str | None] = mapped_column(String(100))
+    numero_serie: Mapped[str | None] = mapped_column(String(120))
+    sistema_operativo: Mapped[str | None] = mapped_column(String(120))
+    origem_registo: Mapped[str] = mapped_column(String(30), default="scan")
+    estado: Mapped[str] = mapped_column(String(50))
+    ultima_vez_ativo_em: Mapped[datetime | None] = mapped_column(DateTime)
+    criado_em: Mapped[datetime | None] = mapped_column(DateTime)
 
     inventario: Mapped["InventarioDB"] = relationship(
         back_populates="dispositivos_descobertos"

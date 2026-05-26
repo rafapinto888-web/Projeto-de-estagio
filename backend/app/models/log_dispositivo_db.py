@@ -16,15 +16,11 @@ class LogDispositivoDB(Base):
 
     __tablename__ = "logs_dispositivo"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    computador_id: Mapped[int] = mapped_column(
-        ForeignKey("computadores.id"), nullable=False, index=True
-    )
-    tipo_log: Mapped[str] = mapped_column(String(50), nullable=False)
-    descricao: Mapped[str | None] = mapped_column(Text, nullable=True)
-    data_evento: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    computador_id: Mapped[int] = mapped_column(ForeignKey("computadores.id"))
+    tipo_log: Mapped[str] = mapped_column(String(50))
+    descricao: Mapped[str | None] = mapped_column(Text)
+    data_evento: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     computador: Mapped["ComputadorDB"] = relationship(back_populates="logs_dispositivo")
 

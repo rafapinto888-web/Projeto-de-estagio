@@ -1,26 +1,12 @@
-"""Ponto de entrada FastAPI: CORS, migracoes SQLite e registo de routers."""
+"""Ponto de entrada FastAPI: CORS e registo de routers."""
 
-# Arranque da API FastAPI e registo de routers.
 import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
-from sqlalchemy import inspect
 
 from app.core.config import APP_ENV, CORS_ORIGINS
 from app.core.security import SECRET_KEY
-from app.database.connection import Base, engine
-
-logger = logging.getLogger(__name__)
-from app.models.computador_db import ComputadorDB
-from app.models.dispositivo_descoberto_db import DispositivoDescobertoDB
-from app.models.inventario_db import InventarioDB
-from app.models.localizacao_db import LocalizacaoDB
-from app.models.log_dispositivo_db import LogDispositivoDB
-from app.models.log_sistema_db import LogSistemaDB
-from app.models.perfil_db import PerfilDB
-from app.models.utilizador_db import UtilizadorDB
 from app.routes.auth import router as auth_router
 from app.routes.computadores import router as computadores_router
 from app.routes.inventarios import router as inventarios_router
@@ -28,6 +14,8 @@ from app.routes.localizacoes import router as localizacoes_router
 from app.routes.pesquisa import router as pesquisa_router
 from app.routes.perfis import router as perfis_router
 from app.routes.utilizadores import router as utilizadores_router
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="API de Inventario",
@@ -49,68 +37,6 @@ if APP_ENV == "production" and SECRET_KEY == "inventario-dev-secret-key-change-i
         "SECRET_KEY por defeito em producao — define SECRET_KEY no ambiente."
     )
 
-
-def garantir_compatibilidade_schema_sqlite() -> None:
-    """Adiciona/remove colunas em BD existentes sem perder dados (SQLite/PostgreSQL)."""
-    with engine.begin() as connection:
-        inspetor = inspect(connection)
-
-        def adicionar_coluna_se_faltar(tabela: str, coluna: str, tipo_sqlite: str, tipo_outros: str) -> None:
-            try:
-                colunas = {c["name"] for c in inspetor.get_columns(tabela)}
-            except Exception:
-                return
-
-            if coluna in colunas:
-                return
-
-            tipo = tipo_sqlite if engine.dialect.name == "sqlite" else tipo_outros
-            connection.execute(text(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}"))
-
-        def remover_coluna_se_existir(tabela: str, coluna: str) -> None:
-            try:
-                colunas = {c["name"] for c in inspetor.get_columns(tabela)}
-            except Exception:
-                return
-
-            if coluna not in colunas:
-                return
-
-            # Em alguns ambientes SQLite antigos DROP COLUMN pode não estar disponível.
-            try:
-                connection.execute(text(f"ALTER TABLE {tabela} DROP COLUMN {coluna}"))
-            except Exception:
-                return
-
-        # Compatibilidade antiga para SQLite (computadores)
-        adicionar_coluna_se_faltar("computadores", "inventario_id", "INTEGER", "INTEGER")
-        adicionar_coluna_se_faltar("computadores", "localizacao_id", "INTEGER", "INTEGER")
-        adicionar_coluna_se_faltar("computadores", "utilizador_responsavel_id", "INTEGER", "INTEGER")
-        adicionar_coluna_se_faltar("computadores", "hostname", "TEXT", "VARCHAR(100)")
-        adicionar_coluna_se_faltar("computadores", "endereco_ip", "TEXT", "VARCHAR(45)")
-        adicionar_coluna_se_faltar("computadores", "mac_address", "TEXT", "VARCHAR(17)")
-        adicionar_coluna_se_faltar("computadores", "sistema_operativo", "TEXT", "VARCHAR(120)")
-
-        # Campos de tipo/rede para inventarios.
-        adicionar_coluna_se_faltar("inventarios", "tipo_inventario", "TEXT DEFAULT 'normal'", "VARCHAR(20) DEFAULT 'normal'")
-        adicionar_coluna_se_faltar("inventarios", "rede", "TEXT", "VARCHAR(50)")
-
-        # Novo campo do scan (dispositivos_descobertos)
-        adicionar_coluna_se_faltar("dispositivos_descobertos", "mac_address", "TEXT", "VARCHAR(17)")
-        adicionar_coluna_se_faltar("dispositivos_descobertos", "marca", "TEXT", "VARCHAR(100)")
-        adicionar_coluna_se_faltar("dispositivos_descobertos", "numero_serie", "TEXT", "VARCHAR(120)")
-        adicionar_coluna_se_faltar("dispositivos_descobertos", "sistema_operativo", "TEXT", "VARCHAR(120)")
-        adicionar_coluna_se_faltar("dispositivos_descobertos", "origem_registo", "TEXT DEFAULT 'scan'", "VARCHAR(30) DEFAULT 'scan'")
-        adicionar_coluna_se_faltar("dispositivos_descobertos", "ultima_vez_ativo_em", "TEXT", "TIMESTAMP")
-
-        # Limpeza de schema: coluna descricao foi removida de perfis.
-        remover_coluna_se_existir("perfis", "descricao")
-
-
-# Importa os modelos antes do create_all para registarem as tabelas na metadata.
-Base.metadata.create_all(bind=engine)
-garantir_compatibilidade_schema_sqlite()
-
 app.include_router(computadores_router)
 app.include_router(auth_router)
 app.include_router(inventarios_router)
@@ -123,4 +49,3 @@ app.include_router(utilizadores_router)
 @app.get("/", tags=["Root"])
 def root():
     return {"mensagem": "API de inventario a funcionar"}
-

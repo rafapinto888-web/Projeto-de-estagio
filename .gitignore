@@ -98,7 +98,6 @@ docker-compose.*.local.yml
 # --- Segredos / ambiente ---
 .env
 .env.*
-!.env.example
 backend/.env
 backend/.env.*
 frontend/.env
