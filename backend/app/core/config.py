@@ -3,7 +3,6 @@
 Variaveis usadas pelo projeto de inventario:
   INVENTARIO_APP_ENV                — development | production
   INVENTARIO_CORS_ORIGINS           — origens do frontend (lista separada por virgulas)
-  INVENTARIO_ALLOW_SWAGGER_BYPASS   — true: /docs sem login (assume admin ou 1.º user)
 """
 
 from __future__ import annotations
@@ -17,27 +16,11 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 
-def _env_bool(nome: str, *, default: bool = False) -> bool:
-    valor = os.getenv(nome, "").strip().lower()
-    if valor in ("1", "true", "yes", "on", "sim"):
-        return True
-    if valor in ("0", "false", "no", "off", "nao", "não"):
-        return False
-    return default
-
-
 # ---------------------------------------------------------------------------
 # Ambiente da aplicacao
 # ---------------------------------------------------------------------------
 
 APP_ENV = os.getenv("INVENTARIO_APP_ENV", "development").strip().lower()
-
-
-# ---------------------------------------------------------------------------
-# Swagger (/docs): bypass automatico (so desenvolvimento)
-# ---------------------------------------------------------------------------
-
-ALLOW_SWAGGER_BYPASS = _env_bool("INVENTARIO_ALLOW_SWAGGER_BYPASS", default=False)
 
 
 # ---------------------------------------------------------------------------

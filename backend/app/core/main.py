@@ -2,10 +2,12 @@
 
 import logging
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import APP_ENV, CORS_ORIGINS
+from app.core.deps import get_current_user
+from app.core.openapi import configure_openapi
 from app.core.security import SECRET_KEY
 from app.routes.auth import router as auth_router
 from app.routes.computadores import router as computadores_router
@@ -14,14 +16,17 @@ from app.routes.localizacoes import router as localizacoes_router
 from app.routes.pesquisa import router as pesquisa_router
 from app.routes.perfis import router as perfis_router
 from app.routes.utilizadores import router as utilizadores_router
+from app.models.utilizador_db import UtilizadorDB
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="API de Inventario",
     version="0.1.0",
-    description="API para gestao de inventario e computadores.",
+    swagger_ui_parameters={"persistAuthorization": True},
 )
+
+configure_openapi(app)
 
 # CORS: lista em app.core.config (INVENTARIO_CORS_ORIGINS); ver docstring em config.py.
 app.add_middleware(
@@ -47,5 +52,8 @@ app.include_router(utilizadores_router)
 
 
 @app.get("/", tags=["Root"])
-def root():
-    return {"mensagem": "API de inventario a funcionar"}
+def root(current_user: UtilizadorDB = Depends(get_current_user)):
+    return {
+        "mensagem": "API de inventario a funcionar",
+        "utilizador": current_user.username,
+    }
