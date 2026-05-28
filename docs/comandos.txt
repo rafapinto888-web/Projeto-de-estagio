@@ -1,94 +1,105 @@
 COMANDOS — inventário IT (resumo)
-Raiz do projeto (ajusta o caminho se for noutro PC):
+Raiz do projeto:
   cd "C:\Users\Jose\Desktop\Projeto de estagio"
 
+Guia completo Nginx na VM (reverse proxy): docs\servidor-proxy-vm-passo-a-passo.txt
+
 ================================================================================
-1) CORRER SEM DOCKER (recomendado para scan na LAN — API no Windows)
+1) CORRER SEM DOCKER (recomendado — API + frontend no Windows)
 ================================================================================
-Precisas: PostgreSQL a correr, ficheiro backend\.env com DATABASE_URL, SECRET_KEY, CORS, etc.
+Precisas: PostgreSQL a correr, ficheiro backend\.env (DATABASE_URL, SECRET_KEY, CORS).
 
 --- Terminal 1 — API (porta 8000) ---
-cd backend
+
+cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
+
+# Primeira vez (venv + dependências):
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+.\.venv\Scripts\pip install -r requirements.txt
+
+# A) Uso normal só no teu PC (localhost):
 .\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
-
-# Para a API ouvir na rede local (outros PCs):
-# .\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 0.0.0.0 --port 8000
-# (define INVENTARIO_CORS_ORIGINS com o URL do frontend, ex.: http://192.168.1.10:5173)
-
 Swagger: http://127.0.0.1:8000/docs
 
---- Terminal 2 — Frontend (Windows) ---
-cd frontend
+# B) Com Nginx na VM Linux (reverse proxy) — USA ESTE quando a VM precisa da API:
+.\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 0.0.0.0 --port 8000
+# 0.0.0.0 = aceita ligações da VM (ex. 192.168.1.63), não só 127.0.0.1
 
-# PowerShell bloqueia npm.ps1 (Execution Policy)? Usa npm.cmd:
+# Confirmar que escuta na rede (outro terminal PowerShell):
+netstat -an | findstr 8000
+# Tem de aparecer:  0.0.0.0:8000  ...  LISTENING
+
+# IP do Windows (ipconfig → Wi-Fi → IPv4), ex.: 192.168.1.43
+# Na VM, Nginx proxy_pass:  http://IP-DO-WINDOWS:8000
+# Browser via Nginx:         http://IP-DA-VM/docs   (ex. http://192.168.1.63/docs)
+
+# Firewall Windows (PowerShell como Administrador) — se curl na VM der timeout:
+New-NetFirewallRule -DisplayName "API Inventario 8000" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Private
+
+# Teste na VM (substituir IP do Windows):
+curl http://192.168.1.43:8000/
+
+--- Terminal 2 — Frontend (pasta frontend, NÃO a raiz do projeto) ---
+
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
 npm.cmd install
 npm.cmd run dev
 # Site: http://127.0.0.1:5173
 
-# Se o Docker ja tiver o frontend na porta 5173, corre o Vite LOCAL na 5174 (Docker continua igual):
+# Porta 5173 ocupada (ex. Docker)? Vite local na 5174:
 npm.cmd run dev:local
-# Site: http://127.0.0.1:5174
-# (acrescenta esta origem em INVENTARIO_CORS_ORIGINS no backend\.env se a API recusar pedidos)
+# http://127.0.0.1:5174
+# Se a API recusar pedidos, acrescenta a origem em INVENTARIO_CORS_ORIGINS no backend\.env
 
 # Alternativa: duplo clique em frontend\dev-local.cmd
 
 --- Parar ---
-Ctrl+C em cada terminal.
+Ctrl+C em cada terminal (API e frontend).
 
 ================================================================================
-2) DOCKER (resumo)
+2) NGINX NA VM (resumo — detalhe no outro ficheiro)
+================================================================================
+VM Ubuntu: sudo apt install nginx -y
+VirtualBox: Rede ponteado (Bridged), não NAT.
+IP VM:     hostname -I   (ex. 192.168.1.63)
+IP Windows: ipconfig     (ex. 192.168.1.43)
+
+Na VM, ficheiro: /etc/nginx/sites-available/default
+  location / {
+      proxy_pass http://192.168.1.43:8000;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+  (trocar 192.168.1.43 pelo IPv4 real do Windows; porta 8000)
+
+sudo nginx -t
+sudo systemctl reload nginx
+
+Passo a passo completo: docs\servidor-proxy-vm-passo-a-passo.txt
+
+================================================================================
+3) DOCKER (opcional)
 ================================================================================
 
 cd "C:\Users\Jose\Desktop\Projeto de estagio"
 
-# --- OUTRO PC (copiar projeto + Docker Desktop) ---
-
-# 1) Dev com hot reload (só frontend em container; API costuma ser no PC)
+# Só frontend em Docker (API no Windows):
 .\scripts\docker-subir-dev.ps1
-# ou:
-docker compose --profile dev-live up -d --build web-dev
+# ou: docker compose --profile dev-live up -d --build web-dev
 
-# 2) Tudo em Docker (frontend dev + API + Postgres)
+# Tudo em Docker (frontend + API + Postgres):
 .\scripts\docker-subir-tudo.ps1
-# ou:
-docker compose --profile dev-live --profile docker-api --profile bundled-db up -d --build
+# ou: docker compose --profile dev-live --profile docker-api --profile bundled-db up -d --build
 
-# Se deps npm falharem (ex. xlsx), recriar volume e rebuild:
-docker compose --profile dev-live down
-docker volume ls
-# apaga o volume node_modules do frontend se existir, depois:
-docker compose --profile dev-live up -d --build web-dev
-
-# --- MODOS ---
-
-# Subir frontend DEV (auto-atualiza ao editar)
-docker compose --profile dev-live up -d --build web-dev
-
-# Subir frontend + backend + base de dados
-docker compose --profile dev-live --profile docker-api --profile bundled-db up -d --build
-
-# Subir frontend + backend (API usa Postgres do PC via host.docker.internal)
-docker compose --profile dev-live --profile docker-api up -d --build
-
-# Ver estado
+# Ver / parar
 docker ps
-docker compose ps
-
-# Ver logs
 docker compose logs -f
-docker compose logs -f frontend-dev
-docker compose logs -f backend
-docker compose logs -f base-de-dados
-
-# Parar
 docker compose stop
 docker compose down
 
 ================================================================================
-3) JWT (opcional — variáveis no backend\.env ou ambiente)
+4) JWT (opcional — backend\.env)
 ================================================================================
 ACCESS_TOKEN_EXPIRE_MINUTES   (ex.: 5 ou 180)
 REFRESH_TOKEN_EXPIRE_DAYS     (ex.: 7)
