@@ -1,10 +1,12 @@
 """Ponto de entrada FastAPI: CORS e registo de routers."""
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.bootstrap import garantir_utilizador_admin_inicial
 from app.core.config import APP_ENV, CORS_ORIGINS
 from app.core.deps import get_current_user
 from app.core.openapi import configure_openapi
@@ -16,14 +18,28 @@ from app.routes.localizacoes import router as localizacoes_router
 from app.routes.pesquisa import router as pesquisa_router
 from app.routes.perfis import router as perfis_router
 from app.routes.utilizadores import router as utilizadores_router
+from app.database.connection import SessionLocal
 from app.models.utilizador_db import UtilizadorDB
 
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Ao arranque: garante utilizador admin inicial se ainda nao existir na BD."""
+    db = SessionLocal()
+    try:
+        garantir_utilizador_admin_inicial(db)
+    finally:
+        db.close()
+    yield
+
 
 app = FastAPI(
     title="API de Inventario",
     version="0.1.0",
     swagger_ui_parameters={"persistAuthorization": True},
+    lifespan=lifespan,
 )
 
 configure_openapi(app)

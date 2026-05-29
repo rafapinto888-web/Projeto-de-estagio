@@ -25,10 +25,15 @@ def _tokens_do_perfil(perfil_raw: str | None) -> frozenset[str]:
     return frozenset(p for p in pedacos if p)
 
 
+def perfil_nome_e_admin(nome: str | None) -> bool:
+    """True se o nome do perfil (ex.: na tabela perfis) concede permissoes de administrador."""
+    return bool(_tokens_do_perfil(nome) & _PERFIL_ADMIN_TOKENS)
+
+
 def is_admin_user(user: UtilizadorDB) -> bool:
     """True para perfis como Admin / Administrador (palavra inteira), nao para 'administrativo'."""
     nome = user.perfil.nome if user.perfil else ""
-    return bool(_tokens_do_perfil(nome) & _PERFIL_ADMIN_TOKENS)
+    return perfil_nome_e_admin(nome)
 
 
 def get_current_user(

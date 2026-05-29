@@ -87,7 +87,7 @@ postgresql+psycopg2://postgres:TU_PASSWORD@127.0.0.1:5432/NOME_DA_BASE
 
 **No pgAdmin (Postgres local, não Docker):** (1) Regista o servidor se ainda não existir (*Connection* → host `127.0.0.1`, porta `5432`, user `postgres`, password que definiste). (2) Em **Databases** → cria a base com o nome que quiseres (ex. `inventario`). (3) No **Query Tool** com essa base seleccionada, cria tabelas, `NOT NULL`, `UNIQUE`, FKs e índices — a **fonte de verdade** dessas regras é a base de dados; o código ORM só mapeia colunas para leitura/escrita.
 
-Precisas de **pelo menos um utilizador** na BD para fazer login (dados iniciais via pgAdmin, dump ou Swagger se existir endpoint).
+Ao **arranque da API**, se ainda não existir um utilizador com username `admin`, o backend cria automaticamente a conta **admin** (password `inventario123`, email `admin@inventario.local`) com perfil de administrador — ver `backend/app/core/bootstrap.py`. Em produção, altera esta password após o primeiro login.
 
 ### 2. Backend (API)
 
