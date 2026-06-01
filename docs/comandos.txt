@@ -1,105 +1,86 @@
-COMANDOS — inventário IT (resumo)
-Raiz do projeto:
-  cd "C:\Users\Jose\Desktop\Projeto de estagio"
+COMANDOS — inventário IT
+Ficheiro: C:\Users\Jose\Desktop\Projeto de estagio\docs\comandos.txt
 
-Guia completo Nginx na VM (reverse proxy): docs\servidor-proxy-vm-passo-a-passo.txt
+Nao colar linhas que comecam por http no terminal (sao so para o browser).
+PowerShell: copia cada bloco de comandos de uma vez (cd + linha seguinte).
 
 ================================================================================
-1) CORRER SEM DOCKER (recomendado — API + frontend no Windows)
+PRIMEIRA VEZ — venv backend + npm frontend (uma vez)
 ================================================================================
-Precisas: PostgreSQL a correr, ficheiro backend\.env (DATABASE_URL, SECRET_KEY, CORS).
-
---- Terminal 1 — API (porta 8000) ---
-
 cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
-
-# Primeira vez (venv + dependências):
 python -m venv .venv
-.\.venv\Scripts\pip install -r requirements.txt
-
-# A) Uso normal só no teu PC (localhost):
-.\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
-Swagger: http://127.0.0.1:8000/docs
-
-# B) Com Nginx na VM Linux (reverse proxy) — USA ESTE quando a VM precisa da API:
-.\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 0.0.0.0 --port 8000
-# 0.0.0.0 = aceita ligações da VM (ex. 192.168.1.63), não só 127.0.0.1
-
-# Confirmar que escuta na rede (outro terminal PowerShell):
-netstat -an | findstr 8000
-# Tem de aparecer:  0.0.0.0:8000  ...  LISTENING
-
-# IP do Windows (ipconfig → Wi-Fi → IPv4), ex.: 192.168.1.43
-# Na VM, Nginx proxy_pass:  http://IP-DO-WINDOWS:8000
-# Browser via Nginx:         http://IP-DA-VM/docs   (ex. http://192.168.1.63/docs)
-
-# Firewall Windows (PowerShell como Administrador) — se curl na VM der timeout:
-New-NetFirewallRule -DisplayName "API Inventario 8000" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Private
-
-# Teste na VM (substituir IP do Windows):
-curl http://192.168.1.43:8000/
-
---- Terminal 2 — Frontend (pasta frontend, NÃO a raiz do projeto) ---
-
+.\.venv\Scripts\pip.exe install -r requirements.txt
 cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
 npm.cmd install
+
+================================================================================
+SEM NGINX — Terminal 1 API
+================================================================================
+cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
+.\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
+
+SEM NGINX — Terminal 2 frontend
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
 npm.cmd run dev
-# Site: http://127.0.0.1:5173
 
-# Porta 5173 ocupada (ex. Docker)? Vite local na 5174:
+SEM NGINX — se porta 5173 ocupada (Terminal 2)
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
 npm.cmd run dev:local
-# http://127.0.0.1:5174
-# Se a API recusar pedidos, acrescenta a origem em INVENTARIO_CORS_ORIGINS no backend\.env
 
-# Alternativa: duplo clique em frontend\dev-local.cmd
-
---- Parar ---
-Ctrl+C em cada terminal (API e frontend).
+Browser API:  http://127.0.0.1:8000/docs
+Browser site: http://127.0.0.1:5173   ou   http://127.0.0.1:5174
 
 ================================================================================
-2) NGINX NA VM (resumo — detalhe no outro ficheiro)
+COM NGINX — Terminal 1 API (VM acede ao Windows)
 ================================================================================
-VM Ubuntu: sudo apt install nginx -y
-VirtualBox: Rede ponteado (Bridged), não NAT.
-IP VM:     hostname -I   (ex. 192.168.1.63)
-IP Windows: ipconfig     (ex. 192.168.1.43)
+cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
+.\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 0.0.0.0 --port 8000
 
-Na VM, ficheiro: /etc/nginx/sites-available/default
-  location / {
-      proxy_pass http://192.168.1.43:8000;
-      proxy_set_header Host $host;
-      proxy_set_header X-Real-IP $remote_addr;
-      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  }
-  (trocar 192.168.1.43 pelo IPv4 real do Windows; porta 8000)
+COM NGINX — Terminal 2 frontend
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
+npm.cmd run dev
 
-sudo nginx -t
-sudo systemctl reload nginx
+COM NGINX — firewall Windows (outro PowerShell COMO ADMINISTRADOR)
+New-NetFirewallRule -DisplayName "API Inventario 8000" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Private
 
-Passo a passo completo: docs\servidor-proxy-vm-passo-a-passo.txt
+Browser API no PC: http://127.0.0.1:8000/docs
+Browser site:      http://127.0.0.1:5173
+API via Nginx VM: http://IP-DA-VM/docs   (ex.: http://192.168.1.63/docs)
+
+COM NGINX — teste rapido no Windows (troca pelo IPv4 do ipconfig)
+curl http://192.168.1.43:8000/docs
+
+COM NGINX — teste na VM Linux (troca pelo IP do Windows)
+curl -sI http://192.168.1.43:8000/docs
+
+COM NGINX — ver se escuta na rede (PowerShell qualquer)
+netstat -an | findstr 8000
+
+Guia Nginx na VM (passo a passo):
+C:\Users\Jose\Desktop\Projeto de estagio\docs\servidor-proxy-vm-passo-a-passo.txt
 
 ================================================================================
-3) DOCKER (opcional)
+Parar API e frontend
 ================================================================================
+Ctrl+C no terminal de cada um.
 
+================================================================================
+Docker (na raiz do projeto)
+================================================================================
 cd "C:\Users\Jose\Desktop\Projeto de estagio"
-
-# Só frontend em Docker (API no Windows):
 .\scripts\docker-subir-dev.ps1
-# ou: docker compose --profile dev-live up -d --build web-dev
-
-# Tudo em Docker (frontend + API + Postgres):
 .\scripts\docker-subir-tudo.ps1
-# ou: docker compose --profile dev-live --profile docker-api --profile bundled-db up -d --build
-
-# Ver / parar
-docker ps
-docker compose logs -f
 docker compose stop
 docker compose down
 
 ================================================================================
-4) JWT (opcional — backend\.env)
+Nginx na VM — ver se ficheiro esta bem
 ================================================================================
-ACCESS_TOKEN_EXPIRE_MINUTES   (ex.: 5 ou 180)
-REFRESH_TOKEN_EXPIRE_DAYS     (ex.: 7)
+sudo nginx -t
+sudo systemctl reload nginx
+
+================================================================================
+backend\.env — JWT opcional
+================================================================================
+ACCESS_TOKEN_EXPIRE_MINUTES
+REFRESH_TOKEN_EXPIRE_DAYS
