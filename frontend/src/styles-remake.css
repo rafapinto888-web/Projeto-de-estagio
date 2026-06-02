@@ -56,12 +56,19 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   font-family: var(--font-sans);
   color: var(--text);
   background:
     radial-gradient(circle at 12% -8%, rgba(99, 102, 241, 0.16), transparent 44%),
     radial-gradient(circle at 100% 2%, rgba(14, 165, 233, 0.14), transparent 30%),
     var(--shell-bg);
+}
+
+/* Evita scroll horizontal indesejado quando há tabelas largas (scroll fica no contentor). */
+#root {
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 input:not(.MuiInputBase-input),
@@ -121,6 +128,7 @@ button:not(.MuiButtonBase-root):hover {
 
 .auth-screen {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 24px;
@@ -227,8 +235,10 @@ button:not(.MuiButtonBase-root):hover {
 
 .logs-output {
   margin: 0;
-  max-height: min(64vh, 560px);
+  max-height: min(64dvh, 560px);
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
@@ -286,8 +296,19 @@ button:not(.MuiButtonBase-root):hover {
   color: var(--text-faint);
 }
 
+.table-shell--responsive {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
 .table-shell--responsive table {
   min-width: 700px;
+}
+
+@media (max-width: 480px) {
+  .table-shell--responsive table {
+    min-width: 560px;
+  }
 }
 
 .perfil-table-name {

@@ -25,13 +25,13 @@ export default function Panel({
     >
       {title ? (
         <Stack
-          direction="row"
-          alignItems="flex-start"
+          direction={{ xs: "column", sm: "row" }}
+          alignItems={{ xs: "flex-start", sm: "flex-start" }}
           justifyContent="space-between"
           spacing={1}
-          sx={{ px: 2, pt: 2, pb: subtitle ? 0.5 : 1.25 }}
+          sx={{ px: 2, pt: 2, pb: subtitle ? 0.5 : 1.25, gap: 1 }}
         >
-          <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ minWidth: 0, width: { xs: "100%", sm: "auto" } }}>
             <Typography variant="h3" color="text.primary">
               {title}
             </Typography>
@@ -41,7 +41,9 @@ export default function Panel({
               </Typography>
             ) : null}
           </Box>
-          {action ? <Box sx={{ flexShrink: 0 }}>{action}</Box> : null}
+          {action ? (
+            <Box sx={{ flexShrink: 0, alignSelf: { xs: "flex-start", sm: "auto" } }}>{action}</Box>
+          ) : null}
         </Stack>
       ) : null}
       {title ? <Divider sx={{ mx: 2 }} /> : null}

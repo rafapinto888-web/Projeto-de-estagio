@@ -24,6 +24,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           },
           "#root": {
             minHeight: "100vh",
+            maxWidth: "100%",
+            overflowX: "clip",
           },
         }}
       />

@@ -38,6 +38,8 @@ export default function DataTable({
         bgcolor: "#fff",
         maxWidth: "100%",
         overflowX: "auto",
+        WebkitOverflowScrolling: "touch",
+        overscrollBehaviorX: "contain",
       }}
     >
       <Table size="small" sx={{ width: "100%" }}>
