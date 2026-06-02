@@ -19,18 +19,18 @@
   --font-sans: "Inter", "DM Sans", "Segoe UI", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  --shell-bg: #f3f5fc;
+  --shell-bg: #f4f4f5;
   --surface: #ffffff;
-  --surface-soft: #f8faff;
-  --border: #dbe3f0;
+  --surface-soft: #fafafa;
+  --border: #e4e4e7;
 
-  --text: #0f172a;
-  --text-soft: #475569;
-  --text-faint: #94a3b8;
+  --text: #18181b;
+  --text-soft: #52525b;
+  --text-faint: #a1a1aa;
 
   --accent: #4f46e5;
   --accent-hover: #4338ca;
-  --accent-soft: rgba(79, 70, 229, 0.1);
+  --accent-soft: rgba(79, 70, 229, 0.12);
 
   --ok-bg: #ecfdf3;
   --ok-tx: #166534;
@@ -60,8 +60,8 @@ body {
   font-family: var(--font-sans);
   color: var(--text);
   background:
-    radial-gradient(circle at 12% -8%, rgba(99, 102, 241, 0.16), transparent 44%),
-    radial-gradient(circle at 100% 2%, rgba(14, 165, 233, 0.14), transparent 30%),
+    radial-gradient(circle at 10% -5%, rgba(99, 102, 241, 0.08), transparent 42%),
+    radial-gradient(circle at 96% 0%, rgba(99, 102, 241, 0.05), transparent 32%),
     var(--shell-bg);
 }
 
@@ -133,9 +133,9 @@ button:not(.MuiButtonBase-root):hover {
   place-items: center;
   padding: 24px;
   background:
-    radial-gradient(circle at top left, rgba(99, 102, 241, 0.2), transparent 45%),
-    radial-gradient(circle at 100% 25%, rgba(14, 165, 233, 0.12), transparent 35%),
-    #eef2ff;
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.14), transparent 45%),
+    radial-gradient(circle at 100% 20%, rgba(99, 102, 241, 0.08), transparent 38%),
+    #f4f4f5;
 }
 
 .auth-card {
@@ -705,4 +705,15 @@ button:not(.MuiButtonBase-root):hover {
   .computadores-stat-strip {
     grid-template-columns: 1fr;
   }
+}
+
+/* Ícones da sidebar escura (Material Symbols) */
+.sidebar-nav-ic {
+  font-size: 22px;
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 500,
+    "GRAD" 0,
+    "opsz" 24;
+  opacity: 0.95;
 }

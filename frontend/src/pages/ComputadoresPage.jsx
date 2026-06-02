@@ -776,6 +776,14 @@ export default function ComputadoresPage({
                                     <TableRow
                                       hover
                                       key={a.tipo === "computador" ? `pc-${a.id}` : `scan-${a.id}`}
+                                      sx={
+                                        a.tipo === "dispositivo_descoberto"
+                                          ? {
+                                              bgcolor: "rgba(14, 165, 233, 0.04)",
+                                              boxShadow: "inset 3px 0 0 #0ea5e9",
+                                            }
+                                          : undefined
+                                      }
                                     >
                                       <TableCell sx={cellMonoCortado}>{txtBd(a.hostname)}</TableCell>
                                       <TableCell sx={cellMonoCortado}>{txtBd(a.ip || a.endereco_ip)}</TableCell>

@@ -287,7 +287,12 @@ export const api = {
   },
 
   computadores: {
-    listar: () => request("/computadores/"),
+    listar: (opts = {}) => {
+      const q = opts.comScan === true ? "?com_scan=true" : "";
+      return request(`/computadores/${q}`);
+    },
+    /** Manuais + dispositivos do scan (mesmas regras de permissão que o painel). */
+    vistaUnificada: () => request("/computadores/vista-unificada"),
     criar: (payload) => request("/computadores", { method: "POST", body: JSON.stringify(payload) }),
     atualizar: (id, payload) =>
       request(`/computadores/${id}`, { method: "PUT", body: JSON.stringify(payload) }),

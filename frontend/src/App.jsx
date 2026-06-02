@@ -206,12 +206,13 @@ function erroRespostaSugereCredenciaisDominio(msg) {
 
 export default function App() {
   const theme = useTheme();
-  const isMobileNav = useMediaQuery(theme.breakpoints.down("lg"));
+  const isCompactTopbar = useMediaQuery(theme.breakpoints.down("md"));
 
   // --- Estado da aplicação ---
   const [status, setStatus] = useState({ type: "ok", message: "" }); // mensagens ok / erro na StatusAlert
   const [activeTab, setActiveTab] = useState(() => tabIdFromLocation());
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  /** Menu lateral (drawer): fechado por defeito — não ocupa largura no layout. */
+  const [navOpen, setNavOpen] = useState(false);
   const [token, setToken] = useState(localStorage.getItem("access_token") || ""); // JWT da sessão
   const [user, setUser] = useState(null); // /auth/me
   const [dataLoading, setDataLoading] = useState(false); // loadAllData inicial / refresh
@@ -522,6 +523,28 @@ export default function App() {
     }
   }, [token, user, isAdmin, activeTab]);
 
+  // Ao abrir Computadores: atualiza agregados (manuais + scan) para refletir o último scan.
+  useEffect(() => {
+    if (!token || activeTab !== "computadores") return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [grupos, comps] = await Promise.all([
+          api.inventarios.ativosPorInventario(),
+          api.computadores.listar(),
+        ]);
+        if (cancelled) return;
+        setAtivosPorInventario(grupos || []);
+        setComputadores(comps || []);
+      } catch {
+        /* falha silenciosa; utilizador já pode ter dados em cache */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, token]);
+
   // Dashboard aberto: atualiza dados em background a cada 30s (sem spinner principal).
   useEffect(() => {
     if (!token || activeTab !== "dashboard") return undefined;
@@ -538,7 +561,7 @@ export default function App() {
 
   function handleSelectTab(tabId) {
     setActiveTab(tabId);
-    if (isMobileNav) setMobileNavOpen(false);
+    setNavOpen(false);
   }
 
   // --- Render: ecrã de login (sem token) ---
@@ -586,19 +609,25 @@ export default function App() {
         tabs={navTabs}
         activeTab={activeTab}
         onSelect={handleSelectTab}
-        mobile={isMobileNav}
-        open={isMobileNav ? mobileNavOpen : true}
-        onClose={() => setMobileNavOpen(false)}
+        open={navOpen}
+        onClose={() => setNavOpen(false)}
       />
 
-      <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Topbar
           user={user}
           isAdmin={isAdmin}
           onLogout={handleLogout}
           onNavigate={handleSelectTab}
-          showNavToggle={isMobileNav}
-          onToggleNav={() => setMobileNavOpen(true)}
+          compact={isCompactTopbar}
+          onToggleNav={() => setNavOpen(true)}
           onSearch={(q) => {
             setGlobalTermo(q); // termo da pesquisa rápida
             handleSelectTab("pesquisa"); // abre Pesquisa global

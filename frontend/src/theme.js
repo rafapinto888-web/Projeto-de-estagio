@@ -11,15 +11,15 @@ const theme = createTheme({
   palette: {
     mode: "light",
     primary: {
-      main: "#2563eb",
-      light: "#3b82f6",
-      dark: "#1d4ed8",
+      main: "#4f46e5",
+      light: "#6366f1",
+      dark: "#4338ca",
       contrastText: "#ffffff",
     },
     secondary: {
-      main: "#64748b",
-      light: "#94a3b8",
-      dark: "#475569",
+      main: "#71717a",
+      light: "#a1a1aa",
+      dark: "#52525b",
     },
     success: {
       main: "#16a34a",
@@ -37,14 +37,14 @@ const theme = createTheme({
       dark: "#b91c1c",
     },
     background: {
-      default: "#f4f6f8",
+      default: "#f4f4f5",
       paper: "#ffffff",
     },
     text: {
-      primary: "#111827",
-      secondary: "#6b7280",
+      primary: "#18181b",
+      secondary: "#52525b",
     },
-    divider: "#e5e7eb",
+    divider: "#e4e4e7",
   },
   shape: {
     borderRadius: 10,
@@ -71,7 +71,7 @@ const theme = createTheme({
     subtitle2: {
       fontSize: "0.8125rem",
       fontWeight: 500,
-      color: "#6b7280",
+      color: "#71717a",
     },
     body2: {
       fontSize: "0.875rem",
@@ -79,7 +79,7 @@ const theme = createTheme({
     },
     caption: {
       fontSize: "0.75rem",
-      color: "#6b7280",
+      color: "#71717a",
     },
     button: {
       textTransform: "none",
@@ -91,7 +91,7 @@ const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundColor: "#f4f6f8",
+          backgroundColor: "#f4f4f5",
         },
       },
     },
@@ -101,8 +101,8 @@ const theme = createTheme({
         root: {
           backgroundImage: "none",
           borderRadius: 10,
-          border: "1px solid #e5e7eb",
-          boxShadow: "0 1px 2px rgba(17, 24, 39, 0.04)",
+          border: "1px solid #e4e4e7",
+          boxShadow: "0 1px 2px rgba(24, 24, 27, 0.04)",
         },
       },
     },
@@ -118,22 +118,22 @@ const theme = createTheme({
           fontSize: "0.875rem",
         },
         contained: {
-          backgroundColor: "#2563eb",
+          backgroundColor: "#4f46e5",
           "&:hover": {
-            backgroundColor: "#1d4ed8",
+            backgroundColor: "#4338ca",
           },
         },
         outlined: {
-          borderColor: "#d1d5db",
-          color: "#374151",
+          borderColor: "#d4d4d8",
+          color: "#3f3f46",
           backgroundColor: "#ffffff",
           "&:hover": {
-            borderColor: "#9ca3af",
-            backgroundColor: "#f9fafb",
+            borderColor: "#a1a1aa",
+            backgroundColor: "#fafafa",
           },
         },
         text: {
-          color: "#2563eb",
+          color: "#4f46e5",
         },
       },
     },
@@ -154,12 +154,12 @@ const theme = createTheme({
             borderColor: "#9ca3af",
           },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#2563eb",
+            borderColor: "#6366f1",
             borderWidth: 1,
           },
         },
         notchedOutline: {
-          borderColor: "#e5e7eb",
+          borderColor: "#e4e4e7",
         },
       },
     },
@@ -174,7 +174,7 @@ const theme = createTheme({
     MuiTableHead: {
       styleOverrides: {
         root: {
-          backgroundColor: "#f9fafb",
+          backgroundColor: "#fafafa",
         },
       },
     },
@@ -188,7 +188,7 @@ const theme = createTheme({
         head: {
           fontWeight: 600,
           fontSize: "0.75rem",
-          color: "#6b7280",
+          color: "#71717a",
           textTransform: "uppercase",
           letterSpacing: "0.05em",
           whiteSpace: "nowrap",
@@ -202,7 +202,7 @@ const theme = createTheme({
             borderBottom: 0,
           },
           "&:hover td": {
-            backgroundColor: "#f9fafb",
+            backgroundColor: "#fafafa",
           },
         },
       },
@@ -237,8 +237,8 @@ const theme = createTheme({
       styleOverrides: {
         paper: {
           borderRadius: 12,
-          border: "1px solid #e5e7eb",
-          boxShadow: "0 16px 48px rgba(17, 24, 39, 0.12)",
+          border: "1px solid #e4e4e7",
+          boxShadow: "0 16px 48px rgba(24, 24, 27, 0.1)",
         },
       },
     },
@@ -246,7 +246,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 8,
-          border: "1px solid #e5e7eb",
+          border: "1px solid #e4e4e7",
         },
       },
     },

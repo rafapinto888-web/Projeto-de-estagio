@@ -3,6 +3,8 @@
 # Schemas de criacao, atualizacao e resposta de computadores.
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.dispositivo_descoberto import DispositivoDescobertoResponse
+
 
 class BaseSchema(BaseModel):
     """Base com serializacao ORM e helper to_dict para camadas de dados."""
@@ -58,4 +60,11 @@ class ComputadorResponse(ComputadorBase):
     inventario_nome: str | None = None
     localizacao_nome: str | None = None
     utilizador_responsavel_nome: str | None = None
+
+
+class ComputadoresVistaUnificadaResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    computadores: list[ComputadorResponse]
+    dispositivos_descobertos: list[DispositivoDescobertoResponse]
 

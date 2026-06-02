@@ -20,7 +20,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             colorScheme: "light",
           },
           body: {
-            backgroundColor: "#f4f6f8",
+            backgroundColor: "#f4f4f5",
           },
           "#root": {
             minHeight: "100vh",

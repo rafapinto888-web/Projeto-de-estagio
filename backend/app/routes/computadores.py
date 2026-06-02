@@ -3,11 +3,11 @@
 # Rotas para gestao de computadores e consulta de logs de dispositivo.
 
 # --- Validacao de referencias (inventario, localizacao, responsavel) ---
-from typing import Literal
+from typing import Literal, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.deps import get_current_user, is_admin_user, require_admin
 from app.database.computadores import (
@@ -29,6 +29,7 @@ from app.schemas.computador import (
     ComputadorReplace,
     ComputadorResponse,
     ComputadorUpdate,
+    ComputadoresVistaUnificadaResponse,
 )
 from app.schemas.log_dispositivo import (
     LogDispositivoItemResponse,
@@ -86,6 +87,22 @@ def _query_computadores_visiveis(db: Session, current_user: UtilizadorDB):
     return query.filter(ComputadorDB.utilizador_responsavel_id == current_user.id)
 
 
+def _inventario_ids_visiveis(db: Session, current_user: UtilizadorDB) -> list[int]:
+    # Mesma regra que GET /inventarios/: admin vê todos; operador vê inventários onde tem PC atribuído.
+    if is_admin_user(current_user):
+        rows = db.query(InventarioDB.id).order_by(InventarioDB.id).all()
+        return [r[0] for r in rows]
+    rows = (
+        db.query(InventarioDB.id)
+        .join(ComputadorDB, ComputadorDB.inventario_id == InventarioDB.id)
+        .filter(ComputadorDB.utilizador_responsavel_id == current_user.id)
+        .distinct()
+        .order_by(InventarioDB.id)
+        .all()
+    )
+    return [r[0] for r in rows]
+
+
 def _garantir_acesso_computador(
     computador: ComputadorDB | None, current_user: UtilizadorDB
 ) -> ComputadorDB:
@@ -99,15 +116,61 @@ def _garantir_acesso_computador(
     return computador
 
 
+def _montar_vista_unificada(
+    db: Session, current_user: UtilizadorDB
+) -> ComputadoresVistaUnificadaResponse:
+    pcs = (
+        _query_computadores_visiveis(db, current_user)
+        .options(
+            joinedload(ComputadorDB.inventario),
+            joinedload(ComputadorDB.localizacao),
+            joinedload(ComputadorDB.utilizador_responsavel),
+        )
+        .order_by(ComputadorDB.id)
+        .all()
+    )
+    inv_ids = _inventario_ids_visiveis(db, current_user)
+    if not inv_ids:
+        disps: list[DispositivoDescobertoDB] = []
+    else:
+        disps = (
+            db.query(DispositivoDescobertoDB)
+            .options(joinedload(DispositivoDescobertoDB.inventario))
+            .filter(DispositivoDescobertoDB.inventario_id.in_(inv_ids))
+            .order_by(DispositivoDescobertoDB.inventario_id, DispositivoDescobertoDB.id)
+            .all()
+        )
+    return ComputadoresVistaUnificadaResponse(
+        computadores=pcs,
+        dispositivos_descobertos=disps,
+    )
+
+
 # --- Listagem e consulta de logs ---
 
-@router.get("/", response_model=list[ComputadorResponse])
+@router.get(
+    "/",
+    response_model=Union[list[ComputadorResponse], ComputadoresVistaUnificadaResponse],
+)
 def listar_computadores(
+    com_scan: bool = Query(False),
     db: Session = Depends(get_db),
     current_user: UtilizadorDB = Depends(get_current_user),
 ):
-    # Lista visivel por perfil: admin ve tudo; utilizador ve apenas os seus.
+    if com_scan:
+        return _montar_vista_unificada(db, current_user)
     return _query_computadores_visiveis(db, current_user).order_by(ComputadorDB.id).all()
+
+
+@router.get(
+    "/vista-unificada",
+    response_model=ComputadoresVistaUnificadaResponse,
+)
+def listar_computadores_vista_unificada(
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    return _montar_vista_unificada(db, current_user)
 
 
 @router.get("/logs/dispositivo", response_model=LogsDispositivoConsultaResponse)
