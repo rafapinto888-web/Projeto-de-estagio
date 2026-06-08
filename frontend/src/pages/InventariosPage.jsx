@@ -278,15 +278,15 @@ export default function InventariosPage({
           }
           footer={
             <>
-              <Button type="button" variant="outlined" onClick={closeEditor}>
+              <Button type="button" variant="outlined" onClick={closeEditor} disabled={loading}>
                 Cancelar
               </Button>
               {editorMode === "edit" ? (
-                <Button type="button" color="error" variant="outlined" onClick={handleDeleteInModal}>
+                <Button type="button" color="error" variant="outlined" onClick={handleDeleteInModal} disabled={loading}>
                   Apagar inventário
                 </Button>
               ) : null}
-              <Button type="button" onClick={handleSave}>
+              <Button type="button" onClick={handleSave} disabled={loading}>
                 {editorMode === "create" ? "Criar inventário" : "Guardar alterações"}
               </Button>
             </>

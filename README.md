@@ -18,7 +18,7 @@ Aplicação web para **gestão de inventário de TI**: inventários, computadore
 
 Autenticação por **JWT** (Bearer). O painel, após login, carrega inventários, computadores, utilizadores, perfis, localizações e histórico.
 
-**API:** `GET /computadores/?com_scan=true` inclui dispositivos do scan; sem o parâmetro, só manuais.
+**API:** `GET /computadores/` — só manuais por defeito; `com_scan=true` inclui dispositivos do scan (campo `tipo` em cada item).
 
 ## Stack
 

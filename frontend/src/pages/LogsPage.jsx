@@ -59,6 +59,10 @@ export default function LogsPage({
   }, [logsOutput]);
 
   const logsTabela = Array.isArray(parsedOutput?.logs) ? parsedOutput.logs : [];
+  const erroOutput =
+    parsedOutput && typeof parsedOutput === "object" && !Array.isArray(parsedOutput) && parsedOutput.erro
+      ? String(parsedOutput.erro)
+      : "";
 
   async function handleComputadorConsultar() {
     const valor = String(pcValorPesquisa || "").trim();
@@ -100,10 +104,10 @@ export default function LogsPage({
       subtitle="Consulta de logs de segurança e RDP. Abre um dos editores para definir filtros e executar."
       rightAction={
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          <Button type="button" onClick={() => setModal("computador")}>
+          <Button type="button" onClick={() => setModal("computador")} disabled={loading}>
             Por computador
           </Button>
-          <Button type="button" variant="outlined" onClick={() => setModal("inventario")}>
+          <Button type="button" variant="outlined" onClick={() => setModal("inventario")} disabled={loading}>
             Por inventário
           </Button>
         </Stack>
@@ -111,6 +115,22 @@ export default function LogsPage({
     >
       {loading ? (
         <div className="loading-box">A consultar logs…</div>
+      ) : erroOutput ? (
+        <Paper variant="outlined" sx={{ p: 2, borderStyle: "dashed", bgcolor: "#fff1f2", borderColor: "#fecdd3" }}>
+          <Stack direction="row" spacing={1.2} alignItems="flex-start">
+            <span className="material-symbols-outlined" style={{ color: "#e11d48", fontSize: 20 }}>
+              error
+            </span>
+            <div>
+              <Typography fontSize={14} fontWeight={700}>
+                Erro ao consultar logs
+              </Typography>
+              <Typography fontSize={12} color="text.secondary" sx={{ wordBreak: "break-word" }}>
+                {erroOutput}
+              </Typography>
+            </div>
+          </Stack>
+        </Paper>
       ) : logsTabela.length > 0 ? (
         <TableContainer component={Paper} variant="outlined" sx={{ borderColor: "#dbe5f2" }}>
           <Table size="small">
@@ -135,8 +155,20 @@ export default function LogsPage({
           </Table>
         </TableContainer>
       ) : (
-        <Paper variant="outlined" sx={{ borderColor: "#dbe5f2", bgcolor: "#fff" }}>
-          <pre className="logs-output">{logsOutput}</pre>
+        <Paper variant="outlined" sx={{ p: 2, borderStyle: "dashed", borderColor: "#dbe5f2", bgcolor: "#f8fbff" }}>
+          <Stack direction="row" spacing={1.2} alignItems="flex-start">
+            <span className="material-symbols-outlined" style={{ color: "#64748b", fontSize: 20 }}>
+              receipt_long
+            </span>
+            <div>
+              <Typography fontSize={14} fontWeight={700}>
+                Sem logs para mostrar
+              </Typography>
+              <Typography fontSize={12} color="text.secondary" sx={{ wordBreak: "break-word" }}>
+                {logsOutput || "Abre uma consulta por computador ou por inventario para carregar eventos."}
+              </Typography>
+            </div>
+          </Stack>
         </Paper>
       )}
 
@@ -149,11 +181,11 @@ export default function LogsPage({
         subtitle={<>Filtra pelo dispositivo e tipo de evento.</>}
         footer={
           <>
-            <Button type="button" variant="outlined" onClick={() => setModal(null)}>
+            <Button type="button" variant="outlined" onClick={() => setModal(null)} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="button" onClick={handleComputadorConsultar}>
-              Consultar
+            <Button type="button" onClick={handleComputadorConsultar} disabled={loading || !String(pcValorPesquisa || "").trim()}>
+              {loading ? "A consultar..." : "Consultar"}
             </Button>
           </>
         }
@@ -203,11 +235,20 @@ export default function LogsPage({
         subtitle={<>Por omissão usa o inventário selecionado na área Scan, se deixares o campo vazio.</>}
         footer={
           <>
-            <Button type="button" variant="outlined" onClick={() => setModal(null)}>
+            <Button type="button" variant="outlined" onClick={() => setModal(null)} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="button" onClick={handleInventarioConsultar}>
-              Consultar
+            <Button
+              type="button"
+              onClick={handleInventarioConsultar}
+              disabled={
+                loading ||
+                (!tiposLogInventario.seguranca && !tiposLogInventario.rdp) ||
+                !credenciaisLogs.utilizador.trim() ||
+                !credenciaisLogs.password
+              }
+            >
+              {loading ? "A consultar..." : "Consultar"}
             </Button>
           </>
         }

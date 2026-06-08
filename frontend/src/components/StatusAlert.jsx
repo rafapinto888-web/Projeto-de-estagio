@@ -20,6 +20,7 @@ export default function StatusAlert({ type = "ok", message }) {
 
   if (!currentMessage) return null;
   const severity = type === "err" ? "error" : type === "warn" ? "warning" : "success";
+  const autoHideDuration = severity === "error" ? 7000 : severity === "warning" ? 5000 : 3000;
   const bgBySeverity = {
     error: "#fff1f2",
     warning: "#fffbeb",
@@ -29,7 +30,7 @@ export default function StatusAlert({ type = "ok", message }) {
   return (
     <Snackbar
       open={open}
-      autoHideDuration={3000}
+      autoHideDuration={autoHideDuration}
       onClose={(_, reason) => {
         if (reason === "clickaway") return;
         setOpen(false);

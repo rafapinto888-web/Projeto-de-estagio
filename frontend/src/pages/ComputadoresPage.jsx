@@ -939,23 +939,23 @@ export default function ComputadoresPage({
           }
           footer={
             <>
-              <Button type="button" variant="outlined" onClick={closeEditor}>
+              <Button type="button" variant="outlined" onClick={closeEditor} disabled={loading}>
                 Cancelar
               </Button>
               {editorMode === "edit" ? (
                 <>
-                  <Button type="button" color="error" variant="outlined" onClick={handleDeleteInModal}>
+                  <Button type="button" color="error" variant="outlined" onClick={handleDeleteInModal} disabled={loading}>
                     Apagar
                   </Button>
-                  <Button type="button" variant="outlined" onClick={handleUpdatePatch}>
+                  <Button type="button" variant="outlined" onClick={handleUpdatePatch} disabled={loading}>
                     Guardar apenas alterações (PATCH)
                   </Button>
-                  <Button type="button" onClick={handleUpdatePut}>
+                  <Button type="button" onClick={handleUpdatePut} disabled={loading}>
                     Substituir registo (PUT)
                   </Button>
                 </>
               ) : (
-                <Button type="button" onClick={handleCreate}>
+                <Button type="button" onClick={handleCreate} disabled={loading}>
                   Criar computador
                 </Button>
               )}

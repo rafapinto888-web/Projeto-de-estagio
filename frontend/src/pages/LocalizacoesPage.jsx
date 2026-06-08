@@ -113,15 +113,15 @@ export default function LocalizacoesPage({
           }
           footer={
             <>
-              <Button type="button" variant="outlined" onClick={closeEditor}>
+              <Button type="button" variant="outlined" onClick={closeEditor} disabled={loading}>
                 Cancelar
               </Button>
               {editorMode === "edit" ? (
-                <Button type="button" color="error" variant="outlined" onClick={handleDeleteInModal}>
+                <Button type="button" color="error" variant="outlined" onClick={handleDeleteInModal} disabled={loading}>
                   Apagar localização
                 </Button>
               ) : null}
-              <Button type="button" onClick={handleSave}>
+              <Button type="button" onClick={handleSave} disabled={loading}>
                 {editorMode === "create" ? "Criar localização" : "Guardar alterações"}
               </Button>
             </>

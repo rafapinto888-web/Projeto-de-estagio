@@ -288,7 +288,7 @@ export const api = {
 
   computadores: {
     listar: (opts = {}) => {
-      const q = opts.comScan === true ? "?com_scan=true" : "";
+      const q = opts.comScan ? "?com_scan=true" : "";
       return request(`/computadores/${q}`);
     },
     /** Manuais + dispositivos do scan (mesmas regras de permissão que o painel). */

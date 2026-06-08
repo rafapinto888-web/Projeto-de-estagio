@@ -31,6 +31,7 @@ from app.schemas.computador import (
     ComputadorUpdate,
     ComputadoresVistaUnificadaResponse,
 )
+from app.schemas.inventario import AtivoInventarioItem
 from app.schemas.log_dispositivo import (
     LogDispositivoItemResponse,
     LogsDispositivoConsultaResponse,
@@ -116,6 +117,26 @@ def _garantir_acesso_computador(
     return computador
 
 
+def _listar_ativos_globais(
+    db: Session, current_user: UtilizadorDB
+) -> list[AtivoInventarioItem]:
+    # Reutiliza a mesma unificacao que GET /inventarios/{id}/computadores.
+    from app.routes.inventarios import (
+        _ativos_unificados_do_inventario,
+        _inventarios_visiveis_query,
+    )
+
+    inventarios = (
+        _inventarios_visiveis_query(db, current_user)
+        .order_by(InventarioDB.nome.asc(), InventarioDB.id.asc())
+        .all()
+    )
+    ativos: list[AtivoInventarioItem] = []
+    for inv in inventarios:
+        ativos.extend(_ativos_unificados_do_inventario(db, inv.id, current_user))
+    return ativos
+
+
 def _montar_vista_unificada(
     db: Session, current_user: UtilizadorDB
 ) -> ComputadoresVistaUnificadaResponse:
@@ -150,16 +171,25 @@ def _montar_vista_unificada(
 
 @router.get(
     "/",
-    response_model=Union[list[ComputadorResponse], ComputadoresVistaUnificadaResponse],
+    response_model=Union[list[ComputadorResponse], list[AtivoInventarioItem]],
 )
 def listar_computadores(
-    com_scan: bool = Query(False),
+    com_scan: bool = Query(False, description="Incluir dispositivos do scan"),
     db: Session = Depends(get_db),
     current_user: UtilizadorDB = Depends(get_current_user),
 ):
     if com_scan:
-        return _montar_vista_unificada(db, current_user)
-    return _query_computadores_visiveis(db, current_user).order_by(ComputadorDB.id).all()
+        return _listar_ativos_globais(db, current_user)
+    return (
+        _query_computadores_visiveis(db, current_user)
+        .options(
+            joinedload(ComputadorDB.inventario),
+            joinedload(ComputadorDB.localizacao),
+            joinedload(ComputadorDB.utilizador_responsavel),
+        )
+        .order_by(ComputadorDB.id)
+        .all()
+    )
 
 
 @router.get(
