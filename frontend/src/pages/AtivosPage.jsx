@@ -735,19 +735,6 @@ export default function AtivosPage({
                   </Stack>
                 ))}
               </Stack>
-              <Button
-                variant="outlined"
-                size="small"
-                fullWidth
-                sx={{ mt: 2 }}
-                startIcon={
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }} aria-hidden>
-                    history
-                  </span>
-                }
-              >
-                Ver histórico
-              </Button>
             </>
           )}
         </Paper>
