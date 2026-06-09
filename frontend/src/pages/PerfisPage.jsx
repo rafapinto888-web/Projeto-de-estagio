@@ -11,6 +11,7 @@ import SectionCard from "../components/SectionCard";
 import { perfilNomeExibicao } from "../domain/perfil/index.js";
 
 function membrosDoPerfil(perfil, listaUtilizadores, isAdmin) {
+  // Prefere a lista global de utilizadores quando disponivel; recorre ao payload do perfil como fallback.
   const id = Number(perfil?.id);
   if (Number.isNaN(id)) return [];
 
@@ -53,6 +54,7 @@ export default function PerfisPage({
   const [membrosModal, setMembrosModal] = useState(null);
 
   const closeEditor = useCallback(() => {
+    // Fecha o modal e repoe o form partilhado para a proxima operacao.
     setEditorOpen(false);
     onCancel?.();
   }, [onCancel]);
@@ -81,7 +83,9 @@ export default function PerfisPage({
     if (ok) closeEditor();
   }
 
-  const membrosModalLista = membrosModal ? membrosDoPerfil(membrosModal, utilizadores, true) : [];
+  const membrosModalLista =
+    // Resolve a lista so quando o modal esta aberto, evitando trabalho desnecessario em render normal.
+    membrosModal ? membrosDoPerfil(membrosModal, utilizadores, true) : [];
 
   return (
     <SectionCard

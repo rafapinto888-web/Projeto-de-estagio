@@ -23,6 +23,7 @@ import { formatarDataPtCurta } from "../domain/equipamento/index.js";
 import SectionCard from "../components/SectionCard";
 
 function eventoVisual(ev) {
+  // Converte acao + descricao numa categoria visual consistente para a timeline.
   const texto = `${ev?.acao || ""} ${ev?.descricao || ""}`.toLowerCase();
   if (/apag|delete|elimin|remov/.test(texto)) {
     return { icon: "delete", color: "#dc2626", bg: "#fef2f2", label: "Remoção" };
@@ -40,11 +41,13 @@ function eventoVisual(ev) {
 }
 
 function eventoTimestamp(ev) {
+  // Normaliza datas invalidas para 0 para manter a ordenacao previsivel.
   const data = ev?.data_evento ? new Date(ev.data_evento) : null;
   return data && !Number.isNaN(data.getTime()) ? data.getTime() : 0;
 }
 
 function mesmoDia(timestamp, ref = new Date()) {
+  // Comparacao por dia civil para o resumo "hoje", ignorando hora/minutos.
   if (!timestamp) return false;
   const data = new Date(timestamp);
   return data.getFullYear() === ref.getFullYear() && data.getMonth() === ref.getMonth() && data.getDate() === ref.getDate();
@@ -57,6 +60,7 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
   const [erro, setErro] = useState(null);
 
   const listaOrdenada = useMemo(
+    // A lista e clonada antes do sort para nao mutar as props recebidas.
     () =>
       [...(utilizadores || [])].sort((a, b) =>
         String(a.nome || a.username || "").localeCompare(String(b.nome || b.username || ""), "pt"),
@@ -84,6 +88,7 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
     : "Sem registo";
 
   useEffect(() => {
+    // Mantem sempre um utilizador valido selecionado quando a lista muda.
     if (!listaOrdenada.length) {
       setUtilizadorId("");
       return;
@@ -99,6 +104,7 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
     let cancel = false;
 
     (async () => {
+      // Evita atualizar estado depois do unmount ou de uma troca rapida de utilizador.
       setLoading(true);
       setErro(null);
       try {
@@ -120,6 +126,7 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
   }, [token, active, isAdmin, utilizadorId]);
 
   function recarregar() {
+    // Reutiliza o mesmo endpoint do carregamento inicial para refresh manual.
     if (!token || !active || !isAdmin || !utilizadorId) return;
     setLoading(true);
     setErro(null);
@@ -260,6 +267,7 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
             </Paper>
 
             {itensOrdenados.map((ev) => {
+              // Cada linha reaproveita a categorizacao visual para manter iconografia e cor alinhadas.
               const visual = eventoVisual(ev);
               return (
                 <Paper key={ev.id} variant="outlined" sx={{ p: 1.5, borderColor: "#dbe5f2", bgcolor: "#fff" }}>

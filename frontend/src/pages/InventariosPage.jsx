@@ -52,6 +52,7 @@ export default function InventariosPage({
   }, [onCancel]);
 
   const closeDetalhes = useCallback(() => {
+    // Limpa o estado do modal para nao reutilizar dados antigos na proxima abertura.
     setDetalhesOpen(false);
     setDetalhesPayload(null);
     setDetalhesError("");
@@ -60,6 +61,7 @@ export default function InventariosPage({
   }, []);
 
   async function openDetalhes(inv) {
+    // Carrega detalhes sob demanda para manter a listagem leve.
     setDetalhesTitulo(String(inv?.nome || "").trim() || `Inventário #${inv?.id}`);
     setDetalhesOpen(true);
     setDetalhesLoading(true);
@@ -88,6 +90,7 @@ export default function InventariosPage({
   }
 
   async function handleSave() {
+    // Fecha o editor apenas quando o create/update confirmar sucesso.
     let ok = false;
     if (editorMode === "create") ok = Boolean(await onCreate?.());
     else ok = Boolean(await onUpdate?.());
@@ -112,6 +115,7 @@ export default function InventariosPage({
           ) : null
         }
       >
+      {/* A tabela fica sempre no estado base; detalhes completos abrem num modal separado. */}
       <DataTable
         columns={["Nome", "Tipo", "Rede", "Equipamentos", "Descrição", "Ações"]}
         tableClassName="table-shell--responsive"

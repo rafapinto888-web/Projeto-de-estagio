@@ -48,6 +48,7 @@ const TIPOS_SUPORTADOS = [
 ];
 
 function parseOutput(raw) {
+  // A API devolve texto JSON; falhas de parsing caem para null para a UI seguir segura.
   if (!raw || !String(raw).trim()) return null;
   try {
     return JSON.parse(raw);
@@ -77,6 +78,7 @@ function indicadoresPagina(atual, total) {
 const CHAVES_SECOES_API = ["computadores", "inventarios", "utilizadores", "localizacoes"];
 
 function toSections(parsed) {
+  // Uniformiza arrays soltos e objetos por secao numa estrutura unica para o render.
   if (!parsed) return [];
   if (Array.isArray(parsed)) return [{ key: "resultados", value: parsed }];
   if (typeof parsed === "object") {
@@ -177,6 +179,7 @@ function itemCorrespondeTermo(item, termoNormalizado) {
 }
 
 function normalizarLinha(row, localizacoesPorId) {
+  // Cria um modelo de linha unico para tabela e cards, independentemente da origem do item.
   const item = row.item || {};
   const secao = normalizarTexto(row.secao);
   const nome = item.nome || item.hostname || item.email || item.descricao || "—";
@@ -234,6 +237,7 @@ export default function PesquisaPage({
 
   const parsed = useMemo(() => parseOutput(globalOutput), [globalOutput]);
   const dispositivosDescobertosBase = useMemo(() => {
+    // Enriquecemos dispositivos de scan com nome/IP/inventario para entrarem na pesquisa global.
     return (ativosPorInventarioBase || []).flatMap((grupo) =>
       (grupo?.ativos || [])
         .filter((a) => a?.tipo === "dispositivo_descoberto")
@@ -270,6 +274,7 @@ export default function PesquisaPage({
   const pesquisaExecutada = useMemo(() => pesquisaFoiExecutada(globalOutput), [globalOutput]);
 
   const secoes = useMemo(() => {
+    // Combina o retorno da pesquisa global com resultados locais de dispositivos descobertos.
     if (!pesquisaExecutada) return secoesBase;
 
     const fromSearch = toSections(parsed);
@@ -294,6 +299,7 @@ export default function PesquisaPage({
   }, [parsed, pesquisaExecutada, secoesBase, scansFiltradosPorTermo]);
 
   const rowsBase = useMemo(() => {
+    // Achata secoes heterogeneas para uma lista unica, pronta a filtrar, ordenar e paginar.
     return secoes.flatMap(({ key, value }) => {
       const lista = Array.isArray(value) ? value : [value];
       return lista.map((item, idx) =>
@@ -353,6 +359,7 @@ export default function PesquisaPage({
   }, [computadoresBase, rowsBase]);
 
   const rowsFiltradas = useMemo(() => {
+    // Filtros avancados atuam sobre a colecao normalizada, nao sobre cada secao isolada.
     return rowsBase.filter((r) => {
       if (filtroSecao !== "todas" && normalizarTexto(r.secao) !== normalizarTexto(filtroSecao)) return false;
 
@@ -386,10 +393,12 @@ export default function PesquisaPage({
   const rowsPaginadas = rowsOrdenadas.slice((paginaAtual - 1) * porPagina, paginaAtual * porPagina);
 
   useEffect(() => {
+    // Qualquer mudanca relevante reinicia a pagina para evitar indices fora do novo total.
     setPagina(1);
   }, [filtroSecao, filtroEstado, filtroLocalizacao, ordem, globalOutput]);
 
   useEffect(() => {
+    // Se a opcao desaparecer apos nova pesquisa, voltamos a um filtro valido.
     if (filtroSecao !== "todas" && !opcoesTipo.some((o) => o.value === filtroSecao)) {
       setFiltroSecao("todas");
     }
@@ -408,6 +417,7 @@ export default function PesquisaPage({
   }, [opcoesLocalizacao, filtroLocalizacao]);
 
   useEffect(() => {
+    // Permite reexecutar a pesquisa a partir de um trigger externo mantendo o termo atual.
     if (!searchRequestId) return;
     const termo = String(globalTermo || "").trim();
     if (!termo) return;
@@ -415,6 +425,7 @@ export default function PesquisaPage({
   }, [searchRequestId, globalTermo, onPesquisar]);
 
   const cardsResumo = useMemo(() => {
+    // Resume o total por secao ja depois dos filtros, para o cabecalho refletir a vista atual.
     const by = new Map();
     rowsFiltradas.forEach((r) => by.set(r.secao, (by.get(r.secao) || 0) + 1));
     return Array.from(by.entries()).map(([secao, total]) => ({ secao, total }));

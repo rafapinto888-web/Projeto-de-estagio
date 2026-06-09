@@ -51,6 +51,7 @@ export default function LogsPage({
   });
 
   const parsedOutput = useMemo(() => {
+    // Faz parsing defensivo porque a resposta pode vir vazia, textual ou em erro.
     try {
       return logsOutput ? JSON.parse(logsOutput) : null;
     } catch {
@@ -65,6 +66,7 @@ export default function LogsPage({
       : "";
 
   async function handleComputadorConsultar() {
+    // Monta um payload com um unico campo de pesquisa ativo de cada vez.
     const valor = String(pcValorPesquisa || "").trim();
     if (!valor) return;
 
@@ -83,6 +85,7 @@ export default function LogsPage({
   }
 
   async function handleInventarioConsultar() {
+    // Exige pelo menos um tipo de log e credenciais antes de consultar em lote.
     const tiposSelecionados = [
       ...(tiposLogInventario.seguranca ? ["seguranca"] : []),
       ...(tiposLogInventario.rdp ? ["rdp"] : []),
@@ -113,6 +116,7 @@ export default function LogsPage({
         </Stack>
       }
     >
+      {/* O output pode ser tabela estruturada, mensagem de erro ou texto informativo simples. */}
       {loading ? (
         <div className="loading-box">A consultar logs…</div>
       ) : erroOutput ? (

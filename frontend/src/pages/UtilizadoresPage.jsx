@@ -61,6 +61,7 @@ function TituloSecaoForm({ children }) {
 }
 
 function emailLocalDeCompleto(email) {
+  // Extrai so a parte local para o formulario, mesmo que a API ja tenha email completo.
   const valor = String(email || "").trim();
   if (!valor) return "";
   const dominio = DOMINIO_EMAIL.toLowerCase();
@@ -79,6 +80,7 @@ function emailCompletoDeLocal(local) {
 }
 
 function validarUtilizadorForm(form, modo) {
+  // Validacao local basica para evitar round-trips desnecessarios antes de criar/editar.
   if (!String(form.nome || "").trim()) return "Indica o nome completo.";
   if (!String(form.username || "").trim()) return "Indica o nome de utilizador para login.";
   const emailLocal = emailLocalDeCompleto(form.email);
@@ -192,6 +194,7 @@ export default function UtilizadoresPage({
   onPick,
   onDeleteRow,
 }) {
+  // O fluxo de criacao tem confirmacao separada; edicao e remocao continuam no mesmo modal.
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState("create");
   const [formError, setFormError] = useState("");
@@ -221,6 +224,7 @@ export default function UtilizadoresPage({
   }
 
   function pedirConfirmacaoCriacao() {
+    // Normaliza o email antes da confirmacao final para mostrar exatamente o valor que sera gravado.
     const erroValidacao = validarUtilizadorForm(utilizadorForm, "create");
     if (erroValidacao) {
       setFormError(erroValidacao);
@@ -245,6 +249,7 @@ export default function UtilizadoresPage({
   }
 
   async function confirmarCriacao() {
+    // A segunda etapa reduz criacoes acidentais de contas com dados sensiveis incorretos.
     if (!confirmacao) return;
     setAGuardar(true);
     setFormError("");
@@ -263,6 +268,7 @@ export default function UtilizadoresPage({
   }
 
   async function handleSaveEdit() {
+    // Reaproveita a mesma normalizacao de email do fluxo de criacao para manter consistencia.
     const erroValidacao = validarUtilizadorForm(utilizadorForm, "edit");
     if (erroValidacao) {
       setFormError(erroValidacao);

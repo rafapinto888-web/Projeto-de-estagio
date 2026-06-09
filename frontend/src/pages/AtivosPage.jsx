@@ -42,12 +42,14 @@ import { estadoChipMuiColor } from "../utils/estadoMuiColor";
 // --- Helpers: export CSV, chaves de linha, resumo do scan ---
 
 function semDadosCompleto(a) {
+  // Marca linhas com dados demasiado incompletos para analise ou reconciliacao.
   const semNome = !(a?.nome || a?.hostname)?.toString()?.trim();
   const semMac = !(a?.mac_address || "").toString().trim();
   return semNome && semMac;
 }
 
 function extrairUltimaMarcacao(scanInfoStr) {
+  // O backend envia varias marcacoes entre []; aqui mostramos so a mais recente no resumo.
   if (!scanInfoStr) return "—";
   const matches = [...String(scanInfoStr).matchAll(/\[[^\]\n]+\]/g)];
   if (!matches.length) return "—";
@@ -68,6 +70,7 @@ function linhaScanKey(a, idx) {
 }
 
 function exportCsvRows(rows, filename = "ativos-scan.csv") {
+  // Exporta exatamente a vista atual, preservando campos vazios e escapando aspas.
   const headers = [
     "Id",
     "Inventario_id",
@@ -186,6 +189,7 @@ export default function AtivosPage({
     setDominioCredOpen(false);
     setScanProgress({ label: SCAN_FASES[0], step: 0 });
     let fase = 0;
+    // O progresso e apenas visual: roda mensagens enquanto o pedido principal decorre.
     scanFaseTimerRef.current = window.setInterval(() => {
       fase = (fase + 1) % SCAN_FASES.length;
       setScanProgress({ label: SCAN_FASES[fase], step: fase });
@@ -247,6 +251,7 @@ export default function AtivosPage({
   const scanPodeExecutar = Boolean(inventarioScanValido && scanTab === "existente");
 
   useEffect(() => {
+    // Garante limpeza de timer e pedido pendente se a pagina sair do ecra.
     return () => {
       if (scanFaseTimerRef.current) {
         window.clearInterval(scanFaseTimerRef.current);
@@ -257,6 +262,7 @@ export default function AtivosPage({
   }, []);
 
   useEffect(() => {
+    // Trocar de inventario invalida a selecao anterior da lista.
     setSelectedAtivo(null);
     setSelectedRowKey(null);
   }, [selectedInventarioId]);
@@ -267,9 +273,14 @@ export default function AtivosPage({
     );
   }, []);
 
-  const listaScan = useMemo(() => (ativos || []).filter((a) => origemDispositivo(a) === "scan"), [ativos]);
+  const listaScan = useMemo(
+    // A pagina trabalha apenas sobre dispositivos descobertos por scan, nao registos manuais.
+    () => (ativos || []).filter((a) => origemDispositivo(a) === "scan"),
+    [ativos],
+  );
 
   const contagens = useMemo(() => {
+    // Resume qualidade e estado do ultimo conjunto descoberto para os cards superiores.
     const base = listaScan;
     const totalScan = base.length;
     const comMac = base.filter((a) => String(a?.mac_address || "").trim()).length;
@@ -285,6 +296,7 @@ export default function AtivosPage({
   }, [listaScan]);
 
   const listaFiltrada = useMemo(() => {
+    // Aplica primeiro filtros rapidos por estado/tipo e depois a pesquisa textual local.
     let out = [...listaScan];
 
     switch (tabLista) {
@@ -316,6 +328,7 @@ export default function AtivosPage({
   }, [listaScan, tabLista, ativoPesquisa]);
 
   const nomeInventario = useMemo(() => {
+    // Resolve o nome no momento do render para manter o cabecalho sincronizado com o id selecionado.
     const inv = (inventarios || []).find((x) => String(x.id) === String(selectedInventarioId || ""));
     return inv?.nome || "—";
   }, [inventarios, selectedInventarioId]);

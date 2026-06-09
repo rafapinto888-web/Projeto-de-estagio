@@ -37,6 +37,7 @@ import { tableCellMono, tableSxSemQuebra } from "../utils/tableCellSx";
 // --- Helpers: ordenação, payloads e filtros por inventário ---
 
 function sortByIdentificacao(list) {
+  // Clona antes de ordenar para nao alterar listas recebidas por props.
   return [...(list || [])].sort((a, b) =>
     labelAtivo(a).localeCompare(labelAtivo(b), "pt", { sensitivity: "base" }),
   );
@@ -65,6 +66,7 @@ function emptyScanForm() {
 }
 
 function payloadScanDispositivo(form) {
+  // Normaliza strings opcionais para null para alinhar com o payload esperado pela API.
   return {
     ip: form.ip.trim(),
     estado: (form.estado && form.estado.trim()) || "ativo",
@@ -91,6 +93,7 @@ function invKey(grupo) {
 }
 
 function estadosUnicosDeAtivos(ativos) {
+  // Gera opcoes de filtro consistentes a partir dos estados realmente presentes nos dados.
   const s = new Set();
   (ativos || []).forEach((a) => {
     const e = String(a?.estado || "").trim();
@@ -186,6 +189,7 @@ export default function ComputadoresPage({
   }, [gruposOrdenados]);
 
   const estadosGlobaisOpcoes = useMemo(() => {
+    // Junta estados de todos os grupos para alimentar o filtro global sem duplicados.
     const s = new Set();
     for (const g of gruposOrdenados) {
       (g.ativos || []).forEach((a) => {
@@ -199,6 +203,7 @@ export default function ComputadoresPage({
   const qLista = pesquisaLista.trim().toLowerCase();
 
   const gruposExibicao = useMemo(() => {
+    // Decide quais inventarios continuam visiveis apos filtros globais e pesquisa livre.
     return gruposOrdenados.filter((g) => {
       const todosBase = g.ativos || [];
       const todosAt = filtroEstadoGlobal
@@ -216,6 +221,7 @@ export default function ComputadoresPage({
   }, [gruposOrdenados, filtroTipo, qLista, filtroEstadoGlobal]);
 
   const totaisFiltrados = useMemo(() => {
+    // Recalcula metricas da vista atual sem perder a distincao entre manuais e scan.
     let registos = 0;
     let scan = 0;
     for (const g of gruposExibicao) {
@@ -253,6 +259,7 @@ export default function ComputadoresPage({
   }
 
   function limparFiltrosLista() {
+    // Limpa tambem filtros/paginacao por inventario para evitar estado residual entre vistas.
     setPesquisaLista("");
     setFiltroTipo("todos");
     setFiltroEstadoGlobal("");

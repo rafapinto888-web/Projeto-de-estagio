@@ -32,6 +32,7 @@ import { instanteDataApiParaLocal } from "../domain/equipamento/index.js";
 import { tableCellEllipsis, tableCellMono, tableCellNowrap, tableSxSemQuebra } from "../utils/tableCellSx";
 
 function horaDoEvento(iso, fallback = "—") {
+  // Converte timestamps em etiquetas curtas apropriadas para dashboard: Hoje, Ontem ou data.
   if (!iso) return fallback;
   try {
     const d = instanteDataApiParaLocal(iso);
@@ -59,6 +60,7 @@ function isAlertaEdicaoOuRemocao(ev) {
 }
 
 function mapHistoricoParaItem(ev, idx) {
+  // Traduz eventos tecnicos em itens de UI com titulo, detalhe, icone e severidade.
   const acao = String(ev?.acao || "Evento").trim() || "Evento";
   const descricao = String(ev?.descricao || "").trim() || "—";
   const txt = `${acao} ${descricao}`.toLowerCase();
@@ -108,6 +110,7 @@ export default function DashboardPage({
   const recentInventarios = (inventarios || []).slice(0, 5);
   const latestUsers = (utilizadores || []).slice(0, 5);
   const dispositivosScan = useMemo(
+    // Achata todos os grupos para o dashboard contar scans como uma unica colecao.
     () =>
       (ativosPorInventario || []).flatMap((grupo) =>
         (grupo?.ativos || []).filter((item) => item?.tipo === "dispositivo_descoberto"),
@@ -165,6 +168,7 @@ export default function DashboardPage({
   );
 
   const estadoContagens = useMemo(() => {
+    // Soma estados de computadores manuais e descobertos para alimentar o grafico agregado.
     const map = new Map();
     (computadores || []).forEach((pc) => {
       const estado = String(pc?.estado || "desconhecido").trim() || "desconhecido";
@@ -182,6 +186,7 @@ export default function DashboardPage({
   }, [computadores, dispositivosScan]);
 
   const historicoOrdenado = useMemo(() => {
+    // Ordenacao defensiva para lidar com eventos sem data valida.
     return [...(historicoConta || [])].sort((a, b) => {
       const ta = a?.data_evento ? instanteDataApiParaLocal(a.data_evento)?.getTime() ?? 0 : 0;
       const tb = b?.data_evento ? instanteDataApiParaLocal(b.data_evento)?.getTime() ?? 0 : 0;
@@ -200,6 +205,7 @@ export default function DashboardPage({
   }, [historicoOrdenado]);
 
   const dataHoje = useMemo(() => {
+    // Mantem a data do selo "Atualizado" estavel durante o ciclo de vida desta renderizacao.
     try {
       return new Date().toLocaleDateString("pt-PT");
     } catch {

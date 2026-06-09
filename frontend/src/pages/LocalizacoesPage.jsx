@@ -27,6 +27,7 @@ export default function LocalizacoesPage({
   const [editorMode, setEditorMode] = useState("create");
 
   const closeEditor = useCallback(() => {
+    // Reaproveita o cancelamento externo para limpar o form partilhado com a app.
     setEditorOpen(false);
     onCancel?.();
   }, [onCancel]);
@@ -44,6 +45,7 @@ export default function LocalizacoesPage({
   }
 
   async function handleSave() {
+    // Mantem o modal aberto se a operacao falhar, preservando o que o utilizador escreveu.
     let ok = false;
     if (editorMode === "create") ok = Boolean(await onCreate?.());
     else ok = Boolean(await onUpdate?.());
@@ -67,6 +69,7 @@ export default function LocalizacoesPage({
         ) : null
       }
     >
+      {/* A listagem e totalmente controlada por props; a pagina so gere abertura do editor. */}
       <DataTable
         columns={["Nome", "Descrição", "Ações"]}
         tableClassName="table-shell--responsive"
