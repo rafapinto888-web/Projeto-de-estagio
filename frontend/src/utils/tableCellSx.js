@@ -9,6 +9,7 @@ export const tableCellNowrap = {
 };
 
 export function tableCellMono(minWidth) {
+  // Fonte mono e numeros tabulares ajudam a alinhar IPs, IDs e series.
   return {
     ...tableCellNowrap,
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
@@ -19,6 +20,7 @@ export function tableCellMono(minWidth) {
 }
 
 export function tableCellEllipsis(minWidth = 100, maxWidth = 220) {
+  // O corte visual evita quebrar o layout quando a tabela precisa caber sem scroll excessivo.
   return {
     ...tableCellNowrap,
     minWidth,

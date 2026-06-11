@@ -16,7 +16,7 @@ Aplicação web para **gestão de inventário de TI**: inventários, computadore
 | **Histórico** | Auditoria das ações da conta autenticada |
 | **Logs** | Consulta de logs por computador ou inventário |
 
-Autenticação por **JWT** (Bearer). O painel, após login, carrega inventários, computadores, utilizadores, perfis, localizações e histórico.
+Autenticação por **sessão com cookie HttpOnly**. O painel, após login, carrega inventários, computadores, utilizadores, perfis, localizações e histórico.
 
 **API:** `GET /computadores/` — só manuais por defeito; `com_scan=true` inclui dispositivos do scan (campo `tipo` em cada item).
 
@@ -24,10 +24,10 @@ Autenticação por **JWT** (Bearer). O painel, após login, carrega inventários
 
 | Camada | Tecnologias |
 |--------|-------------|
-| Backend | Python 3.11+, FastAPI, Uvicorn, SQLAlchemy, Pydantic, PostgreSQL, JWT, Argon2 (hash de passwords) |
+| Backend | Python 3.11+, FastAPI, Uvicorn, SQLAlchemy, Pydantic, PostgreSQL, sessões por cookie HttpOnly, Argon2 (hash de passwords) |
 | Frontend | React 18, Vite 5, Material UI (MUI), Emotion, `xlsx` (export) |
 | Infra | Docker Compose (perfis opcionais: frontend, API, Postgres) |
-| API docs | Swagger em `/docs` — obtém token em `POST /auth/login` e usa **Authorize** com Bearer JWT nas restantes rotas |
+| API docs | Swagger em `/docs` — o login (`POST /auth/login`) cria sessão por cookie; as restantes rotas protegidas usam esse cookie |
 
 ## Estrutura do repositório
 
@@ -56,16 +56,20 @@ Cria **`backend/.env`** (não commits com passwords em repositório público). O
 | Variável | Obrigatório | Uso |
 |----------|-------------|-----|
 | `DATABASE_URL` | Sim | Ligação SQLAlchemy ao PostgreSQL, ex.: `postgresql+psycopg2://USER:PASS@HOST:PORT/NOME_BD` |
-| `SECRET_KEY` | Recomendado em produção | Assinatura dos JWT (há valor de desenvolvimento no código se omitires) |
+| `SECRET_KEY` | Recomendado em produção | Segredo geral da aplicação (mantido para configuração/compatibilidade e avisos de ambiente) |
 | `INVENTARIO_CORS_ORIGINS` | Opcional | Origens do frontend separadas por vírgula; por defeito inclui `http://localhost:5173` e `127.0.0.1` equivalentes (ver `app/core/config.py`) |
 | `INVENTARIO_APP_ENV` | Opcional | `development` ou `production` (avisos, ex.: `SECRET_KEY` por defeito) |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` / `REFRESH_TOKEN_EXPIRE_DAYS` | Opcional | Validade dos tokens (ver `app/core/security.py`) |
+| `SESSION_EXPIRE_MINUTES` | Opcional | Duração base da sessão; cada pedido autenticado renova este prazo (sliding session) |
+| `SESSION_COOKIE_NAME` | Opcional | Nome do cookie de sessão (por defeito `inventario_session`) |
+| `SESSION_COOKIE_SECURE` | Opcional | `true/false`; em produção deve ficar `true` |
+| `SESSION_COOKIE_SAMESITE` | Opcional | Política `SameSite` do cookie (`lax` por defeito) |
 
 No **frontend** em Docker, `VITE_API_BASE` define a URL da API (por defeito no compose: `http://localhost:8000`).
 
 ## Base de dados e conta inicial
 
-1. **Schema** — As tabelas e constraints devem existir na base **antes** de usares a API (criação em SQL/pgAdmin ou migração; o projeto não corre `create_all` automático).
+1. **Schema** — As tabelas e constraints principais devem existir na base **antes** de usares a API (criação em SQL/pgAdmin ou migração; o projeto não corre `create_all` automático para o domínio principal).
+   A tabela de sessões autenticadas (`sessoes_utilizador`) é criada automaticamente ao arranque se ainda não existir.
 2. **`DATABASE_URL`** — Aponta para essa base (PostgreSQL).
 3. **Utilizador `admin`** — Ao arranque, se não existir username `admin`, o backend cria conta **admin** / **inventario123**, email `admin@inventario.local`, com perfil de administrador (ou cria o perfil `Admin` se não houver perfil reconhecido como admin). Ver `backend/app/core/bootstrap.py`. **Em produção altera a password** após o primeiro login.
 
@@ -99,7 +103,7 @@ $env:DATABASE_URL = "postgresql+psycopg2://postgres:TU_PASSWORD@127.0.0.1:5432/i
 Linux/macOS: ativa o venv, `export DATABASE_URL=...`, mesmo comando `uvicorn`.
 
 - API: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- Login na UI ou `POST /auth/login` com `admin` / `inventario123` (se o seed tiver corrido).
+- Login na UI ou `POST /auth/login` com `admin` / `inventario123` (se o seed tiver corrido). O backend devolve um cookie de sessão `HttpOnly`.
 
 ### 3. Frontend
 
@@ -111,7 +115,7 @@ npm run dev
 
 - Site: [http://127.0.0.1:5173](http://127.0.0.1:5173) (ou `localhost`)
 
-Por defeito o cliente usa `http://localhost:8000` como API (`frontend/src/api.js`); se a API estiver só em `127.0.0.1`, confirma que o browser consegue resolver (ou alinha host/porta).
+Por defeito o cliente usa `http://localhost:8000` como API (`frontend/src/api.js`); se a API estiver só em `127.0.0.1`, confirma que o browser consegue resolver (ou alinha host/porta). O frontend já envia `credentials: "include"` em todos os pedidos para incluir o cookie de sessão.
 
 ## Docker Compose
 
@@ -167,6 +171,21 @@ Mais comandos: [`docs/comandos.txt`](docs/comandos.txt).
 - Sem suíte de testes automatizada documentada; validação manual via UI e Swagger.
 - Scan e logs dependem de rede, credenciais e, onde aplicável, ambiente Windows.
 - Navegação por **abas** em `App.jsx` (sem React Router nesta fase).
+
+## Fluxo de autenticação atual
+
+1. `POST /auth/login` valida `username/email + password`.
+2. O backend cria uma linha em `sessoes_utilizador`.
+3. A resposta define um cookie `HttpOnly` (por defeito `inventario_session`).
+4. O browser envia esse cookie automaticamente nos pedidos seguintes.
+5. Cada rota protegida valida a sessão no backend e renova a expiração da mesma sessão.
+6. `POST /auth/logout` revoga a sessão atual e limpa o cookie.
+
+### Swagger (`/docs`)
+
+- Faz login por `POST /auth/login`; o browser guarda o cookie da sessão automaticamente.
+- As rotas protegidas aparecem com esquema de segurança por **cookie** no OpenAPI.
+- Depois do login, o botão **Try it out** usa a mesma sessão do browser para chamar as rotas autenticadas.
 
 ## Licença
 

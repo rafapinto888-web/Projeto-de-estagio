@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { api, clearApiToken, setApiToken, setSessionTokens } from "./api";
+import { api } from "./api";
 import { isAdminProfileName } from "./authz";
 import SidebarNav from "./components/SidebarNav";
 import StatusAlert from "./components/StatusAlert";
@@ -80,6 +80,7 @@ function emptyComputerForm() {
 
 // Corpo JSON para criar/atualizar computador a partir do form.
 function payloadComputadorRegisto(form) {
+  // Normaliza o form partilhado num payload consistente para create/update completo.
   return {
     nome: form.nome.trim(),
     marca: form.marca.trim(),
@@ -110,6 +111,7 @@ function emptyInventarioForm() {
 
 // Remove chaves com string vazia ou null (útil em query strings de logs).
 function limparQueryVazia(params) {
+  // Evita enviar filtros vazios que poderiam alterar o comportamento do backend.
   return Object.fromEntries(
     Object.entries(params || {}).filter(([, value]) => {
       if (value == null) return false;
@@ -139,6 +141,7 @@ function compareIPv4(a, b) {
 
 // Texto do campo rede do scan -> CIDR/rede aceite pela API ou erro.
 function normalizarRedeScan(rawValue) {
+  // Aceita IP unico, CIDR ou alguns intervalos simples e devolve um alvo seguro para a API.
   const input = String(rawValue || "").trim();
   if (!input) {
     return { ok: true, rede: null, label: "rede padrão do inventário" };
@@ -186,6 +189,7 @@ function normalizarRedeScan(rawValue) {
 
 /** Resposta do scan: todos os hosts sem marca/modelo/SO → provável falta de acesso WMI remoto. */
 function heuristicaScanSemWmiCompleto(out) {
+  // Se todos os hosts vierem sem enriquecimento tecnico, sugerimos repetir com credenciais explicitas.
   const disps = out?.dispositivos_descobertos;
   if (!Array.isArray(disps) || disps.length === 0) return false;
   return disps.every(
@@ -213,7 +217,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(() => tabIdFromLocation());
   /** Menu lateral (drawer): fechado por defeito — não ocupa largura no layout. */
   const [navOpen, setNavOpen] = useState(false);
-  const [token, setToken] = useState(localStorage.getItem("access_token") || ""); // JWT da sessão
+  const [authReady, setAuthReady] = useState(false); // bootstrap inicial da sessao por cookie
   const [user, setUser] = useState(null); // /auth/me
   const [dataLoading, setDataLoading] = useState(false); // loadAllData inicial / refresh
   const [actionLoading, setActionLoading] = useState(false); // botões CRUD, login, pesquisa…
@@ -269,6 +273,7 @@ export default function App() {
       user?.perfil_nome || user?.perfil || user?.perfil_nome_utilizador || user?.role || "";
     return isAdminProfileName(nomePerfil) || user?.is_admin === true;
   }, [user]);
+  const isAuthenticated = Boolean(user);
 
   const navTabs = useMemo(
     () => (isAdmin ? TABS : TABS.filter((t) => t.id !== "historico-conta")),
@@ -277,11 +282,8 @@ export default function App() {
 
   // --- Carregamento de dados (API) ---
 
-  async function loadAllData(currentToken, options = {}) {
-    if (currentToken != null && String(currentToken).trim() !== "") {
-      setApiToken(String(currentToken).trim());
-    }
-    if (!localStorage.getItem("access_token")) return;
+  async function loadAllData(options = {}) {
+    // Carrega o estado base do painel em paralelo para reduzir tempo de arranque/refresh.
     const { silent = false } = options;
     if (!silent) setDataLoading(true);
     try {
@@ -315,6 +317,7 @@ export default function App() {
 
   // Atualiza lista de ativos do inventário na aba Scan (com ou sem termo de pesquisa).
   async function refreshAtivos(invId, searchTerm = "") {
+    // A aba Scan trabalha com uma lista combinada: registos manuais + dispositivos descobertos.
     if (!invId) {
       setAtivos([]);
       return;
@@ -338,50 +341,38 @@ export default function App() {
   // --- Autenticação ---
 
   async function handleLogin(event) {
+    // O login so e considerado concluido depois de termos sessao e dados iniciais minimamente prontos.
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     setActionLoading(true);
     try {
       const identificador = String(formData.get("identificador") ?? "").trim();
       const palavraPasse = String(formData.get("password") ?? "");
-      const res = await api.login(identificador, palavraPasse);
-      const accessToken = res?.access_token;
-      const refreshToken = res?.refresh_token;
-      if (!accessToken) throw new Error("Token nao recebido no login");
-      setSessionTokens(accessToken, refreshToken || "");
-      setToken(accessToken);
+      await api.login(identificador, palavraPasse);
       const me = await api.me();
       setUser(me);
       try {
-        await loadAllData(accessToken);
+        await loadAllData();
       } catch (loadErr) {
         setStatus({
           type: "ok",
           message: `Sessao iniciada, mas falhou o carregamento inicial (${loadErr.message}). Tenta recarregar a pagina.`,
         });
+        setAuthReady(true);
         return;
       }
+      setAuthReady(true);
       setStatus({ type: "ok", message: "Sessao iniciada com sucesso" });
     } catch (error) {
+      setUser(null);
+      setAuthReady(true);
       setStatus({ type: "err", message: `Erro no login: ${error.message}` });
     } finally {
       setActionLoading(false);
     }
   }
 
-  // Termina sessão e limpa estado local (regista saída na auditoria antes de invalidar o token).
-  async function handleLogout() {
-    const nome = user?.nome || user?.username || "";
-    try {
-      await api.registarHistorico({
-        acao: "sessao.logout",
-        descricao: nome ? `Sessão terminada (${nome}).` : "Sessão terminada.",
-      });
-    } catch {
-      /* token expirado ou sem rede — continua a terminar sessão localmente */
-    }
-    clearApiToken();
-    setToken("");
+  function limparEstadoAutenticado() {
     setUser(null);
     setInventarios([]);
     setComputadores([]);
@@ -390,18 +381,32 @@ export default function App() {
     setPerfis([]);
     setLocalizacoes([]);
     setAtivos([]);
+    setSelectedInventarioId("");
+  }
+
+  // Termina sessão e limpa estado local; o backend regista auditoria e revoga a sessão.
+  async function handleLogout() {
+    try {
+      await api.logout();
+    } catch {
+      /* sessao ja pode ter expirado; mesmo assim limpamos o estado local */
+    }
+    limparEstadoAutenticado();
+    setAuthReady(true);
     setStatus({ type: "ok", message: "Sessao terminada" });
   }
 
   // --- Mutações CRUD com feedback e auditoria ---
 
   function removerUtilizadorDoEstado(utilizadorId) {
+    // Ajuda a remover a conta logo do estado local, incluindo cenarios de auto-remocao.
     const id = Number(utilizadorId);
     if (Number.isNaN(id)) return;
     setUtilizadores((prev) => prev.filter((u) => Number(u.id) !== id));
   }
 
   async function withAction(action, successMessage, options = {}) {
+    // Wrapper comum: executa a mutacao, refresca dados dependentes e tenta auditar o resultado.
     const { onSuccess } = options;
     setActionLoading(true);
     try {
@@ -437,53 +442,52 @@ export default function App() {
 
   useEffect(() => {
     async function bootstrap() {
-      if (!token) {
-        setUser(null);
-        return;
-      }
+      // Verifica a sessao HttpOnly ja existente e restaura a UI sem depender de localStorage.
       try {
-        setApiToken(token);
         const me = await api.me();
         setUser(me);
       } catch {
-        // Só aqui limpamos sessão: token inválido, refresh falhou, ou utilizador apagado.
-        clearApiToken();
-        setToken("");
         setUser(null);
+        setAuthReady(true);
         return;
       }
       try {
-        await loadAllData(token);
+        await loadAllData();
       } catch {
-        // Sessão válida mas dados iniciais falharam (rede, 500): não deslogar.
+        // Sessao valida mas dados iniciais falharam (rede, 500): nao deslogar.
         setStatus({
           type: "warn",
           message: "Sessão restaurada; não foi possível carregar todos os dados. Recarrega ou tenta outra vez.",
         });
+      } finally {
+        setAuthReady(true);
       }
     }
     bootstrap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, []);
 
   useEffect(() => {
-    function onAccessRefreshed() {
-      const t = localStorage.getItem("access_token");
-      if (t) setToken(t);
+    // Qualquer 401 do cliente HTTP termina a sessao visivel e devolve o utilizador ao login.
+    function onSessionExpired() {
+      limparEstadoAutenticado();
+      setAuthReady(true);
+      setStatus({ type: "warn", message: "Sessao expirada. Inicia sessao novamente." });
     }
-    window.addEventListener("inventario-access-refreshed", onAccessRefreshed);
-    return () => window.removeEventListener("inventario-access-refreshed", onAccessRefreshed);
+    window.addEventListener("inventario-session-expired", onSessionExpired);
+    return () => window.removeEventListener("inventario-session-expired", onSessionExpired);
   }, []);
 
   // Ao mudar inventário ou voltar a logar: recarrega ativos do Scan para esse inventário.
   useEffect(() => {
-    if (token && selectedInventarioId) {
+    // Precarrega a lista visivel da aba Scan sempre que o inventario alvo muda.
+    if (isAuthenticated && selectedInventarioId) {
       refreshAtivos(selectedInventarioId).catch(() =>
         setStatus({ type: "warn", message: "Falha ao carregar ativos" }),
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedInventarioId, token]);
+  }, [selectedInventarioId, isAuthenticated]);
 
   // Preenche campo "rede" do scan quando escolhes outro inventário (uma vez por id).
   useEffect(() => {
@@ -516,16 +520,18 @@ export default function App() {
 
   // Utilizador normal não tem aba Histórico: evita ficar preso no hash #historico-conta.
   useEffect(() => {
-    if (!token || !user) return;
+    // Protege o acesso direto por hash a uma aba reservada a administradores.
+    if (!isAuthenticated || !user) return;
     if (!isAdmin && activeTab === "historico-conta") {
       setActiveTab("dashboard");
       syncLocationHash("dashboard");
     }
-  }, [token, user, isAdmin, activeTab]);
+  }, [isAuthenticated, user, isAdmin, activeTab]);
 
   // Ao abrir Computadores: atualiza agregados (manuais + scan) para refletir o último scan.
   useEffect(() => {
-    if (!token || activeTab !== "computadores") return undefined;
+    // Ao abrir Computadores, refrescamos agregados para refletir scans recentes sem refresh total manual.
+    if (!isAuthenticated || activeTab !== "computadores") return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -543,30 +549,49 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, token]);
+  }, [activeTab, isAuthenticated]);
 
   // Dashboard aberto: atualiza dados em background a cada 30s (sem spinner principal).
   useEffect(() => {
-    if (!token || activeTab !== "dashboard") return undefined;
+    if (!isAuthenticated || activeTab !== "dashboard") return undefined;
     const timer = setInterval(() => {
-      loadAllData(undefined, { silent: true }).catch(() => {
+      loadAllData({ silent: true }).catch(() => {
         /* atualização automática opcional; falhas pontuais não devem quebrar UI */
       });
     }, 30000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, activeTab]);
+  }, [isAuthenticated, activeTab]);
 
   const loading = dataLoading || actionLoading; // spinner geral (dados + ações)
 
   function handleSelectTab(tabId) {
+    // Fechar a drawer no mesmo gesto evita dupla interacao em mobile.
     setActiveTab(tabId);
     setNavOpen(false);
   }
 
-  // --- Render: ecrã de login (sem token) ---
+  // --- Render: bootstrap da sessao / ecrã de login ---
 
-  if (!token) {
+  if (!authReady) {
+    return (
+      <main className="auth-screen">
+        <div className="auth-card">
+          <div className="brand-mini">
+            <span className="topbar-logo" aria-hidden style={{ width: 40, height: 40 }}>
+              <span className="material-symbols-outlined">inventory_2</span>
+            </span>
+            <div>
+              <h1>Inventário IT</h1>
+              <p>A verificar sessão...</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!isAuthenticated) {
     return (
       <main className="auth-screen">
         {/* POST /auth/login via handleLogin */}
@@ -667,7 +692,7 @@ export default function App() {
 
           {activeTab === "historico-conta" && (
             <HistoricoContaPage
-              token={token}
+              token={isAuthenticated ? "session" : ""}
               active={activeTab === "historico-conta"}
               isAdmin={isAdmin}
               utilizadores={utilizadores}
@@ -685,6 +710,7 @@ export default function App() {
               onCreate={() =>
                 withAction(
                   () => {
+                    // Inventarios de sub-rede exigem alvo explicito porque alimentam o fluxo de scan.
                     const rede = inventarioForm.ip_rede.trim();
                     if (inventarioForm.tipo_inventario === "sub_rede" && !rede) {
                       throw new Error("IP da rede é obrigatório para inventário do tipo Rede (sub-rede)");
@@ -731,6 +757,7 @@ export default function App() {
                 withAction(() => api.inventarios.apagar(inv.id), "Inventario apagado");
               }}
               onSelectInventario={(inv) => {
+                // A mesma selecao serve o editor de Inventarios e o contexto ativo da aba Scan.
                 setSelectedInventarioId(String(inv.id));
                 setInventarioForm({
                   id: String(inv.id),
@@ -781,6 +808,7 @@ export default function App() {
               scanLogsSeguranca={scanLogsSeguranca}
               setScanLogsSeguranca={setScanLogsSeguranca}
               onCreateInventarioFromScan={async (payload) => {
+                // Fluxo auxiliar: criar inventario sem sair do modal/assistente de scan.
                 setActionLoading(true);
                 try {
                   const created = await api.inventarios.criar(payload);
@@ -807,6 +835,7 @@ export default function App() {
                 }
               }}
               onScan={async ({ signal } = {}) => {
+                // Fluxo principal do scan: validar contexto, executar, resumir no log e refrescar o painel.
                 const falha = { ok: false };
                 if (!selectedInventarioId) {
                   setStatus({ type: "err", message: "Seleciona um inventário para executar o scan" });
@@ -873,6 +902,7 @@ export default function App() {
                     },
                     { signal },
                   );
+                  // Quando so um tipo de log foi pedido, tentamos consultar o total desse tipo para resumo.
                   let totalLogsPreferidos = null;
                   if (scanLogsRdp !== scanLogsSeguranca) {
                     const tipoLog = scanLogsRdp ? "rdp" : "seguranca";
@@ -916,6 +946,7 @@ export default function App() {
                   } catch {
                     /* não bloquear */
                   }
+                  // A password explicita nao deve ficar presa no estado depois de uma execucao bem sucedida.
                   if (temCredRede) setScanPass("");
                   const sugestaoCredenciais = !temCredRede && heuristicaScanSemWmiCompleto(out);
                   return { ok: true, sugestaoCredenciais };
@@ -1028,7 +1059,7 @@ export default function App() {
                   ? withAction(() => api.computadores.apagar(pc.id), "Computador apagado")
                   : null
               }
-              token={token}
+              token={isAuthenticated ? "session" : ""}
               withPanelAction={withAction}
             />
           )}
@@ -1170,6 +1201,7 @@ export default function App() {
               globalTermo={globalTermo}
               setGlobalTermo={setGlobalTermo}
               onPesquisar={async () => {
+                // Guardamos a resposta crua em JSON para a pagina decidir parse, filtros e apresentacao.
                 setActionLoading(true);
                 try {
                   const data = await api.pesquisa.global(globalTermo);
@@ -1198,6 +1230,7 @@ export default function App() {
               logComputadorParams={logComputadorParams}
               setLogComputadorParams={setLogComputadorParams}
               onLogsComputador={async (paramsOverride = null) => {
+                // Logs por computador usam apenas os filtros realmente preenchidos pelo utilizador.
                 setActionLoading(true);
                 try {
                   const query = limparQueryVazia(paramsOverride || logComputadorParams);
@@ -1219,6 +1252,7 @@ export default function App() {
               logInventarioParams={logInventarioParams}
               setLogInventarioParams={setLogInventarioParams}
               onLogsInventario={async ({ tiposSelecionados = [], credenciais = {} } = {}) => {
+                // A recolha em lote depende do inventario ativo e de credenciais de rede validas.
                 setActionLoading(true);
                 try {
                   const invId = logInventarioParams.inventario_id || selectedInventarioId;

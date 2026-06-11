@@ -29,4 +29,7 @@ class UtilizadorDB(Base):
         back_populates="utilizador",
         cascade="all, delete-orphan",
     )
-
+    sessoes: Mapped[list["SessaoDB"]] = relationship(
+        back_populates="utilizador",
+        cascade="all, delete-orphan",
+    )

@@ -1,17 +1,18 @@
-"""Esquema OpenAPI: autenticacao JWT no Swagger."""
+"""Esquema OpenAPI: autenticacao por cookie de sessao no Swagger."""
 
 from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
-# Nome do esquema HTTP Bearer no Swagger (deve coincidir com scheme_name em deps.py).
-BEARER_SCHEME_NAME = "BearerAuth"
+from app.core.security import SESSION_COOKIE_NAME
 
-# Rotas publicas (unicas sem JWT: obter ou renovar token).
+# Nome do esquema cookie no Swagger (deve coincidir com scheme_name em deps.py).
+SESSION_COOKIE_SCHEME_NAME = "SessionCookieAuth"
+
+# Rotas publicas (unicas sem sessao: iniciar docs e criar sessao/login).
 _PUBLIC_PATH_PREFIXES = (
     "/auth/login",
-    "/auth/refresh",
     "/docs",
     "/redoc",
     "/openapi.json",
@@ -27,7 +28,7 @@ def _path_is_public(path: str) -> bool:
 
 
 def configure_openapi(app: FastAPI) -> None:
-    """Regista gerador OpenAPI com um unico esquema Bearer e rotas publicas marcadas."""
+    """Regista gerador OpenAPI com cookie de sessao nas rotas protegidas."""
 
     def custom_openapi():
         if app.openapi_schema:
@@ -41,14 +42,15 @@ def configure_openapi(app: FastAPI) -> None:
 
         components = schema.setdefault("components", {})
         schemes = components.setdefault("securitySchemes", {})
-        schemes[BEARER_SCHEME_NAME] = {
-            "type": "http",
-            "scheme": "bearer",
-            "bearerFormat": "JWT",
+        schemes[SESSION_COOKIE_SCHEME_NAME] = {
+            "type": "apiKey",
+            "in": "cookie",
+            "name": SESSION_COOKIE_NAME,
         }
         schemes.pop("HTTPBasic", None)
+        schemes.pop("BearerAuth", None)
 
-        bearer_security = [{BEARER_SCHEME_NAME: []}]
+        cookie_security = [{SESSION_COOKIE_SCHEME_NAME: []}]
 
         for path, path_item in schema.get("paths", {}).items():
             if _path_is_public(path):
@@ -56,7 +58,7 @@ def configure_openapi(app: FastAPI) -> None:
             for operation in path_item.values():
                 if not isinstance(operation, dict) or "operationId" not in operation:
                     continue
-                operation["security"] = bearer_security
+                operation["security"] = cookie_security
 
         app.openapi_schema = schema
         return app.openapi_schema

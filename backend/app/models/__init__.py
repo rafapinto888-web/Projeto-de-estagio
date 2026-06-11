@@ -10,6 +10,7 @@ from app.models.localizacao_db import LocalizacaoDB
 from app.models.log_dispositivo_db import LogDispositivoDB
 from app.models.log_sistema_db import LogSistemaDB
 from app.models.perfil_db import PerfilDB
+from app.models.sessao_db import SessaoDB
 from app.models.utilizador_db import UtilizadorDB
 
 __all__ = [
@@ -20,6 +21,7 @@ __all__ = [
     "LogDispositivoDB",
     "LogSistemaDB",
     "PerfilDB",
+    "SessaoDB",
     "UtilizadorDB",
 ]
 

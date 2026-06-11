@@ -1,4 +1,4 @@
-"""Ponto de entrada FastAPI: CORS e registo de routers."""
+"""Ponto de entrada FastAPI: CORS, seed inicial e registo de routers."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -18,7 +18,8 @@ from app.routes.localizacoes import router as localizacoes_router
 from app.routes.pesquisa import router as pesquisa_router
 from app.routes.perfis import router as perfis_router
 from app.routes.utilizadores import router as utilizadores_router
-from app.database.connection import SessionLocal
+from app.database.connection import SessionLocal, engine
+from app.models.sessao_db import SessaoDB
 from app.models.utilizador_db import UtilizadorDB
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,8 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Ao arranque: garante utilizador admin inicial se ainda nao existir na BD."""
+    """Ao arranque: garante tabela de sessoes e utilizador admin inicial."""
+    SessaoDB.__table__.create(bind=engine, checkfirst=True)
     db = SessionLocal()
     try:
         garantir_utilizador_admin_inicial(db)
@@ -38,7 +40,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="API de Inventario",
     version="0.1.0",
-    swagger_ui_parameters={"persistAuthorization": True},
+    swagger_ui_parameters={"withCredentials": True},
     lifespan=lifespan,
 )
 

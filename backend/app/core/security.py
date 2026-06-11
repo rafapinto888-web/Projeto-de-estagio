@@ -1,22 +1,36 @@
-"""Hash de passwords (Argon2), emissao e validacao de tokens JWT."""
+"""Hash de passwords (Argon2) e sessoes autenticadas por cookie HttpOnly."""
 
+from __future__ import annotations
+
+import hashlib
 import os
+import secrets
 from datetime import UTC, datetime, timedelta
 
-import jwt
-from jwt import InvalidTokenError
+from fastapi import Response
 from pwdlib import PasswordHash
-from pwdlib.hashers.argon2 import Argon2Hasher
 from pwdlib.exceptions import UnknownHashError
+from pwdlib.hashers.argon2 import Argon2Hasher
 
 
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "5"))
-REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 SECRET_KEY = os.getenv("SECRET_KEY", "inventario-dev-secret-key-change-in-production")
+SESSION_EXPIRE_MINUTES = int(os.getenv("SESSION_EXPIRE_MINUTES", "60"))
+SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "inventario_session").strip() or "inventario_session"
+SESSION_COOKIE_SAMESITE = (os.getenv("SESSION_COOKIE_SAMESITE", "lax").strip().lower() or "lax")
+SESSION_COOKIE_PATH = "/"
 
-JWT_TYP_ACCESS = "access"
-JWT_TYP_REFRESH = "refresh"
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+SESSION_COOKIE_SECURE = _env_bool(
+    "SESSION_COOKIE_SECURE",
+    os.getenv("INVENTARIO_APP_ENV", "development").strip().lower() == "production",
+)
 
 
 def _build_password_hash() -> PasswordHash:
@@ -35,48 +49,51 @@ def verificar_palavra_passe(palavra_passe: str, palavra_passe_hash: str) -> bool
         return False
 
 
-def criar_access_token(subject: str) -> str:
-    """JWT curto (API): subject = id do utilizador, claim `typ=access`."""
-    expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload = {"sub": subject, "exp": expire, "typ": JWT_TYP_ACCESS}
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+def agora_utc_naive() -> datetime:
+    """Timestamp UTC sem timezone explicita, alinhado com o resto das tabelas do projeto."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
-def criar_refresh_token(subject: str) -> str:
-    """JWT longo: mesma chave HS256, claim `typ=refresh` — nao serve como Bearer nas rotas normais."""
-    expire = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    payload = {"sub": subject, "exp": expire, "typ": JWT_TYP_REFRESH}
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+def expira_sessao_em(base: datetime | None = None) -> datetime:
+    """Calcula a nova expiracao da sessao a partir do instante indicado."""
+    instante = base or agora_utc_naive()
+    return instante + timedelta(minutes=SESSION_EXPIRE_MINUTES)
 
 
-def descodificar_access_token(token: str) -> str | None:
-    """Subject do access JWT; None se invalido, expirado, ou se for token de refresh."""
-    try:
-        # Leeway suave para relógios do cliente/servidor ligeiramente desfasados.
-        payload = jwt.decode(
-            token, SECRET_KEY, algorithms=[ALGORITHM], leeway=timedelta(seconds=120)
-        )
-    except InvalidTokenError:
-        return None
-    if payload.get("typ") == JWT_TYP_REFRESH:
-        return None
-    subject = payload.get("sub")
-    if not isinstance(subject, str):
-        return None
-    return subject
+def criar_token_sessao() -> str:
+    """Token opaco e aleatorio enviado ao browser via cookie HttpOnly."""
+    return secrets.token_urlsafe(48)
 
 
-def descodificar_refresh_token(token: str) -> str | None:
-    """Subject do refresh JWT; None se invalido ou nao for typ=refresh."""
-    try:
-        payload = jwt.decode(
-            token, SECRET_KEY, algorithms=[ALGORITHM], leeway=timedelta(seconds=120)
-        )
-    except InvalidTokenError:
-        return None
-    if payload.get("typ") != JWT_TYP_REFRESH:
-        return None
-    subject = payload.get("sub")
-    if not isinstance(subject, str):
-        return None
-    return subject
+def hash_token_sessao(token: str) -> str:
+    """Hash SHA-256 do token de sessao para nao guardar o valor bruto na BD."""
+    valor = str(token or "")
+    return hashlib.sha256(valor.encode("utf-8")).hexdigest()
+
+
+def configurar_cookie_sessao(response: Response, token: str, expires_at: datetime | None = None) -> None:
+    """Escreve cookie de sessao com atributos seguros e expiracao alinhada com a BD."""
+    exp = expires_at or expira_sessao_em()
+    exp_http = exp.replace(tzinfo=UTC) if exp.tzinfo is None else exp.astimezone(UTC)
+    max_age = max(0, int((exp - agora_utc_naive()).total_seconds()))
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        max_age=max_age,
+        expires=exp_http,
+        httponly=True,
+        secure=SESSION_COOKIE_SECURE,
+        samesite=SESSION_COOKIE_SAMESITE,
+        path=SESSION_COOKIE_PATH,
+    )
+
+
+def limpar_cookie_sessao(response: Response) -> None:
+    """Apaga o cookie de sessao do browser."""
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        httponly=True,
+        secure=SESSION_COOKIE_SECURE,
+        samesite=SESSION_COOKIE_SAMESITE,
+        path=SESSION_COOKIE_PATH,
+    )

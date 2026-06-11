@@ -1,24 +1,30 @@
 """Endpoints de autenticacao, sessao (/me) e historico de auditoria."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
 from app.core.security import (
-    criar_access_token,
-    criar_refresh_token,
-    descodificar_refresh_token,
+    SESSION_COOKIE_NAME,
+    agora_utc_naive,
+    configurar_cookie_sessao,
+    criar_token_sessao,
+    expira_sessao_em,
+    hash_token_sessao,
+    limpar_cookie_sessao,
     verificar_palavra_passe,
 )
 from app.database.connection import get_db
 from app.models.log_sistema_db import LogSistemaDB
+from app.models.sessao_db import SessaoDB
 from app.models.utilizador_db import UtilizadorDB
 from app.schemas.auth import (
+    AuthLoginResponse,
+    AuthLogoutResponse,
     AuthMeResponse,
-    AuthRefreshRequest,
-    AuthRefreshResponse,
-    AuthTokenResponse,
     HistoricoRegistoIn,
     LoginRequest,
 )
@@ -62,46 +68,66 @@ def autenticar_utilizador(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciais invalidas",
-            headers={"WWW-Authenticate": "Bearer"},
         )
     return utilizador
 
 
-@router.post("/login", response_model=AuthTokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+@router.post("/login", response_model=AuthLoginResponse)
+def login(
+    payload: LoginRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+):
     utilizador = autenticar_utilizador(db, payload.identificador, payload.palavra_passe)
+    agora = agora_utc_naive()
+    expira_em = expira_sessao_em(agora)
+    token_bruto = criar_token_sessao()
+    sessao = SessaoDB(
+        utilizador_id=utilizador.id,
+        token_hash=hash_token_sessao(token_bruto),
+        criado_em=agora,
+        ultima_atividade_em=agora,
+        expira_em=expira_em,
+    )
+    db.add(sessao)
+    db.commit()
+
     registar_log_sistema(
         db,
         utilizador.id,
         "sessao.login",
         f'Sessão iniciada como "{utilizador.username}"',
     )
-    return {
-        "access_token": criar_access_token(str(utilizador.id)),
-        "refresh_token": criar_refresh_token(str(utilizador.id)),
-        "token_type": "bearer",
-    }
+    configurar_cookie_sessao(response, token_bruto, expires_at=expira_em)
+    return {"ok": True, "message": "Sessao iniciada"}
 
 
-@router.post("/refresh", response_model=AuthRefreshResponse)
-def refresh_token(payload: AuthRefreshRequest, db: Session = Depends(get_db)):
-    """Novo access JWT a partir de um refresh JWT valido (sem password)."""
-    uid_txt = descodificar_refresh_token(payload.refresh_token.strip())
-    if uid_txt is None or not uid_txt.isdigit():
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token invalido ou expirado",
+@router.post("/logout", response_model=AuthLogoutResponse)
+def logout(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if token:
+        sessao = (
+            db.query(SessaoDB)
+            .filter(SessaoDB.token_hash == hash_token_sessao(token.strip()))
+            .first()
         )
-    utilizador = db.get(UtilizadorDB, int(uid_txt))
-    if utilizador is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Utilizador do refresh token nao encontrado",
-        )
-    return {
-        "access_token": criar_access_token(str(utilizador.id)),
-        "token_type": "bearer",
-    }
+        if sessao is not None and sessao.revogado_em is None:
+            sessao.revogado_em = agora_utc_naive()
+            db.commit()
+
+    registar_log_sistema(
+        db,
+        current_user.id,
+        "sessao.logout",
+        f'Sessão terminada ({current_user.nome or current_user.username}).',
+    )
+    limpar_cookie_sessao(response)
+    return {"ok": True, "message": "Sessao terminada"}
 
 
 @router.get("/me", response_model=AuthMeResponse)

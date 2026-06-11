@@ -1,9 +1,9 @@
 /*
  * Cliente HTTP da API REST (FastAPI).
- * Token JWT: setApiToken no login; pedidos autenticados usam-no automaticamente.
+ * Autenticacao por cookie HttpOnly: o browser envia a sessao automaticamente.
  */
 
-// --- Configuração da URL base ---
+// --- Configuracao da URL base ---
 
 const FALLBACK_API_BASE = "http://localhost:8000";
 const ENV_BASE =
@@ -40,7 +40,7 @@ function localStorageApiBaseUsavel(saved) {
 function apiBaseMesmoHostQuePaginaQuandoEnvELoopback(explicitEnv) {
   if (typeof window === "undefined") return null;
   const pageHost = window.location.hostname;
-  if (!pageHost || pageHost === "localhost" || pageHost === "127.0.0.1") return null;
+  if (!pageHost) return null;
 
   let envHost = null;
   const raw = (explicitEnv || "").trim();
@@ -87,88 +87,9 @@ export function setApiBase(value) {
   localStorage.setItem("api_base", value);
 }
 
-// --- Token da sessão (Bearer) + refresh ---
+// --- Pedido HTTP generico (JSON + cookie de sessao) ---
 
-let authToken = null;
-let _refreshPromise = null;
-
-function readStoredAccess() {
-  if (typeof localStorage === "undefined") return null;
-  return localStorage.getItem("access_token");
-}
-
-if (typeof localStorage !== "undefined") {
-  const saved = readStoredAccess();
-  if (saved) authToken = saved;
-}
-
-export function setApiToken(token) {
-  authToken = token || null;
-}
-
-export function clearApiToken() {
-  authToken = null;
-  if (typeof localStorage !== "undefined") {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-  }
-}
-
-/** Grava access + refresh (login). */
-export function setSessionTokens(accessToken, refreshToken) {
-  if (typeof localStorage === "undefined") return;
-  if (accessToken) {
-    localStorage.setItem("access_token", accessToken);
-    authToken = accessToken;
-  }
-  if (refreshToken) localStorage.setItem("refresh_token", refreshToken);
-}
-
-async function tryRefreshAccess() {
-  if (typeof localStorage === "undefined") return false;
-  const rt = localStorage.getItem("refresh_token");
-  if (!rt?.trim()) return false;
-
-  if (_refreshPromise) {
-    await _refreshPromise;
-    return Boolean(readStoredAccess());
-  }
-
-  _refreshPromise = (async () => {
-    const base = getApiBase();
-    try {
-      const r = await fetch(`${base}/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: rt.trim() }),
-      });
-      const data = await r.json().catch(() => null);
-      if (!r.ok) {
-        // Só invalida sessão quando o servidor rejeita o refresh (expirado / SECRET_KEY / utilizador apagado).
-        if (r.status === 401) clearApiToken();
-        return false;
-      }
-      if (!data?.access_token) {
-        clearApiToken();
-        return false;
-      }
-      localStorage.setItem("access_token", data.access_token);
-      authToken = data.access_token;
-      return true;
-    } catch {
-      // Falha de rede: não apagar refresh_token; o pedido original falha e podes tentar de novo.
-      return false;
-    } finally {
-      _refreshPromise = null;
-    }
-  })();
-
-  return _refreshPromise;
-}
-
-// --- Pedido HTTP genérico (JSON + Bearer) ---
-
-/** Extrai mensagem legível de `detail` (string, lista de erros Pydantic, etc.). */
+/** Extrai mensagem legivel de `detail` (string, lista de erros Pydantic, etc.). */
 function mensagemApiDetail(data) {
   const d = data?.detail;
   if (d == null) return "Erro na comunicacao com a API";
@@ -182,13 +103,9 @@ function mensagemApiDetail(data) {
   return String(d);
 }
 
-async function request(path, options = {}, isRetry = false) {
+async function request(path, options = {}) {
   const { signal, headers: optHeaders, ...fetchRest } = options;
   const headers = { "Content-Type": "application/json", ...(optHeaders || {}), ...(fetchRest.headers || {}) };
-  // Login não deve enviar Bearer antigo (evita confusão em proxies / logs; o servidor ignora na mesma).
-  if (authToken && path !== "/auth/login") {
-    headers.Authorization = `Bearer ${authToken}`;
-  }
 
   const base = getApiBase();
   const url = `${base}${path}`;
@@ -196,6 +113,7 @@ async function request(path, options = {}, isRetry = false) {
   try {
     response = await fetch(url, {
       ...fetchRest,
+      credentials: "include",
       headers,
       signal,
     });
@@ -217,26 +135,18 @@ async function request(path, options = {}, isRetry = false) {
   if (!response.ok) {
     if (
       response.status === 401 &&
-      !isRetry &&
+      typeof window !== "undefined" &&
       path !== "/auth/login" &&
-      path !== "/auth/refresh" &&
-      typeof localStorage !== "undefined" &&
-      localStorage.getItem("refresh_token")
+      path !== "/auth/me"
     ) {
-      const refreshed = await tryRefreshAccess();
-      if (refreshed) {
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("inventario-access-refreshed"));
-        }
-        return request(path, options, true);
-      }
+      window.dispatchEvent(new CustomEvent("inventario-session-expired"));
     }
     throw new Error(mensagemApiDetail(data));
   }
   return data;
 }
 
-// --- Objeto api: módulos por recurso ---
+// --- Objeto api: modulos por recurso ---
 
 export const api = {
   login: (identificador, password) =>
@@ -244,10 +154,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ identificador, palavra_passe: password }),
     }),
+  logout: () => request("/auth/logout", { method: "POST" }),
   me: () => request("/auth/me"),
   registarHistorico: (payload) =>
     request("/auth/me/historico", { method: "POST", body: JSON.stringify(payload) }),
-  health: () => fetch(getApiBase()).then((r) => r.ok),
+  health: () => fetch(getApiBase(), { credentials: "include" }).then((r) => r.ok),
 
   inventarios: {
     listar: () => request("/inventarios/"),
@@ -291,7 +202,7 @@ export const api = {
       const q = opts.comScan ? "?com_scan=true" : "";
       return request(`/computadores/${q}`);
     },
-    /** Manuais + dispositivos do scan (mesmas regras de permissão que o painel). */
+    /** Manuais + dispositivos do scan (mesmas regras de permissao que o painel). */
     vistaUnificada: () => request("/computadores/vista-unificada"),
     criar: (payload) => request("/computadores", { method: "POST", body: JSON.stringify(payload) }),
     atualizar: (id, payload) =>

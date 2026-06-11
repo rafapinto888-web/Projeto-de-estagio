@@ -1,4 +1,4 @@
-"""Schemas de login, token JWT e historico de auditoria do utilizador."""
+"""Schemas de login, sessao autenticada por cookie e historico do utilizador."""
 
 from datetime import UTC, datetime
 
@@ -14,25 +14,16 @@ class LoginRequest(BaseModel):
     palavra_passe: str = Field(min_length=1)
 
 
-class AuthTokenResponse(BaseModel):
-    """Resposta com access + refresh JWT apos login bem-sucedido."""
+class AuthLoginResponse(BaseModel):
+    """Resposta do login; a autenticacao persiste via cookie HttpOnly, nao via JWT no corpo."""
 
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-
-class AuthRefreshRequest(BaseModel):
-    """Pedido para obter novo access_token sem voltar a pedir password."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    refresh_token: str = Field(min_length=10)
+    ok: bool = True
+    message: str = "Sessao iniciada"
 
 
-class AuthRefreshResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+class AuthLogoutResponse(BaseModel):
+    ok: bool = True
+    message: str = "Sessao terminada"
 
 
 class AuthMeResponse(BaseModel):
@@ -47,7 +38,7 @@ class AuthMeResponse(BaseModel):
 
 
 class HistoricoRegistoIn(BaseModel):
-    """Registo de atividade sempre associado ao utilizador autenticado pelo token."""
+    """Registo de atividade sempre associado ao utilizador autenticado pela sessao atual."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -73,4 +64,3 @@ class HistoricoUtilizadorItem(BaseModel):
 
 class HistoricoUtilizadorLista(BaseModel):
     itens: list[HistoricoUtilizadorItem]
-

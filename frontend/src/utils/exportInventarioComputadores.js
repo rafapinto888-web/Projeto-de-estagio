@@ -38,12 +38,14 @@ function sanitizeFilename(name) {
 }
 
 function stampFicheiro() {
+  // Gera um sufixo legivel e seguro para evitar colisoes entre exportacoes.
   return new Date()
     .toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "medium" })
     .replace(/[/:,\s]+/g, "-");
 }
 
 function linhaAtivo(grupo, a) {
+  // Mantem a mesma ordem de colunas para registos manuais e itens de scan.
   const invNome = grupo?.inventario_nome ?? "";
   const tipoInv = tipoInventarioLabel(grupo?.tipo_inventario);
   const ip = ipEquipamento(a) ?? "";
@@ -69,6 +71,7 @@ function linhaAtivo(grupo, a) {
 }
 
 function largurasColunas(rows) {
+  // Ajusta largura por conteudo com limites para evitar folhas impraticaveis.
   return HEADERS.map((header, col) => {
     let max = header.length;
     for (const row of rows) {
@@ -81,6 +84,7 @@ function largurasColunas(rows) {
 
 /** Gera e descarrega o Excel com as linhas do inventário indicado. */
 export function exportInventarioComputadoresParaExcel(grupo, linhas) {
+  // A exportacao falha em silencio quando nao ha linhas, espelhando o estado da vista atual.
   const list = Array.isArray(linhas) ? linhas : [];
   if (list.length === 0) return;
 

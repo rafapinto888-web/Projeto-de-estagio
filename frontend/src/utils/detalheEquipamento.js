@@ -15,6 +15,7 @@ import { txtBd, formatarDataPt, ipEquipamento } from "../domain/equipamento/inde
  * Linhas [rótulo, valor] para painel de detalhe — alinha inventário manual e dispositivo do scan.
  */
 export function linhasDetalheEquipamento(item, opts = {}) {
+  // Uniformiza o painel de detalhe para computadores manuais e dispositivos descobertos por scan.
   const nomeInv = opts.nomeInventario ?? item?.inventario_nome ?? "—";
   const tipo = String(item?.tipo || "").toLowerCase();
   const isDesc = tipo === "dispositivo_descoberto";
@@ -52,6 +53,7 @@ export function linhasDetalheEquipamento(item, opts = {}) {
 }
 
 export function secaoPesquisaEhEquipamento(secaoRaw) {
+  // A pesquisa global agrega varios nomes de secao que no UI representam equipamentos.
   const s = String(secaoRaw || "").toLowerCase();
   return s === "computadores" || s.includes("dispositivo") || s.includes("ativo");
 }
@@ -60,11 +62,13 @@ export function secaoPesquisaEhEquipamento(secaoRaw) {
  * Células alinhadas à grelha da pesquisa global.
  */
 export function celulasGrelhaPesquisaGlobal(r) {
+  // Converte cada tipo de resultado num shape fixo para a tabela partilhada da pesquisa.
   const item = r.item || {};
   const sec = String(r.secao || "").toLowerCase();
   const z = txtBd;
 
   if (secaoPesquisaEhEquipamento(r.secao)) {
+    // Equipamentos usam o conjunto mais completo de colunas tecnicas.
     const ip = ipEquipamento(item);
     return {
       kind: "equipamento",
@@ -86,6 +90,7 @@ export function celulasGrelhaPesquisaGlobal(r) {
   }
 
   if (sec === "inventarios") {
+    // Inventarios ocupam as mesmas colunas, preenchendo so os campos relevantes.
     const tipo = String(item.tipo_inventario || "").replace("_", " ");
     return {
       kind: "outro",
@@ -107,6 +112,7 @@ export function celulasGrelhaPesquisaGlobal(r) {
   }
 
   if (sec === "utilizadores") {
+    // Utilizadores reutilizam a grelha sem criar uma tabela alternativa so para pessoas.
     return {
       kind: "outro",
       id: item.id != null ? String(item.id) : "—",
@@ -127,6 +133,7 @@ export function celulasGrelhaPesquisaGlobal(r) {
   }
 
   if (sec === "localizacoes") {
+    // Localizacoes reaproveitam o campo "localizacao" como coluna principal da secao.
     return {
       kind: "outro",
       id: item.id != null ? String(item.id) : "—",
