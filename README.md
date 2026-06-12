@@ -17,6 +17,7 @@ Aplicação web para **gestão de inventário de TI**: inventários, computadore
 | **Logs** | Consulta de logs por computador ou inventário |
 
 Autenticação por **sessão com cookie HttpOnly**. O painel, após login, carrega inventários, computadores, utilizadores, perfis, localizações e histórico.
+Não existem `access_token` / `refresh_token` no frontend: a sessão vive no backend e o browser só guarda o cookie.
 
 **API:** `GET /computadores/` — só manuais por defeito; `com_scan=true` inclui dispositivos do scan (campo `tipo` em cada item).
 
@@ -115,7 +116,13 @@ npm run dev
 
 - Site: [http://127.0.0.1:5173](http://127.0.0.1:5173) (ou `localhost`)
 
-Por defeito o cliente usa `http://localhost:8000` como API (`frontend/src/api.js`); se a API estiver só em `127.0.0.1`, confirma que o browser consegue resolver (ou alinha host/porta). O frontend já envia `credentials: "include"` em todos os pedidos para incluir o cookie de sessão.
+O frontend já envia `credentials: "include"` em todos os pedidos para incluir o cookie de sessão.
+Para evitar problemas de cookie, usa o **mesmo hostname** no frontend e na API:
+
+- `localhost` com `localhost`
+- `127.0.0.1` com `127.0.0.1`
+
+O cliente (`frontend/src/api.js`) tenta alinhar automaticamente o host da API com o host visível da página quando a API está configurada como loopback.
 
 ## Docker Compose
 
@@ -136,6 +143,22 @@ Perfis úteis (ver `docker-compose.yml`):
 `postgresql+psycopg2://postgres:inventario-docker@db:5432/inventario`
 
 O serviço `api` monta `./backend` e usa `env_file: ./backend/.env` — tens de ter `DATABASE_URL` (e `SECRET_KEY` em produção) definidos aí.
+
+### Nginx / reverse proxy
+
+O cenário mais estável para a autenticação por cookie é:
+
+- frontend e API a aparecerem para o browser no **mesmo host/domínio**
+- ou a API por trás de Nginx com o frontend a usar esse mesmo host público
+
+Se o Nginx estiver **só à frente do backend**, confirma:
+
+- o frontend chama a API pelo host público do Nginx
+- a origem do frontend está em `INVENTARIO_CORS_ORIGINS`
+- `allow_credentials=True` continua ativo (já vem configurado)
+- em produção com HTTPS usa `SESSION_COOKIE_SECURE=true`
+
+Com frontend em `localhost` e API em `127.0.0.1` (ou vice-versa), o browser pode não devolver o cookie corretamente.
 
 ### Atalhos
 
@@ -181,11 +204,18 @@ Mais comandos: [`docs/comandos.txt`](docs/comandos.txt).
 5. Cada rota protegida valida a sessão no backend e renova a expiração da mesma sessão.
 6. `POST /auth/logout` revoga a sessão atual e limpa o cookie.
 
+Notas:
+
+- a sessão usa `sliding expiration`: cada pedido autenticado renova novamente o prazo configurado em `SESSION_EXPIRE_MINUTES`
+- o frontend não guarda tokens em `localStorage`
+- um `401` faz o site voltar ao ecrã de login e limpa o estado da interface
+
 ### Swagger (`/docs`)
 
 - Faz login por `POST /auth/login`; o browser guarda o cookie da sessão automaticamente.
 - As rotas protegidas aparecem com esquema de segurança por **cookie** no OpenAPI.
-- Depois do login, o botão **Try it out** usa a mesma sessão do browser para chamar as rotas autenticadas.
+- O Swagger UI está configurado com `withCredentials`, por isso o botão **Try it out** usa a mesma sessão do browser para chamar as rotas autenticadas.
+- Se o login funcionar mas as rotas autenticadas derem `401`, verifica primeiro se abriste o Swagger e o frontend com o mesmo hostname da API.
 
 ## Licença
 
