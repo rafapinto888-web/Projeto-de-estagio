@@ -14,20 +14,31 @@ test.describe("Localizacoes", () => {
     const nome = uniqueValue("PW-LOC");
     const nomeAtualizado = `${nome}-OK`;
 
-    await loginAsAdmin(page);
-    await createLocation(page, { nome, descricao: "Localizacao criada por Playwright" });
-    await openRowAction(page, nome, /editar/i);
+    await test.step("Inicia sessao como administrador", async () => {
+      await loginAsAdmin(page);
+    });
 
-    const dialog = page.getByRole("dialog", { name: /editar localiza..o/i });
-    await dialog.getByLabel("Nome").fill(nomeAtualizado);
-    await dialog.getByLabel(/descri/i).fill("Depois da edicao");
-    await dialog.getByRole("button", { name: /guardar altera..es/i }).click();
+    await test.step("Cria uma localizacao", async () => {
+      await createLocation(page, { nome, descricao: "Localizacao criada por Playwright" });
+    });
 
-    await expect(rowByText(page, nomeAtualizado)).toBeVisible();
-    await expect(rowByText(page, nomeAtualizado)).toContainText("Depois da edicao");
+    await test.step("Edita a localizacao", async () => {
+      await openRowAction(page, nome, /editar/i);
+      const dialog = page.getByRole("dialog", { name: /editar localiza..o/i });
+      await dialog.getByLabel("Nome").fill(nomeAtualizado);
+      await dialog.getByLabel(/descri/i).fill("Depois da edicao");
+      await dialog.getByRole("button", { name: /guardar altera..es/i }).click();
+    });
 
-    await acceptNextDialog(page);
-    await openRowAction(page, nomeAtualizado, /apagar/i);
-    await expect(rowByText(page, nomeAtualizado)).toHaveCount(0);
+    await test.step("Valida os dados atualizados na tabela", async () => {
+      await expect(rowByText(page, nomeAtualizado)).toBeVisible();
+      await expect(rowByText(page, nomeAtualizado)).toContainText("Depois da edicao");
+    });
+
+    await test.step("Apaga a localizacao", async () => {
+      await acceptNextDialog(page);
+      await openRowAction(page, nomeAtualizado, /apagar/i);
+      await expect(rowByText(page, nomeAtualizado)).toHaveCount(0);
+    });
   });
 });

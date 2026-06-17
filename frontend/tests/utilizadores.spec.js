@@ -14,27 +14,37 @@ test.describe("Utilizadores", () => {
     const username = uniqueValue("pw.user");
     const nomeAtualizado = uniqueValue("Playwright Utilizador Editado");
 
-    await loginAsAdmin(page);
-    await createUser(page, {
-      nome: "Playwright Utilizador",
-      username,
-      emailLocal: username,
-      password: "Playwright123!",
+    await test.step("Inicia sessao como administrador", async () => {
+      await loginAsAdmin(page);
     });
-    await openRowAction(page, username, /editar/i);
 
-    const dialog = page.getByRole("dialog", { name: /editar utilizador/i });
-    await dialog.getByLabel(/nome completo/i).fill(nomeAtualizado);
-    await dialog.getByLabel(/nova palavra-passe/i).fill("Playwright456!");
-    await dialog.getByRole("button", { name: /guardar altera..es/i }).click();
+    await test.step("Cria um utilizador", async () => {
+      await createUser(page, {
+        nome: "Playwright Utilizador",
+        username,
+        emailLocal: username,
+        password: "Playwright123!",
+      });
+    });
 
-    await expect(dialog).not.toBeVisible({ timeout: 10000 });
-    await expect(rowByText(page, username)).toBeVisible();
-    await expect(rowByText(page, username)).toContainText(nomeAtualizado);
+    await test.step("Edita o utilizador", async () => {
+      await openRowAction(page, username, /editar/i);
+      const dialog = page.getByRole("dialog", { name: /editar utilizador/i });
+      await dialog.getByLabel(/nome completo/i).fill(nomeAtualizado);
+      await dialog.getByLabel(/nova palavra-passe/i).fill("Playwright456!");
+      await dialog.getByRole("button", { name: /guardar altera..es/i }).click();
+      await expect(dialog).not.toBeVisible({ timeout: 10000 });
+    });
 
-    await acceptNextDialog(page);
-    await openRowAction(page, username, /apagar/i);
+    await test.step("Valida os dados atualizados na tabela", async () => {
+      await expect(rowByText(page, username)).toBeVisible();
+      await expect(rowByText(page, username)).toContainText(nomeAtualizado);
+    });
 
-    await expect(rowByText(page, username)).toHaveCount(0);
+    await test.step("Apaga o utilizador", async () => {
+      await acceptNextDialog(page);
+      await openRowAction(page, username, /apagar/i);
+      await expect(rowByText(page, username)).toHaveCount(0);
+    });
   });
 });
