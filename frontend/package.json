@@ -9,6 +9,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:e2e": "playwright test",
+    "test:e2e:auth": "playwright test tests/auth.spec.js",
+    "test:e2e:inventarios": "playwright test tests/inventarios.spec.js",
+    "test:e2e:localizacoes": "playwright test tests/localizacoes.spec.js",
+    "test:e2e:utilizadores": "playwright test tests/utilizadores.spec.js",
+    "test:e2e:computadores": "playwright test tests/computadores.spec.js",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed"
   },

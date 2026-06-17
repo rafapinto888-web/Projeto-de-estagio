@@ -84,3 +84,15 @@ backend\.env — JWT opcional
 ================================================================================
 ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS
+
+================================================================================
+Playwright (frontend)
+================================================================================
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
+npm.cmd run test:e2e
+
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
+npm.cmd run test:e2e:ui
+
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
+npm.cmd run test:e2e:headed

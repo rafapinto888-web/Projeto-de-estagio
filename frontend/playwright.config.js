@@ -4,10 +4,11 @@ import { defineConfig, devices } from "@playwright/test";
 // O frontend arranca em 5173 e a API continua separada em 8000.
 export default defineConfig({
   testDir: "./tests",
+  timeout: 90000,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: "http://127.0.0.1:5173",
@@ -24,7 +25,9 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      // Usa o Edge ja instalado no Windows para nao depender do chrome-headless-shell
+      // descarregado pelo Playwright, que foi a origem do erro no modo headless.
+      use: { ...devices["Desktop Chrome"], channel: "msedge" },
     },
   ],
 });
