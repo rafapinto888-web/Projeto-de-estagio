@@ -373,31 +373,116 @@ button:not(.MuiButtonBase-root):hover {
 
 .computadores-page {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .computadores-overview {
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  border-radius: 16px;
   background: #fff;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
 .computadores-overview-controls {
-  padding: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.computadores-overview-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.computadores-overview-copy {
+  display: grid;
+  gap: 6px;
+  max-width: 720px;
+}
+
+.computadores-controls-panel {
+  display: grid;
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.computadores-overview-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid #e4e4e7;
+  background: #fafafa;
+  color: #52525b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.computadores-overview-title {
+  margin: 0;
+  font-size: clamp(1.1rem, 1.8vw, 1.35rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.computadores-overview-text {
+  margin: 4px 0 0;
+  max-width: 68ch;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.computadores-overview-badge {
+  min-width: 190px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fafafa;
+}
+
+.computadores-overview-badge--active {
+  border-color: #d4d4d8;
+  background: #f4f4f5;
+}
+
+.computadores-overview-badge-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-soft);
+}
+
+.computadores-overview-badge-value {
+  display: block;
+  margin-top: 4px;
+  font-size: 1rem;
+  line-height: 1.2;
 }
 
 .computadores-search-row {
-  display: flex;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
   align-items: stretch;
-  margin-bottom: 12px;
 }
 
 .computadores-search-field {
   flex: 1;
   min-width: 220px;
+}
+
+.computadores-search-field .MuiOutlinedInput-root {
+  border-radius: 10px;
+  background: #fff;
 }
 
 .computadores-search-field-icon {
@@ -406,18 +491,24 @@ button:not(.MuiButtonBase-root):hover {
 }
 
 .computadores-toolbar-merge {
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  display: contents;
 }
 
-.computadores-toolbar-merge-left,
-.computadores-toolbar-merge-right {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
+.computadores-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(180px, 0.8fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.computadores-filter-group {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.computadores-filter-group--field .MuiOutlinedInput-root {
+  background: #fff;
 }
 
 .computadores-toolbar-merge-label,
@@ -443,7 +534,7 @@ button:not(.MuiButtonBase-root):hover {
   background: #fff;
   color: var(--text-soft);
   border-radius: 999px;
-  padding: 6px 10px;
+  padding: 7px 12px;
   font-size: 12px;
   font-weight: 700;
 }
@@ -454,21 +545,68 @@ button:not(.MuiButtonBase-root):hover {
   color: #3730a3;
 }
 
+.computadores-active-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-height: 28px;
+}
+
+.computadores-active-filters-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.computadores-active-filters-idle {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.computadores-inline-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #3f3f46;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.computadores-inline-pill--accent {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.computadores-inline-pill--soft {
+  border-color: #e4e4e7;
+  background: #fafafa;
+  color: #52525b;
+}
+
 .computadores-stat-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  padding: 0 14px 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 16px 16px;
 }
 
 .computadores-stat-tile {
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--surface-soft);
-  padding: 10px;
+  background: #fff;
+  padding: 12px;
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
+  min-height: 84px;
 }
 
 .computadores-stat-tile-ic {
@@ -489,14 +627,20 @@ button:not(.MuiButtonBase-root):hover {
 }
 
 .computadores-stat-tile-value {
-  font-size: 20px;
+  display: block;
+  font-size: clamp(1.3rem, 1.8vw, 1.7rem);
   font-weight: 800;
-  line-height: 1.05;
+  line-height: 1;
+  letter-spacing: -0.02em;
 }
 
 .computadores-stat-tile-label {
+  display: block;
+  margin-top: 4px;
   font-size: 11px;
   color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .computadores-por-inv-grid {
@@ -504,11 +648,44 @@ button:not(.MuiButtonBase-root):hover {
   gap: 14px;
 }
 
+.computadores-list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.computadores-list-title {
+  margin: 0;
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+}
+
+.computadores-list-text {
+  margin: 4px 0 0;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.computadores-list-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fafafa;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .computadores-empty-filtros {
-  border: 1px dashed #cbd5e1;
-  border-radius: var(--radius-md);
-  background: #f8faff;
-  padding: 16px;
+  border: 1px dashed #d4d4d8;
+  border-radius: 14px;
+  background: #fff;
+  padding: 18px;
   text-align: center;
   display: grid;
   gap: 12px;
@@ -516,7 +693,7 @@ button:not(.MuiButtonBase-root):hover {
 
 .computadores-empty-filtros-inner {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: flex-start;
   justify-content: center;
 }
@@ -528,50 +705,67 @@ button:not(.MuiButtonBase-root):hover {
 
 .computadores-empty-filtros-title {
   margin: 0 0 4px;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .computadores-empty-filtros-text {
   margin: 0;
   color: var(--text-soft);
   font-size: 13px;
+  max-width: 50ch;
 }
 
 .computadores-inv-card {
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 14px;
   background: #fff;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
   overflow: hidden;
 }
 
 .computadores-inv-card--sub_rede {
-  border-left: 4px solid #6366f1;
+  border-left: 3px solid #6366f1;
 }
 
 .computadores-inv-card--normal {
-  border-left: 4px solid #0ea5e9;
+  border-left: 3px solid #94a3b8;
 }
 
 .computadores-inv-card-header {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: 14px;
   flex-wrap: wrap;
-  padding: 12px 14px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border);
-  background: #f8faff;
+  background: #fafafa;
 }
 
 .computadores-inv-card-head-main {
   display: flex;
-  gap: 8px;
+  gap: 12px;
+  align-items: flex-start;
   min-width: 0;
 }
 
+.computadores-inv-card-head-text {
+  min-width: 0;
+}
+
+.computadores-inv-card-folder-wrap {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  border: 1px solid #e4e4e7;
+  background: #fff;
+  flex-shrink: 0;
+}
+
 .computadores-inv-card-folder {
-  color: var(--text-soft);
-  font-size: 24px;
+  color: #52525b;
+  font-size: 20px;
 }
 
 .computadores-inv-card-title-row {
@@ -583,13 +777,35 @@ button:not(.MuiButtonBase-root):hover {
 
 .computadores-inv-card-title {
   margin: 0;
-  font-size: 18px;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
 }
 
 .computadores-inv-card-index {
   color: var(--text-faint);
   font-size: 12px;
   font-weight: 700;
+}
+
+.computadores-inv-card-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.computadores-inv-card-meta {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.computadores-inv-card-head-side {
+  margin-left: auto;
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+  align-content: start;
 }
 
 .pill {
@@ -602,21 +818,23 @@ button:not(.MuiButtonBase-root):hover {
 }
 
 .badge-info {
-  background: #e0f2fe;
-  color: #0c4a6e;
+  background: #f4f4f5;
+  color: #52525b;
+  border: 1px solid #e4e4e7;
 }
 
 .computadores-inv-kpis {
-  margin: 8px 0 0;
+  margin: 0;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
 .computadores-inv-kpi {
+  min-width: 74px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 4px 8px;
+  padding: 7px 9px;
   background: #fff;
 }
 
@@ -624,24 +842,34 @@ button:not(.MuiButtonBase-root):hover {
   margin: 0;
   font-size: 10px;
   color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .computadores-inv-kpi dd {
   margin: 2px 0 0;
-  font-size: 14px;
+  font-size: 0.95rem;
   font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .computadores-inv-kpi--manual {
-  background: #eef2ff;
+  background: #f8fafc;
 }
 
 .computadores-inv-kpi--scan {
-  background: #ecfeff;
+  background: #f8fafc;
 }
 
 .computadores-inv-card-export-wrap {
-  align-self: center;
+  align-self: start;
+}
+
+.computadores-inv-card-export.MuiButton-root {
+  min-height: 36px;
+  border-radius: 10px;
+  border-color: #d4d4d8;
+  background: #fff;
 }
 
 .computadores-inv-card-body {
@@ -650,41 +878,115 @@ button:not(.MuiButtonBase-root):hover {
 
 .computadores-inv-card-toolbar {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  align-items: flex-end;
+  justify-content: space-between;
   flex-wrap: wrap;
-  padding: 10px 12px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+
+.computadores-inv-card-toolbar-fields {
+  flex: 1 1 560px;
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.computadores-inv-card-toolbar-fields .MuiTextField-root:first-child {
+  flex: 1 1 260px;
+}
+
+.computadores-inv-card-toolbar-meta {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.computadores-inv-card-body .MuiTableHead-root .MuiTableCell-root {
+  background: #fafafa;
+}
+
+.computadores-inv-card-body .MuiTableCell-root {
+  border-color: #f1f5f9;
+}
+
+.computadores-inv-card-body .MuiTableBody-root .MuiTableRow-root:hover td {
+  background-color: #fafafa;
 }
 
 .computadores-inv-pagination {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-  padding: 10px 12px;
+  padding: 12px 16px;
   border-top: 1px solid var(--border);
-  background: #fafcff;
+  background: #fafafa;
 }
 
 .computadores-footnote {
-  margin-top: 6px;
+  margin-top: 8px;
+}
+
+.computadores-primary-cta.MuiButton-root {
+  min-height: 40px;
+  border-radius: 10px;
+  padding-inline: 16px;
+  background: #4f46e5;
+  box-shadow: none;
+}
+
+.computadores-primary-cta.MuiButton-root:hover {
+  background: #4338ca;
 }
 
 @media (max-width: 960px) {
   .computadores-stat-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .computadores-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
   .computadores-search-row {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
-  .computadores-toolbar-merge {
+  .computadores-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .computadores-overview-head,
+  .computadores-inv-card-header,
+  .computadores-inv-card-toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .computadores-overview-badge {
+    width: 100%;
+  }
+
+  .computadores-list-head,
+  .computadores-inv-card-head-side {
+    width: 100%;
+    justify-items: start;
+  }
+
+  .computadores-inv-card-toolbar-fields,
+  .computadores-inv-card-toolbar-meta {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .computadores-empty-filtros-inner {

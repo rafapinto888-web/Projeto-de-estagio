@@ -373,6 +373,7 @@ export default function ComputadoresPage({
             type="button"
             variant="contained"
             color="primary"
+            className="computadores-primary-cta"
             startIcon={<span className="material-symbols-outlined" style={{ fontSize: 20 }} aria-hidden>add</span>}
             onClick={openCreate}
           >
@@ -393,83 +394,105 @@ export default function ComputadoresPage({
           <div className="computadores-page">
           <div className="computadores-overview">
             <section className="computadores-overview-controls" aria-label="Pesquisa e filtros">
-              <div className="computadores-search-row">
-                <div className="computadores-search-field">
-                  <TextField
-                    type="search"
-                    size="small"
-                    fullWidth
-                    placeholder="Pesquisar por nome, hostname, IP, MAC ou série…"
-                    value={pesquisaLista}
-                    onChange={(e) => setPesquisaLista(e.target.value)}
-                    autoComplete="off"
-                    aria-label="Pesquisar na lista"
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <span className="material-symbols-outlined computadores-search-field-icon" aria-hidden>
-                            search
-                          </span>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </div>
-                {pesquisaLista ? (
-                  <Button type="button" variant="outlined" size="small" onClick={() => setPesquisaLista("")}>
-                    Limpar
-                  </Button>
-                ) : null}
-              </div>
-
-              <div className="computadores-toolbar-merge">
-                <div className="computadores-toolbar-merge-left">
-                  <span className="computadores-toolbar-merge-label">Tipo</span>
-                  <div className="computadores-filter-chips" role="group" aria-label="Tipo de registo">
-                    <button
-                      type="button"
-                      className={`computadores-chip ${filtroTipo === "todos" ? "computadores-chip--active" : ""}`}
-                      onClick={() => setFiltroTipo("todos")}
-                    >
-                      Tudo
-                    </button>
-                    <button
-                      type="button"
-                      title="Apenas registos manuais"
-                      className={`computadores-chip ${filtroTipo === "manuais" ? "computadores-chip--active" : ""}`}
-                      onClick={() => setFiltroTipo("manuais")}
-                    >
-                      Manuais
-                    </button>
-                    <button
-                      type="button"
-                      title="Apenas equipamentos descobertos pelo scan"
-                      className={`computadores-chip ${filtroTipo === "scan" ? "computadores-chip--active" : ""}`}
-                      onClick={() => setFiltroTipo("scan")}
-                    >
-                      Scan
-                    </button>
+              <div className="computadores-overview-head">
+                <div className="computadores-overview-copy">
+                  <span className="computadores-overview-eyebrow">Gestão de equipamentos</span>
+                  <div>
+                    <h2 className="computadores-overview-title">Resumo da vista e filtros</h2>
+                    <p className="computadores-overview-text">
+                      Vista centralizada para consultar registos manuais e equipamentos detetados por scan com filtros rápidos.
+                    </p>
                   </div>
                 </div>
-                <div className="computadores-toolbar-merge-right">
-                  <TextField
-                    select
-                    size="small"
-                    label="Estado"
-                    value={filtroEstadoGlobal}
-                    onChange={(e) => setFiltroEstadoGlobal(e.target.value)}
-                    disabled={gruposOrdenados.length === 0}
-                    sx={{ minWidth: 160 }}
-                  >
-                    <MenuItem value="">Todos</MenuItem>
-                    {estadosGlobaisOpcoes.map((est) => (
-                      <MenuItem key={est} value={est}>
-                        {est}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                  <label className="computadores-jump-compact">
-                    <span className="computadores-jump-compact-label">Ir para</span>
+                <div className={`computadores-overview-badge ${filtroActivo ? "computadores-overview-badge--active" : ""}`}>
+                  <span className="computadores-overview-badge-label">{filtroActivo ? "Vista filtrada" : "Vista global"}</span>
+                  <strong className="computadores-overview-badge-value">
+                    {filtroActivo ? `${totaisFiltrados.total} linhas` : `${totaisGlobais.total} equipamentos`}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="computadores-controls-panel">
+                <div className="computadores-search-row">
+                  <div className="computadores-search-field">
+                    <TextField
+                      type="search"
+                      size="small"
+                      fullWidth
+                      placeholder="Pesquisar por nome, hostname, IP, MAC ou série…"
+                      value={pesquisaLista}
+                      onChange={(e) => setPesquisaLista(e.target.value)}
+                      autoComplete="off"
+                      aria-label="Pesquisar na lista"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <span className="material-symbols-outlined computadores-search-field-icon" aria-hidden>
+                              search
+                            </span>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </div>
+                  {pesquisaLista ? (
+                    <Button type="button" variant="outlined" size="small" onClick={() => setPesquisaLista("")}>
+                      Limpar
+                    </Button>
+                  ) : null}
+                </div>
+
+                <div className="computadores-filter-grid">
+                  <div className="computadores-filter-group">
+                    <span className="computadores-toolbar-merge-label">Tipo de registo</span>
+                    <div className="computadores-filter-chips" role="group" aria-label="Tipo de registo">
+                      <button
+                        type="button"
+                        className={`computadores-chip ${filtroTipo === "todos" ? "computadores-chip--active" : ""}`}
+                        onClick={() => setFiltroTipo("todos")}
+                      >
+                        Tudo
+                      </button>
+                      <button
+                        type="button"
+                        title="Apenas registos manuais"
+                        className={`computadores-chip ${filtroTipo === "manuais" ? "computadores-chip--active" : ""}`}
+                        onClick={() => setFiltroTipo("manuais")}
+                      >
+                        Manuais
+                      </button>
+                      <button
+                        type="button"
+                        title="Apenas equipamentos descobertos pelo scan"
+                        className={`computadores-chip ${filtroTipo === "scan" ? "computadores-chip--active" : ""}`}
+                        onClick={() => setFiltroTipo("scan")}
+                      >
+                        Scan
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="computadores-filter-group computadores-filter-group--field">
+                    <span className="computadores-toolbar-merge-label">Estado</span>
+                    <TextField
+                      select
+                      size="small"
+                      value={filtroEstadoGlobal}
+                      onChange={(e) => setFiltroEstadoGlobal(e.target.value)}
+                      disabled={gruposOrdenados.length === 0}
+                      sx={{ minWidth: 160 }}
+                    >
+                      <MenuItem value="">Todos</MenuItem>
+                      {estadosGlobaisOpcoes.map((est) => (
+                        <MenuItem key={est} value={est}>
+                          {est}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </div>
+
+                  <div className="computadores-filter-group computadores-filter-group--field">
+                    <span className="computadores-jump-compact-label">Ir para inventário</span>
                     <TextField
                       select
                       size="small"
@@ -489,16 +512,41 @@ export default function ComputadoresPage({
                         </MenuItem>
                       ))}
                     </TextField>
-                  </label>
+                  </div>
                 </div>
+              </div>
+
+              <div className="computadores-active-filters" aria-live="polite">
+                {filtroActivo ? (
+                  <>
+                    <span className="computadores-active-filters-label">Filtros ativos</span>
+                    {qLista ? (
+                      <span className="computadores-inline-pill computadores-inline-pill--accent">
+                        Pesquisa: {pesquisaLista.trim()}
+                      </span>
+                    ) : null}
+                    {filtroTipo !== "todos" ? (
+                      <span className="computadores-inline-pill">
+                        Tipo: {filtroTipo === "manuais" ? "Manuais" : "Scan"}
+                      </span>
+                    ) : null}
+                    {filtroEstadoGlobal ? (
+                      <span className="computadores-inline-pill">Estado: {filtroEstadoGlobal}</span>
+                    ) : null}
+                  </>
+                ) : (
+                  <span className="computadores-active-filters-idle">
+                    A mostrar todos os equipamentos disponíveis por inventário.
+                  </span>
+                )}
               </div>
             </section>
 
-            <div className="computadores-stat-strip" aria-label={filtroActivo ? "Resumo filtrado" : "Resumo global"}>
-              <div className="computadores-stat-tile">
-                <span className="material-symbols-outlined computadores-stat-tile-ic" aria-hidden>
-                  devices
-                </span>
+              <div className="computadores-stat-strip" aria-label={filtroActivo ? "Resumo filtrado" : "Resumo global"}>
+                <div className="computadores-stat-tile">
+                  <span className="material-symbols-outlined computadores-stat-tile-ic" aria-hidden>
+                    devices
+                  </span>
                 <div className="computadores-stat-tile-text">
                   <span className="computadores-stat-tile-value">{filtroActivo ? totaisFiltrados.total : totaisGlobais.total}</span>
                   <span className="computadores-stat-tile-label">
@@ -515,29 +563,28 @@ export default function ComputadoresPage({
                   <span className="computadores-stat-tile-label">Manuais</span>
                 </div>
               </div>
-              <div className="computadores-stat-tile computadores-stat-tile--scan">
-                <span className="material-symbols-outlined computadores-stat-tile-ic" aria-hidden>
-                  radar
-                </span>
-                <div className="computadores-stat-tile-text">
-                  <span className="computadores-stat-tile-value">{filtroActivo ? totaisFiltrados.scan : totaisGlobais.scan}</span>
-                  <span className="computadores-stat-tile-label">Scan</span>
-                </div>
-              </div>
-              <div className="computadores-stat-tile computadores-stat-tile--muted">
-                <span className="material-symbols-outlined computadores-stat-tile-ic" aria-hidden>
-                  folder_open
-                </span>
-                <div className="computadores-stat-tile-text">
-                  <span className="computadores-stat-tile-value">
-                    {filtroActivo ? totaisFiltrados.inventarios : `${totaisGlobais.inventariosComDados}/${totaisGlobais.inventariosVisiveis}`}
+                <div className="computadores-stat-tile computadores-stat-tile--scan">
+                  <span className="material-symbols-outlined computadores-stat-tile-ic" aria-hidden>
+                    radar
                   </span>
-                  <span className="computadores-stat-tile-label">
-                    {filtroActivo ? "Inventários" : "Com dados / total"}
-                  </span>
+                  <div className="computadores-stat-tile-text">
+                    <span className="computadores-stat-tile-value">{filtroActivo ? totaisFiltrados.scan : totaisGlobais.scan}</span>
+                    <span className="computadores-stat-tile-label">Scan</span>
+                  </div>
                 </div>
-              </div>
             </div>
+          </div>
+
+          <div className="computadores-list-head">
+            <div>
+              <h3 className="computadores-list-title">Inventários</h3>
+              <p className="computadores-list-text">
+                {gruposExibicao.length} {gruposExibicao.length === 1 ? "inventário visível" : "inventários visíveis"} nesta vista.
+              </p>
+            </div>
+            <span className="computadores-list-badge">
+              {filtroActivo ? "Com filtros aplicados" : "Sem filtros adicionais"}
+            </span>
           </div>
 
           <div className="computadores-por-inv-grid">
@@ -611,58 +658,73 @@ export default function ComputadoresPage({
                 >
                   <header className="computadores-inv-card-header">
                     <div className="computadores-inv-card-head-main">
-                      <span className="computadores-inv-card-folder material-symbols-outlined" aria-hidden>
-                        folder
-                      </span>
+                      <div className="computadores-inv-card-folder-wrap" aria-hidden>
+                        <span className="computadores-inv-card-folder material-symbols-outlined">folder</span>
+                      </div>
                       <div className="computadores-inv-card-head-text">
                         <div className="computadores-inv-card-title-row">
                           <h3 className="computadores-inv-card-title">{grupo.inventario_nome}</h3>
                           <span className="pill badge-info">{tipoInventarioLabel(grupo.tipo_inventario)}</span>
                           <span className="computadores-inv-card-index">#{idxInv + 1}</span>
                         </div>
-                        <dl className="computadores-inv-kpis computadores-inv-kpis--inline">
-                          <div className="computadores-inv-kpi">
-                            <dt>Total</dt>
-                            <dd>{nTot}</dd>
-                          </div>
-                          <div className="computadores-inv-kpi computadores-inv-kpi--manual">
-                            <dt>Manuais</dt>
-                            <dd>{nReg}</dd>
-                          </div>
-                          <div className="computadores-inv-kpi computadores-inv-kpi--scan">
-                            <dt>Scan</dt>
-                            <dd>{nScan}</dd>
-                          </div>
-                        </dl>
+                        <div className="computadores-inv-card-meta-row">
+                          <span className="computadores-inv-card-meta">
+                            {totalLinhas === nTot
+                              ? `${nTot} equipamentos disponíveis nesta vista`
+                              : `${totalLinhas} visíveis de ${nTot} neste inventário`}
+                          </span>
+                          {qInv || estInv ? (
+                            <span className="computadores-inline-pill computadores-inline-pill--soft">
+                              Filtro local ativo
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
-                    <div className="computadores-inv-card-export-wrap">
-                      <Button
-                        type="button"
-                        size="small"
-                        variant="outlined"
-                        color="success"
-                        className="computadores-inv-card-export"
-                        disabled={linhasUnificadas.length === 0}
-                        title={
-                          linhasUnificadas.length === 0
-                            ? "Sem linhas para exportar com os filtros atuais"
-                            : "Ficheiro Excel (.xlsx)"
-                        }
-                        startIcon={
-                          <span className="material-symbols-outlined computadores-inv-card-export-icon" aria-hidden>
-                            download
-                          </span>
-                        }
-                        onClick={() => exportInventarioComputadoresParaExcel(grupo, linhasUnificadas)}
-                      >
-                        Exportar Excel
-                      </Button>
+                    <div className="computadores-inv-card-head-side">
+                      <dl className="computadores-inv-kpis computadores-inv-kpis--inline">
+                        <div className="computadores-inv-kpi">
+                          <dt>Total</dt>
+                          <dd>{nTot}</dd>
+                        </div>
+                        <div className="computadores-inv-kpi computadores-inv-kpi--manual">
+                          <dt>Manuais</dt>
+                          <dd>{nReg}</dd>
+                        </div>
+                        <div className="computadores-inv-kpi computadores-inv-kpi--scan">
+                          <dt>Scan</dt>
+                          <dd>{nScan}</dd>
+                        </div>
+                      </dl>
+                      <div className="computadores-inv-card-export-wrap">
+                        <Button
+                          type="button"
+                          size="small"
+                          variant="outlined"
+                          color="success"
+                          className="computadores-inv-card-export"
+                          disabled={linhasUnificadas.length === 0}
+                          title={
+                            linhasUnificadas.length === 0
+                              ? "Sem linhas para exportar com os filtros atuais"
+                              : "Ficheiro Excel (.xlsx)"
+                          }
+                          startIcon={
+                            <span className="material-symbols-outlined computadores-inv-card-export-icon" aria-hidden>
+                              download
+                            </span>
+                          }
+                          onClick={() => exportInventarioComputadoresParaExcel(grupo, linhasUnificadas)}
+                        >
+                          Exportar Excel
+                        </Button>
+                      </div>
                     </div>
                   </header>
 
                   <div className="computadores-inv-card-body">
                       <div className="computadores-inv-card-toolbar">
+                        <div className="computadores-inv-card-toolbar-fields">
                         <TextField
                           type="search"
                           size="small"
@@ -708,6 +770,12 @@ export default function ComputadoresPage({
                         <IconButton size="small" aria-label="Filtros do inventário" disabled title="Filtro local">
                           <span className="material-symbols-outlined">filter_list</span>
                         </IconButton>
+                        </div>
+                        <div className="computadores-inv-card-toolbar-meta">
+                          <span className="computadores-inline-pill computadores-inline-pill--soft">
+                            {totalLinhas} visíveis
+                          </span>
+                        </div>
                       </div>
 
                       <TableContainer
