@@ -1,92 +1,116 @@
-# Sistema de inventário informático
+# Sistema de inventario informatico
 
-Aplicação web para **gestão de inventário de TI**: inventários, computadores, localizações, utilizadores com perfis, descoberta na rede (scan), pesquisa global, logs e exportação para Excel. Projeto **full stack** (FastAPI + React + PostgreSQL), desenvolvido em contexto de estágio.
+Aplicacao web para gestao de inventario de TI, com frontend React e backend FastAPI. O projeto cobre autenticacao por sessao com cookie HttpOnly, gestao de inventarios, computadores, utilizadores, perfis, localizacoes, pesquisa global, auditoria e operacoes de scan/logs em ambiente Windows.
 
-## Funcionalidades
+## O que a aplicacao faz
 
-| Área | Descrição |
-|------|-----------|
-| **Dashboard** | Resumo e métricas do inventário |
-| **Inventários** | CRUD de inventários (normal / sub-rede) |
-| **Scan** | Listagem de ativos e scan de rede com credenciais (admin) |
-| **Computadores** | Registo e gestão de equipamento; export Excel |
-| **Utilizadores / perfis** | Contas e permissões (operações admin condicionadas ao perfil) |
-| **Localizações** | CRUD de localizações físicas |
-| **Pesquisa global** | Pesquisa por texto e filtros (tipo, estado, localização) |
-| **Histórico** | Auditoria das ações da conta autenticada |
-| **Logs** | Consulta de logs por computador ou inventário |
-
-Autenticação por **sessão com cookie HttpOnly**. O painel, após login, carrega inventários, computadores, utilizadores, perfis, localizações e histórico.
-Não existem `access_token` / `refresh_token` no frontend: a sessão vive no backend e o browser só guarda o cookie.
-
-**API:** `GET /computadores/` — só manuais por defeito; `com_scan=true` inclui dispositivos do scan (campo `tipo` em cada item).
+- Dashboard com metricas do inventario.
+- CRUD de inventarios, incluindo inventarios do tipo sub-rede.
+- Gestao de computadores manuais e vista unificada com ativos detetados por scan.
+- Gestao de utilizadores, perfis e localizacoes.
+- Pesquisa global por texto.
+- Historico da conta autenticada e logs associados.
+- Exportacao para Excel no frontend.
+- Autenticacao por sessao guardada no backend, sem `access_token` nem `refresh_token` no browser.
 
 ## Stack
 
 | Camada | Tecnologias |
-|--------|-------------|
-| Backend | Python 3.11+, FastAPI, Uvicorn, SQLAlchemy, Pydantic, PostgreSQL, sessões por cookie HttpOnly, Argon2 (hash de passwords) |
-| Frontend | React 18, Vite 5, Material UI (MUI), Emotion, `xlsx` (export) |
-| Infra | Docker Compose (perfis opcionais: frontend, API, Postgres) |
-| API docs | Swagger em `/docs` — o login (`POST /auth/login`) cria sessão por cookie; as restantes rotas protegidas usam esse cookie |
+| --- | --- |
+| Backend | Python, FastAPI, Uvicorn, SQLAlchemy, Pydantic, PostgreSQL, `pwdlib[argon2]` |
+| Frontend | React 18, Vite 5, Material UI, Emotion, `xlsx` |
+| Testes | Playwright |
+| Infra | Docker Compose com perfis separados para frontend, API e Postgres |
 
-## Estrutura do repositório
+## Estrutura do repositorio
 
 ```text
-backend/app/
-  core/          # arranque FastAPI, segurança, CORS, seed admin
-  database/      # ligação SQLAlchemy, sessão
-  models/        # ORM
-  routes/        # endpoints (auth, inventários, computadores, …)
-  schemas/       # Pydantic
-  services/      # scan de rede, logs Windows, …
-frontend/src/
-  pages/         # Dashboard, Inventários, Scan, …
-  components/    # layout, tabelas, modais
-  api.js         # cliente HTTP
-  App.jsx        # estado global e navegação por abas (#hash)
-docs/            # requisitos, diagramas, comandos Docker
-scripts/         # atalhos PowerShell (Docker)
+backend/
+  app/
+    core/         # arranque FastAPI, config, seguranca, OpenAPI
+    database/     # ligacao SQLAlchemy
+    models/       # modelos ORM
+    routes/       # endpoints REST
+    schemas/      # schemas Pydantic
+    services/     # scan de rede e logs Windows
+frontend/
+  src/
+    components/   # UI reutilizavel
+    pages/        # paginas do painel
+    domain/       # labels e helpers por dominio
+    api.js        # cliente HTTP com sessao por cookie
+  tests/          # testes E2E Playwright
+docs/             # requisitos, comandos e diagramas
+scripts/          # scripts PowerShell e SQL auxiliares
 docker-compose.yml
 ```
 
-## Variáveis de ambiente
+## Autenticacao
 
-Cria **`backend/.env`** (não commits com passwords em repositório público). O backend carrega este ficheiro ao arrancar.
+O fluxo atual usa sessao tradicional no servidor:
 
-| Variável | Obrigatório | Uso |
-|----------|-------------|-----|
-| `DATABASE_URL` | Sim | Ligação SQLAlchemy ao PostgreSQL, ex.: `postgresql+psycopg2://USER:PASS@HOST:PORT/NOME_BD` |
-| `SECRET_KEY` | Recomendado em produção | Segredo geral da aplicação (mantido para configuração/compatibilidade e avisos de ambiente) |
-| `INVENTARIO_CORS_ORIGINS` | Opcional | Origens do frontend separadas por vírgula; por defeito inclui `http://localhost:5173` e `127.0.0.1` equivalentes (ver `app/core/config.py`) |
-| `INVENTARIO_APP_ENV` | Opcional | `development` ou `production` (avisos, ex.: `SECRET_KEY` por defeito) |
-| `SESSION_EXPIRE_MINUTES` | Opcional | Duração base da sessão; cada pedido autenticado renova este prazo (sliding session) |
-| `SESSION_COOKIE_NAME` | Opcional | Nome do cookie de sessão (por defeito `inventario_session`) |
-| `SESSION_COOKIE_SECURE` | Opcional | `true/false`; em produção deve ficar `true` |
-| `SESSION_COOKIE_SAMESITE` | Opcional | Política `SameSite` do cookie (`lax` por defeito) |
+1. `POST /auth/login` valida `username/email + password`.
+2. O backend cria um token aleatorio e guarda apenas o hash na tabela `sessoes_utilizador`.
+3. A resposta define um cookie `HttpOnly` no browser.
+4. Os pedidos seguintes enviam esse cookie automaticamente com `credentials: "include"`.
+5. Cada rota protegida valida a sessao e renova a expiracao (`sliding session`).
+6. `POST /auth/logout` revoga a sessao atual e limpa o cookie.
 
-No **frontend** em Docker, `VITE_API_BASE` define a URL da API (por defeito no compose: `http://localhost:8000`).
+Notas importantes:
+
+- O frontend nao guarda tokens em `localStorage`.
+- O nome do cookie e configuravel por `SESSION_COOKIE_NAME`.
+- A politica `SameSite` do cookie e configuravel por `SESSION_COOKIE_SAMESITE` e por defeito fica em `lax`.
+- Em producao deve ser usado `SESSION_COOKIE_SECURE=true`.
+
+## Variaveis de ambiente
+
+O backend carrega `backend/.env` no arranque.
+
+| Variavel | Obrigatorio | Uso |
+| --- | --- | --- |
+| `DATABASE_URL` | Sim | Ligacao SQLAlchemy ao PostgreSQL |
+| `SECRET_KEY` | Recomendado | Segredo geral da aplicacao; em producao nao uses o valor por defeito |
+| `INVENTARIO_APP_ENV` | Nao | `development` ou `production` |
+| `INVENTARIO_CORS_ORIGINS` | Nao | Lista separada por virgulas com as origens permitidas |
+| `SESSION_EXPIRE_MINUTES` | Nao | Duracao base da sessao, renovada em cada pedido autenticado |
+| `SESSION_COOKIE_NAME` | Nao | Nome do cookie de sessao; default `inventario_session` |
+| `SESSION_COOKIE_SECURE` | Nao | `true/false`; em producao deve ficar `true` |
+| `SESSION_COOKIE_SAMESITE` | Nao | Politica `SameSite`; default `lax` |
+
+O frontend pode receber:
+
+| Variavel | Uso |
+| --- | --- |
+| `VITE_API_BASE` | URL base da API usada pelo frontend |
+
+Defaults relevantes do projeto:
+
+- API local: `http://127.0.0.1:8000`
+- Frontend Vite: `http://127.0.0.1:5173`
+- CORS por defeito aceita `localhost:5173`, `127.0.0.1:5173`, `localhost:5174`, `127.0.0.1:5174` e `localhost:80`
 
 ## Base de dados e conta inicial
 
-1. **Schema** — As tabelas e constraints principais devem existir na base **antes** de usares a API (criação em SQL/pgAdmin ou migração; o projeto não corre `create_all` automático para o domínio principal).
-   A tabela de sessões autenticadas (`sessoes_utilizador`) é criada automaticamente ao arranque se ainda não existir.
-2. **`DATABASE_URL`** — Aponta para essa base (PostgreSQL).
-3. **Utilizador `admin`** — Ao arranque, se não existir username `admin`, o backend cria conta **admin** / **inventario123**, email `admin@inventario.local`, com perfil de administrador (ou cria o perfil `Admin` se não houver perfil reconhecido como admin). Ver `backend/app/core/bootstrap.py`. **Em produção altera a password** após o primeiro login.
+- O dominio principal da base de dados nao e criado automaticamente.
+- A tabela `sessoes_utilizador` e criada no arranque, se ainda nao existir.
+- Ao arrancar, o backend tenta garantir um utilizador inicial `admin`.
+- Credenciais iniciais esperadas: `admin` / `inventario123`.
+- Depois do primeiro login, altera a password se fores usar isto fora de ambiente local.
 
-## Como executar (desenvolvimento no PC)
+## Arranque local
 
-Precisas de **PostgreSQL acessível**, **API** (porta 8000) e **frontend** (porta 5173) em paralelo.
+### 1. Preparar a base de dados
 
-### 1. Criar a base e o schema
+Cria a base no PostgreSQL e aplica o schema principal do projeto pelas tuas scripts ou pela modelacao que estiveres a usar no teu ambiente.
+
+Exemplo de base:
 
 ```sql
 CREATE DATABASE inventario;
 ```
 
-Depois aplica o script ou modelo físico que tiveres (tabelas `perfis`, `utilizadores`, `inventarios`, etc.).
-
-### 2. Backend
+### 2. Arrancar o backend
 
 ```powershell
 cd backend
@@ -94,129 +118,129 @@ python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Define `DATABASE_URL` em `backend/.env` **ou** no terminal, por exemplo:
+Cria `backend/.env` com pelo menos:
+
+```env
+DATABASE_URL=postgresql+psycopg2://postgres:TU_PASSWORD@127.0.0.1:5432/inventario
+SECRET_KEY=troca-este-valor-em-producao
+```
+
+Depois arranca a API:
 
 ```powershell
-$env:DATABASE_URL = "postgresql+psycopg2://postgres:TU_PASSWORD@127.0.0.1:5432/inventario"
 .venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Linux/macOS: ativa o venv, `export DATABASE_URL=...`, mesmo comando `uvicorn`.
+Pontos uteis:
 
-- API: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- Login na UI ou `POST /auth/login` com `admin` / `inventario123` (se o seed tiver corrido). O backend devolve um cookie de sessão `HttpOnly`.
+- API root: `http://127.0.0.1:8000/`
+- Swagger: `http://127.0.0.1:8000/docs`
 
-### 3. Frontend
+### 3. Arrancar o frontend
 
 ```powershell
 cd frontend
 npm install
-npm run dev
+npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-- Site: [http://127.0.0.1:5173](http://127.0.0.1:5173) (ou `localhost`)
+Abre:
 
-O frontend já envia `credentials: "include"` em todos os pedidos para incluir o cookie de sessão.
-Para evitar problemas de cookie, usa o **mesmo hostname** no frontend e na API:
+- Frontend: `http://127.0.0.1:5173`
+
+Para evitar problemas com cookies, usa o mesmo hostname no frontend e na API:
 
 - `localhost` com `localhost`
 - `127.0.0.1` com `127.0.0.1`
 
-O cliente (`frontend/src/api.js`) tenta alinhar automaticamente o host da API com o host visível da página quando a API está configurada como loopback.
+O cliente em `frontend/src/api.js` ja tenta alinhar automaticamente a API com o host visivel da pagina quando a configuracao aponta para loopback.
 
 ## Docker Compose
 
-Perfis úteis (ver `docker-compose.yml`):
+Perfis definidos em `docker-compose.yml`:
 
-| Perfil | Serviço | Descrição |
-|--------|---------|-----------|
-| `dev-live` | `web-dev` | Frontend Vite com hot reload, porta **5173** |
-| `docker-api` | `api` | Backend no contentor (lê `backend/.env`) |
-| `bundled-db` | `db` | Postgres 16, no host **localhost:5433**, user `postgres`, password `inventario-docker`, BD `inventario` |
+| Perfil | Servico | Descricao |
+| --- | --- | --- |
+| `dev-live` | `web-dev` | Frontend Vite com hot reload na porta `5173` |
+| `docker-api` | `api` | Backend FastAPI em container |
+| `bundled-db` | `db` | PostgreSQL 16 exposto no host em `localhost:5433` |
 
-**Postgres só em Docker, API no Windows (caso comum):** no `.env` / terminal usa host `127.0.0.1` e porta **5433**:
+Cenarios comuns:
 
-`postgresql+psycopg2://postgres:inventario-docker@127.0.0.1:5433/inventario`
+- So frontend em Docker: `.\scripts\docker-subir-dev.ps1`
+- Frontend + API + Postgres em Docker: `.\scripts\docker-subir-tudo.ps1`
+- So Postgres em Docker: `docker compose --profile bundled-db up -d`
 
-**API e Postgres ambos em Docker** (mesmo `docker compose`): dentro da rede Docker o hostname do serviço é `db` e a porta interna é **5432** (não uses `localhost:5433` dentro do contentor da API):
+Ligacoes uteis:
 
-`postgresql+psycopg2://postgres:inventario-docker@db:5432/inventario`
+- Se a API correr no host Windows e o Postgres em Docker, usa `127.0.0.1:5433` na `DATABASE_URL`.
+- Se API e Postgres correrem ambos no Compose, a API deve usar `db:5432` como host interno.
 
-O serviço `api` monta `./backend` e usa `env_file: ./backend/.env` — tens de ter `DATABASE_URL` (e `SECRET_KEY` em produção) definidos aí.
+Importante para scan e logs:
 
-### Nginx / reverse proxy
+- O scan de rede e a recolha de alguns logs funcionam melhor com a API a correr no host Windows.
+- Dentro do container, a API pode nao ter a mesma visibilidade da LAN.
 
-O cenário mais estável para a autenticação por cookie é:
+## Testes E2E
 
-- frontend e API a aparecerem para o browser no **mesmo host/domínio**
-- ou a API por trás de Nginx com o frontend a usar esse mesmo host público
+O frontend tem testes Playwright em `frontend/tests`.
 
-Se o Nginx estiver **só à frente do backend**, confirma:
+Scripts disponiveis:
 
-- o frontend chama a API pelo host público do Nginx
-- a origem do frontend está em `INVENTARIO_CORS_ORIGINS`
-- `allow_credentials=True` continua ativo (já vem configurado)
-- em produção com HTTPS usa `SESSION_COOKIE_SECURE=true`
-
-Com frontend em `localhost` e API em `127.0.0.1` (ou vice-versa), o browser pode não devolver o cookie corretamente.
-
-### Atalhos
-
-- Só frontend em Docker: `.\scripts\docker-subir-dev.ps1` (continua a precisar da API em `localhost:8000`, normalmente no host Windows para scan/logs na rede).
-- Frontend + API + Postgres: `.\scripts\docker-subir-tudo.ps1` — ver mensagens do script para URLs.
-
-Scan e consulta de logs Windows funcionam melhor com a **API a correr no host Windows**, não só dentro do contentor.
-
-Mais comandos: [`docs/comandos.txt`](docs/comandos.txt).
-
-## Clonar noutro PC (resumo)
-
-1. Clonar ou copiar o repo (com `frontend/package-lock.json`).
-2. PostgreSQL local **ou** `docker compose --profile bundled-db up -d` e `DATABASE_URL` com porta **5433** se acederes do host.
-3. Criar/importar **schema** na base; arrancar API e frontend como acima.
-4. Login inicial: **admin** / **inventario123** (se o utilizador ainda não existir).
-
-## Documentação adicional
-
-- [`docs/estrutura de requisitos do projeto.txt`](docs/estrutura%20de%20requisitos%20do%20projeto.txt) — requisitos funcionais
-- [`docs/diagramas/`](docs/diagramas/) — diagramas (sequência em PDF, ER, etc.)
-- [`docs/comandos.txt`](docs/comandos.txt) — Docker
-- [`docs/pendencias-melhorias.txt`](docs/pendencias-melhorias.txt) — ideias / trabalho futuro
-
-## Regras de negócio relevantes
-
-- **Apagar computador**: bloqueado se existir utilizador responsável associado.
-- **Delete com logs**: sem responsável, logs técnicos do computador podem ser removidos antes do delete (evita bloqueio por FK).
-- **Scan**: credenciais de rede no momento do scan (não são as do login da aplicação).
-
-## Estado e limitações
-
-- Sem suíte de testes automatizada documentada; validação manual via UI e Swagger.
-- Scan e logs dependem de rede, credenciais e, onde aplicável, ambiente Windows.
-- Navegação por **abas** em `App.jsx` (sem React Router nesta fase).
-
-## Fluxo de autenticação atual
-
-1. `POST /auth/login` valida `username/email + password`.
-2. O backend cria uma linha em `sessoes_utilizador`.
-3. A resposta define um cookie `HttpOnly` (por defeito `inventario_session`).
-4. O browser envia esse cookie automaticamente nos pedidos seguintes.
-5. Cada rota protegida valida a sessão no backend e renova a expiração da mesma sessão.
-6. `POST /auth/logout` revoga a sessão atual e limpa o cookie.
+```powershell
+cd frontend
+npm run test:e2e
+npm run test:e2e:auth
+npm run test:e2e:inventarios
+npm run test:e2e:localizacoes
+npm run test:e2e:utilizadores
+npm run test:e2e:computadores
+```
 
 Notas:
 
-- a sessão usa `sliding expiration`: cada pedido autenticado renova novamente o prazo configurado em `SESSION_EXPIRE_MINUTES`
-- o frontend não guarda tokens em `localStorage`
-- um `401` faz o site voltar ao ecrã de login e limpa o estado da interface
+- A config usa `http://127.0.0.1:5173` como `baseURL`.
+- O `webServer` do Playwright arranca o frontend automaticamente.
+- A API continua de fora e tem de estar disponivel em `127.0.0.1:8000`.
+- O projeto Playwright usa o canal `msedge`, por isso convem ter Microsoft Edge instalado no Windows.
+- Podes sobrepor credenciais dos testes com `PLAYWRIGHT_LOGIN` e `PLAYWRIGHT_PASSWORD`.
 
-### Swagger (`/docs`)
+## API e areas principais
 
-- Faz login por `POST /auth/login`; o browser guarda o cookie da sessão automaticamente.
-- As rotas protegidas aparecem com esquema de segurança por **cookie** no OpenAPI.
-- O Swagger UI está configurado com `withCredentials`, por isso o botão **Try it out** usa a mesma sessão do browser para chamar as rotas autenticadas.
-- Se o login funcionar mas as rotas autenticadas derem `401`, verifica primeiro se abriste o Swagger e o frontend com o mesmo hostname da API.
+Rotas/areas mais relevantes do backend:
 
-## Licença
+- `auth` - login, logout, `me` e historico da conta
+- `inventarios` - CRUD, scan, ativos e logs por inventario
+- `computadores` - CRUD, vista unificada e logs por dispositivo
+- `localizacoes` - CRUD
+- `perfis` - CRUD
+- `utilizadores` - CRUD e historico por utilizador
+- `pesquisa` - pesquisa global
 
-Projeto académico / estágio — uso interno e demonstração.
+No frontend, a navegacao principal esta em `frontend/src/App.jsx` e nas paginas de `frontend/src/pages`.
+
+## Regras e comportamento relevantes
+
+- `GET /computadores/` devolve por defeito apenas computadores manuais.
+- `GET /computadores/?com_scan=true` inclui tambem dispositivos do scan.
+- A sessao expira se ficar inativa alem de `SESSION_EXPIRE_MINUTES`, mas cada pedido autenticado renova esse prazo.
+- Um `401` no frontend faz a app voltar ao ecra de login e limpar o estado de sessao da interface.
+- Operacoes administrativas dependem do perfil do utilizador autenticado.
+
+## Documentacao adicional
+
+- [`docs/estrutura de requisitos do projeto.txt`](docs/estrutura%20de%20requisitos%20do%20projeto.txt)
+- [`docs/comandos.txt`](docs/comandos.txt)
+- [`docs/diagramas/`](docs/diagramas/)
+- [`docs/servidor-proxy-vm-passo-a-passo.txt`](docs/servidor-proxy-vm-passo-a-passo.txt)
+- [`scripts/sql/add_criado_em_dispositivos_descobertos.sql`](scripts/sql/add_criado_em_dispositivos_descobertos.sql)
+
+## Limitacoes atuais
+
+- O schema principal da base nao esta automatizado por migracoes no repositorio.
+- Funcionalidades de scan/logs dependem de rede, credenciais e contexto Windows.
+- O projeto usa navegacao por vistas/abas na app, nao React Router.
+
+## Licenca
+
+Projeto academico / de estagio para uso interno, demonstracao e aprendizagem.
