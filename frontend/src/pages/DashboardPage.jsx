@@ -79,15 +79,21 @@ function mapHistoricoParaItem(ev, idx) {
 
   const titulo = acao === "painel" && descricao !== "—" ? descricao : acao;
   const detalhe = acao === "painel" && descricao !== "—" ? "Operação no painel" : descricao;
+  const autor = ev?.utilizador_nome || ev?.utilizador_username || null;
 
   return {
     id: ev?.id != null ? `hist-${ev.id}` : `hist-f-${idx}`,
     titulo,
     detalhe,
+    autor,
     hora: horaDoEvento(ev?.data_evento),
     icon,
     tone,
   };
+}
+
+function inventarioAtivosTotal(inv) {
+  return (inv?.total_computadores ?? 0) + (inv?.total_dispositivos_scan ?? 0);
 }
 
 export default function DashboardPage({
@@ -96,12 +102,12 @@ export default function DashboardPage({
   ativosPorInventario = [],
   utilizadores,
   localizacoes: _localizacoes,
+  atividadeRecente = [],
   isAdmin = false,
   loading,
   onNavigate,
   onOpenHistorico,
 }) {
-  const historicoConta = [];
   const abrirMeuHistorico =
     typeof onOpenHistorico === "function" ? onOpenHistorico : () => onNavigate("historico-conta");
 
@@ -187,12 +193,12 @@ export default function DashboardPage({
 
   const historicoOrdenado = useMemo(() => {
     // Ordenacao defensiva para lidar com eventos sem data valida.
-    return [...(historicoConta || [])].sort((a, b) => {
+    return [...(atividadeRecente || [])].sort((a, b) => {
       const ta = a?.data_evento ? instanteDataApiParaLocal(a.data_evento)?.getTime() ?? 0 : 0;
       const tb = b?.data_evento ? instanteDataApiParaLocal(b.data_evento)?.getTime() ?? 0 : 0;
       return tb - ta;
     });
-  }, [historicoConta]);
+  }, [atividadeRecente]);
 
   /** Todas as atividades (sessão, painel, operações) — pré-visualização no dashboard. */
   const atividadeTodas = useMemo(() => {
@@ -247,11 +253,60 @@ export default function DashboardPage({
     },
   ];
 
+  const quickActions = [
+    {
+      key: "scan",
+      label: "Scan de rede",
+      description: "Executar descoberta e atualizar dispositivos da sub-rede.",
+      icon: "radar",
+      target: "ativos",
+    },
+    {
+      key: "computadores",
+      label: "Computadores",
+      description: "Consultar registos manuais e equipamentos encontrados por scan.",
+      icon: "computer",
+      target: "computadores",
+    },
+    {
+      key: "pesquisa",
+      label: "Pesquisa global",
+      description: "Procurar rapidamente ativos, inventários e utilizadores.",
+      icon: "manage_search",
+      target: "pesquisa",
+    },
+    {
+      key: "inventarios",
+      label: "Inventários",
+      description: "Ver o catálogo de inventários e respetivos ativos associados.",
+      icon: "inventory_2",
+      target: "inventarios",
+    },
+    {
+      key: "logs",
+      label: "Logs",
+      description: "Rever eventos técnicos e registos operacionais do sistema.",
+      icon: "receipt_long",
+      target: "logs",
+    },
+    ...(isAdmin
+      ? [
+          {
+            key: "historico",
+            label: "Histórico",
+            description: "Aceder à auditoria por conta e acompanhar alterações recentes.",
+            icon: "history",
+            target: "historico-conta",
+          },
+        ]
+      : []),
+  ];
+
   const atividadeRede = atividadeTodas;
   const listaScrollSx = {
     maxHeight: { xs: 225, lg: 265 },
     overflowY: "auto",
-    pr: 0.5,
+    pr: 0.25,
   };
 
   // --- Render: grelha de KPIs, gráficos e tabelas resumo ---
@@ -266,7 +321,88 @@ export default function DashboardPage({
         </Typography>
       }
     >
-      <Stack spacing={3}>
+      <Stack spacing={2.5}>
+        <Box
+          sx={{
+            p: { xs: 2.25, md: 2.75 },
+            border: "1px solid #e5e7eb",
+            borderRadius: 3,
+            background:
+              "radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 28%), linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%)",
+            boxShadow: "0 14px 32px rgba(15, 23, 42, 0.05)",
+          }}
+        >
+          <Stack spacing={1.75}>
+            <Stack
+              direction={{ xs: "column", lg: "row" }}
+              justifyContent="space-between"
+              alignItems={{ xs: "flex-start", lg: "center" }}
+              spacing={1.5}
+            >
+              <Box>
+                <Box
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.75,
+                    px: 1,
+                    py: 0.5,
+                    width: "fit-content",
+                    borderRadius: 999,
+                    bgcolor: "#f8fafc",
+                    border: "1px solid #e5e7eb",
+                    color: "#475569",
+                    mb: 1.1,
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                    dashboard
+                  </span>
+                  <Typography variant="caption" fontWeight={700}>
+                    Vista geral
+                  </Typography>
+                </Box>
+                <Typography
+                  sx={{
+                    fontSize: { xs: "1.35rem", md: "1.7rem" },
+                    fontWeight: 800,
+                    letterSpacing: "-0.045em",
+                    lineHeight: 1.06,
+                    maxWidth: 760,
+                  }}
+                >
+                  O estado atual do inventário, da rede e da atividade recente num só painel.
+                </Typography>
+                <Typography
+                  color="text.secondary"
+                  sx={{ mt: 1, maxWidth: 760, fontSize: "0.95rem", lineHeight: 1.6 }}
+                >
+                  Acompanha rapidamente o volume de ativos, os resultados do scan, os inventários com mais contexto
+                  e os sinais recentes de atividade administrativa.
+                </Typography>
+              </Box>
+
+              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" justifyContent={{ lg: "flex-end" }}>
+                <Chip
+                  size="small"
+                  label={`${inventarios.length} inventários`}
+                  sx={{ bgcolor: "#eef2ff", color: "#3730a3", border: "1px solid #c7d2fe", fontWeight: 700 }}
+                />
+                <Chip
+                  size="small"
+                  label={`${computadoresAtivos} computadores ativos`}
+                  sx={{ bgcolor: "#ecfdf5", color: "#166534", border: "1px solid #bbf7d0", fontWeight: 700 }}
+                />
+                <Chip
+                  size="small"
+                  label={`${totalScan} dispositivos de scan`}
+                  sx={{ bgcolor: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", fontWeight: 700 }}
+                />
+              </Stack>
+            </Stack>
+          </Stack>
+        </Box>
+
         <Box
           sx={{
             display: "grid",
@@ -290,63 +426,78 @@ export default function DashboardPage({
           ))}
         </Box>
 
-        <Box>
-          <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 1, display: "block" }}>
-            Ações rápidas
-          </Typography>
-          <Stack direction="row" flexWrap="wrap" gap={1}>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<span className="material-symbols-outlined">radar</span>}
-              onClick={() => onNavigate("ativos")}
-            >
-              Scan de rede
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<span className="material-symbols-outlined">computer</span>}
-              onClick={() => onNavigate("computadores")}
-            >
-              Computadores
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<span className="material-symbols-outlined">manage_search</span>}
-              onClick={() => onNavigate("pesquisa")}
-            >
-              Pesquisa global
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<span className="material-symbols-outlined">inventory_2</span>}
-              onClick={() => onNavigate("inventarios")}
-            >
-              Inventários
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<span className="material-symbols-outlined">receipt_long</span>}
-              onClick={() => onNavigate("logs")}
-            >
-              Logs
-            </Button>
-            {isAdmin ? (
+        <Panel
+          title="Ações rápidas"
+          subtitle="Atalhos para as áreas e operações mais usadas no dia a dia"
+        >
+          <Box
+            sx={{
+              display: "grid",
+              gap: 1.1,
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, minmax(0, 1fr))",
+                xl: "repeat(3, minmax(0, 1fr))",
+              },
+            }}
+          >
+            {quickActions.map((action) => (
               <Button
+                key={action.key}
                 variant="outlined"
-                size="small"
-                startIcon={<span className="material-symbols-outlined">history</span>}
-                onClick={() => onNavigate("historico-conta")}
+                onClick={() => onNavigate(action.target)}
+                sx={{
+                  justifyContent: "flex-start",
+                  alignItems: "stretch",
+                  textAlign: "left",
+                  px: 1.5,
+                  py: 1.25,
+                  minHeight: 86,
+                  borderRadius: 2.25,
+                  borderColor: "#e5e7eb",
+                  color: "text.primary",
+                  backgroundColor: "#fff",
+                  "&:hover": {
+                    borderColor: "#cbd5e1",
+                    backgroundColor: "#fafafa",
+                  },
+                }}
               >
-                Histórico
+                <Stack direction="row" spacing={1.25} sx={{ width: "100%", minWidth: 0 }}>
+                  <Box
+                    sx={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 1.5,
+                      display: "grid",
+                      placeItems: "center",
+                      bgcolor: "#f8fafc",
+                      border: "1px solid #e5e7eb",
+                      color: "#475569",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                      {action.icon}
+                    </span>
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography sx={{ fontSize: "0.9rem", fontWeight: 700, color: "text.primary" }}>
+                      {action.label}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mt: 0.35, lineHeight: 1.45, whiteSpace: "normal" }}
+                    >
+                      {action.description}
+                    </Typography>
+                  </Box>
+                </Stack>
               </Button>
-            ) : null}
-          </Stack>
-        </Box>
+            ))}
+          </Box>
+        </Panel>
 
         <Box
           sx={{
@@ -371,6 +522,7 @@ export default function DashboardPage({
           <Box>
             <Panel
               title="Inventários recentes"
+              subtitle="Os registos mais recentes com contexto e volume de ativos"
               action={
                 <Button variant="text" size="small" onClick={() => onNavigate("inventarios")}>
                 Ver todos
@@ -391,13 +543,54 @@ export default function DashboardPage({
                 <Box sx={listaScrollSx}>
                   <List disablePadding>
                     {recentInventarios.map((inv) => (
-                      <ListItem key={inv.id} divider disableGutters>
-                        <ListItemText
-                          primary={inv.nome}
-                          secondary={`${tipoInventarioLabel(inv.tipo_inventario)} · ${(inv.total_computadores ?? 0) + (inv.total_dispositivos_scan ?? 0)} ativos`}
-                          primaryTypographyProps={{ fontSize: 14, fontWeight: 700 }}
-                          secondaryTypographyProps={{ fontSize: 12 }}
-                        />
+                      <ListItem
+                        key={inv.id}
+                        divider
+                        disableGutters
+                        sx={{ py: 1.2, gap: 1.25, alignItems: "flex-start" }}
+                      >
+                        <Box
+                          sx={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: 1.5,
+                            display: "grid",
+                            placeItems: "center",
+                            border: "1px solid #e5e7eb",
+                            bgcolor: "#f8fafc",
+                            color: "#475569",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                            inventory_2
+                          </span>
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography fontSize={14} fontWeight={700} noWrap>
+                            {inv.nome}
+                          </Typography>
+                          <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap" sx={{ mt: 0.7 }}>
+                            <Chip
+                              size="small"
+                              label={tipoInventarioLabel(inv.tipo_inventario)}
+                              sx={{
+                                bgcolor: "#f4f4f5",
+                                color: "#52525b",
+                                border: "1px solid #e4e4e7",
+                              }}
+                            />
+                            <Chip
+                              size="small"
+                              label={`${inventarioAtivosTotal(inv)} ativos`}
+                              sx={{
+                                bgcolor: "#eff6ff",
+                                color: "#1d4ed8",
+                                border: "1px solid #bfdbfe",
+                              }}
+                            />
+                          </Stack>
+                        </Box>
                       </ListItem>
                     ))}
                   </List>
@@ -410,6 +603,7 @@ export default function DashboardPage({
             <Box>
             <Panel
               title="Atividade recente"
+              subtitle="Pré-visualização da auditoria disponível por conta"
               action={
                 <Button variant="text" size="small" onClick={abrirMeuHistorico}>
                   Histórico
@@ -423,9 +617,43 @@ export default function DashboardPage({
                   <Typography variant="body2">A carregar…</Typography>
                 </Stack>
               ) : atividadeRede.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  Escolhe um utilizador na aba <strong>Histórico</strong> para ver a auditoria por conta.
-                </Typography>
+                <Box
+                  sx={{
+                    minHeight: 216,
+                    border: "1px dashed #d4d4d8",
+                    borderRadius: 2,
+                    bgcolor: "#fafafa",
+                    display: "grid",
+                    placeItems: "center",
+                    p: 2.5,
+                    textAlign: "center",
+                  }}
+                >
+                  <Stack spacing={1} alignItems="center" maxWidth={320}>
+                    <Box
+                      sx={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 999,
+                        display: "grid",
+                        placeItems: "center",
+                        bgcolor: "#ffffff",
+                        border: "1px solid #e5e7eb",
+                        color: "#64748b",
+                      }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                        history
+                      </span>
+                    </Box>
+                    <Typography fontSize={14} fontWeight={700}>
+                      Sem atividade selecionada
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Escolhe um utilizador na aba <strong>Histórico</strong> para consultar a auditoria por conta.
+                    </Typography>
+                  </Stack>
+                </Box>
               ) : (
                 <Box sx={listaScrollSx}>
                   <List disablePadding>
@@ -434,13 +662,55 @@ export default function DashboardPage({
                         key={ev.id}
                         disableGutters
                         divider
-                        secondaryAction={<Typography variant="caption">{ev.hora}</Typography>}
+                        secondaryAction={
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              px: 0.9,
+                              py: 0.4,
+                              borderRadius: 999,
+                              bgcolor: "#f8fafc",
+                              border: "1px solid #e5e7eb",
+                            }}
+                          >
+                            {ev.hora}
+                          </Typography>
+                        }
+                        sx={{ py: 1.15, pr: 7.5 }}
                       >
+                        <ListItemIcon sx={{ minWidth: 36, mt: 0.15 }}>
+                          <Box
+                            sx={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: 1.25,
+                              display: "grid",
+                              placeItems: "center",
+                              bgcolor:
+                                ev.tone === "warning"
+                                  ? "#fffbeb"
+                                  : ev.tone === "error"
+                                    ? "#fef2f2"
+                                    : "#f0fdf4",
+                              color:
+                                ev.tone === "warning"
+                                  ? "#ca8a04"
+                                  : ev.tone === "error"
+                                    ? "#dc2626"
+                                    : "#16a34a",
+                              border: "1px solid #e5e7eb",
+                            }}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 17 }}>
+                              {ev.icon}
+                            </span>
+                          </Box>
+                        </ListItemIcon>
                         <ListItemText
                           primary={ev.titulo}
-                          secondary={ev.detalhe}
-                          primaryTypographyProps={{ fontSize: 14, fontWeight: 700 }}
-                          secondaryTypographyProps={{ fontSize: 12 }}
+                          secondary={ev.autor ? `${ev.autor} · ${ev.detalhe || "Sem descrição"}` : ev.detalhe}
+                          primaryTypographyProps={{ fontSize: 13.5, fontWeight: 700 }}
+                          secondaryTypographyProps={{ fontSize: 12, color: "#64748b" }}
                         />
                       </ListItem>
                     ))}
@@ -465,6 +735,7 @@ export default function DashboardPage({
           <Box>
             <Panel
               title="Equipamentos recentes"
+              subtitle="Amostra rápida dos registos manuais e dos dispositivos encontrados"
               action={
                 <Button variant="text" size="small" onClick={() => onNavigate("computadores")}>
                 Ver todos
@@ -473,7 +744,7 @@ export default function DashboardPage({
               minHeight={340}
               noPadding
             >
-              <Box sx={{ px: 2, pb: 2 }}>
+              <Box sx={{ px: 2.25, pb: 2.25 }}>
               <TableContainer sx={{ overflowX: "auto", maxWidth: "100%" }}>
                 <Table
                   size="small"
@@ -481,6 +752,10 @@ export default function DashboardPage({
                     minWidth: 1020,
                     ...tableSxSemQuebra,
                     "& .MuiTableCell-root": { fontSize: 13 },
+                    "& .MuiTableHead-root .MuiTableCell-root": {
+                      bgcolor: "#fafafa",
+                      borderBottomColor: "#eceff3",
+                    },
                   }}
                 >
                   <TableHead>
@@ -510,7 +785,19 @@ export default function DashboardPage({
                     ) : (
                       equipamentosRecentesPainel.map((row) => (
                         <TableRow key={`${row.linha}-${row.id}`} hover>
-                          <TableCell sx={{ ...tableCellNowrap, minWidth: 72 }}>{row.linha === "manual" ? "Manual" : "Scan"}</TableCell>
+                          <TableCell sx={{ ...tableCellNowrap, minWidth: 96 }}>
+                            <Chip
+                              size="small"
+                              label={row.linha === "manual" ? "Manual" : "Scan"}
+                              sx={{
+                                bgcolor: row.linha === "manual" ? "#f4f4f5" : "#eff6ff",
+                                color: row.linha === "manual" ? "#3f3f46" : "#1d4ed8",
+                                border: "1px solid",
+                                borderColor: row.linha === "manual" ? "#e4e4e7" : "#bfdbfe",
+                                fontWeight: 700,
+                              }}
+                            />
+                          </TableCell>
                           <TableCell sx={{ ...tableCellEllipsis(120, 220), fontWeight: 600 }}>{txtBd(row.nome)}</TableCell>
                           <TableCell sx={tableCellMono(110)}>{txtBd(row.hostname)}</TableCell>
                           <TableCell sx={tableCellMono(118)}>{txtBd(row.ip)}</TableCell>
@@ -545,9 +832,43 @@ export default function DashboardPage({
               minHeight={340}
             >
               {alertasEdicaoRemocao.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  Escolhe um utilizador na aba <strong>Histórico</strong> para rever edições e remoções por conta.
-                </Typography>
+                <Box
+                  sx={{
+                    minHeight: 230,
+                    border: "1px dashed #d4d4d8",
+                    borderRadius: 2,
+                    bgcolor: "#fafafa",
+                    display: "grid",
+                    placeItems: "center",
+                    p: 2.5,
+                    textAlign: "center",
+                  }}
+                >
+                  <Stack spacing={1} alignItems="center" maxWidth={320}>
+                    <Box
+                      sx={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 999,
+                        display: "grid",
+                        placeItems: "center",
+                        bgcolor: "#ffffff",
+                        border: "1px solid #e5e7eb",
+                        color: "#64748b",
+                      }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                        notifications
+                      </span>
+                    </Box>
+                    <Typography fontSize={14} fontWeight={700}>
+                      Sem alertas disponíveis
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Escolhe um utilizador na aba <strong>Histórico</strong> para rever edições e remoções por conta.
+                    </Typography>
+                  </Stack>
+                </Box>
               ) : (
                 <Box sx={{ ...listaScrollSx, maxHeight: { xs: 210, lg: 235 } }}>
                   <List disablePadding>
@@ -556,31 +877,59 @@ export default function DashboardPage({
                         key={alerta.id}
                         divider={idx < alertasEdicaoRemocao.length - 1}
                         disableGutters
-                        secondaryAction={<Typography variant="caption">{alerta.hora}</Typography>}
+                        secondaryAction={
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              px: 0.9,
+                              py: 0.4,
+                              borderRadius: 999,
+                              bgcolor: "#f8fafc",
+                              border: "1px solid #e5e7eb",
+                            }}
+                          >
+                            {alerta.hora}
+                          </Typography>
+                        }
+                        sx={{ py: 1.05, pr: 7.5 }}
                       >
-                        <ListItemIcon sx={{ minWidth: 28 }}>
-                          <span
-                            className="material-symbols-outlined"
-                            style={{
-                              fontSize: 18,
+                        <ListItemIcon sx={{ minWidth: 36, mt: 0.15 }}>
+                          <Box
+                            sx={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: 1.25,
+                              display: "grid",
+                              placeItems: "center",
+                              bgcolor:
+                                alerta.tone === "warning"
+                                  ? "#fffbeb"
+                                  : alerta.tone === "error"
+                                    ? "#fef2f2"
+                                    : alerta.icon === "edit_square"
+                                      ? "#eff6ff"
+                                      : "#f0fdf4",
                               color:
                                 alerta.tone === "warning"
-                                  ? "#f59e0b"
+                                  ? "#ca8a04"
                                   : alerta.tone === "error"
                                     ? "#dc2626"
                                     : alerta.icon === "edit_square"
                                       ? "#2563eb"
-                                      : "#22c55e",
+                                      : "#16a34a",
+                              border: "1px solid #e5e7eb",
                             }}
                           >
-                            {alerta.icon}
-                          </span>
+                            <span className="material-symbols-outlined" style={{ fontSize: 17 }}>
+                              {alerta.icon}
+                            </span>
+                          </Box>
                         </ListItemIcon>
                         <ListItemText
                           primary={alerta.titulo}
                           secondary={alerta.detalhe}
-                          primaryTypographyProps={{ fontSize: 13, fontWeight: 700 }}
-                          secondaryTypographyProps={{ fontSize: 12 }}
+                          primaryTypographyProps={{ fontSize: 13.5, fontWeight: 700 }}
+                          secondaryTypographyProps={{ fontSize: 12, color: "#64748b" }}
                         />
                       </ListItem>
                     ))}
@@ -594,6 +943,7 @@ export default function DashboardPage({
 
         <Panel
           title="Utilizadores recentes"
+          subtitle="Contas adicionadas ou atualizadas recentemente"
           action={
             <Button variant="text" size="small" onClick={() => onNavigate("utilizadores")}>
               Ver todos
@@ -603,17 +953,30 @@ export default function DashboardPage({
           <Box sx={{ ...listaScrollSx, maxHeight: { xs: 165, lg: 175 } }}>
             <List disablePadding>
               {latestUsers.map((u) => (
-                <ListItem key={u.id} divider disableGutters>
-                  <ListItemIcon sx={{ minWidth: 28 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                    person
-                  </span>
+                <ListItem key={u.id} divider disableGutters sx={{ py: 1.1, gap: 1.2 }}>
+                  <ListItemIcon sx={{ minWidth: 38 }}>
+                    <Box
+                      sx={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 999,
+                        display: "grid",
+                        placeItems: "center",
+                        bgcolor: "#f8fafc",
+                        border: "1px solid #e5e7eb",
+                        color: "#475569",
+                      }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 17 }}>
+                        person
+                      </span>
+                    </Box>
                   </ListItemIcon>
                   <ListItemText
                     primary={u.nome || u.username}
                     secondary={u.email || u.username || "Sem email"}
                     primaryTypographyProps={{ fontSize: 14, fontWeight: 700 }}
-                    secondaryTypographyProps={{ fontSize: 12 }}
+                    secondaryTypographyProps={{ fontSize: 12, color: "#64748b" }}
                   />
                 </ListItem>
               ))}

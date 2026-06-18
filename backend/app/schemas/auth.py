@@ -64,3 +64,13 @@ class HistoricoUtilizadorItem(BaseModel):
 
 class HistoricoUtilizadorLista(BaseModel):
     itens: list[HistoricoUtilizadorItem]
+
+
+class HistoricoRecenteItem(HistoricoUtilizadorItem):
+    utilizador_id: int
+    utilizador_nome: str | None = None
+    utilizador_username: str | None = None
+
+
+class HistoricoRecenteLista(BaseModel):
+    itens: list[HistoricoRecenteItem]

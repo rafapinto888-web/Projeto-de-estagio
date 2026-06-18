@@ -22,26 +22,43 @@ export default function MetricCard({ label, value, icon, tone = "primary", hint 
       sx={{
         p: 2.25,
         height: "100%",
-        borderLeft: `3px solid ${t.accent}`,
-        transition: "border-color 0.15s ease",
+        borderRadius: 2.5,
+        borderColor: "#e5e7eb",
+        background: "linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%)",
+        boxShadow: "0 10px 24px rgba(15, 23, 42, 0.04)",
+        position: "relative",
+        overflow: "hidden",
+        transition: "transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease",
+        "&::before": {
+          content: "\"\"",
+          position: "absolute",
+          inset: 0,
+          top: 0,
+          height: 3,
+          background: t.accent,
+        },
         "&:hover": {
+          transform: "translateY(-1px)",
+          boxShadow: "0 14px 28px rgba(15, 23, 42, 0.06)",
           borderColor: "#d1d5db",
         },
       }}
     >
-      <Stack spacing={1.5}>
+      <Stack spacing={1.65}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
           <Stack direction="row" alignItems="center" spacing={1.25}>
             {icon ? (
               <Box
                 sx={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 1,
+                  width: 40,
+                  height: 40,
+                  borderRadius: 1.5,
                   display: "grid",
                   placeItems: "center",
                   bgcolor: t.iconBg,
                   color: t.iconColor,
+                  border: "1px solid rgba(255,255,255,0.8)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
                 }}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
@@ -49,7 +66,12 @@ export default function MetricCard({ label, value, icon, tone = "primary", hint 
                 </span>
               </Box>
             ) : null}
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              fontWeight={700}
+              sx={{ fontSize: "0.76rem", letterSpacing: "0.01em" }}
+            >
               {label}
             </Typography>
           </Stack>
@@ -57,10 +79,10 @@ export default function MetricCard({ label, value, icon, tone = "primary", hint 
         <Typography
           component="p"
           sx={{
-            fontWeight: 700,
-            fontSize: "1.75rem",
-            lineHeight: 1.1,
-            letterSpacing: "-0.03em",
+            fontWeight: 800,
+            fontSize: "1.9rem",
+            lineHeight: 1,
+            letterSpacing: "-0.04em",
             fontVariantNumeric: "tabular-nums",
             color: "text.primary",
           }}
@@ -68,7 +90,7 @@ export default function MetricCard({ label, value, icon, tone = "primary", hint 
           {value}
         </Typography>
         {hint ? (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.45 }}>
             {hint}
           </Typography>
         ) : null}

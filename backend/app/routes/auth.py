@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, is_admin_user
 from app.core.security import (
     SESSION_COOKIE_NAME,
     agora_utc_naive,
@@ -25,6 +25,8 @@ from app.schemas.auth import (
     AuthLoginResponse,
     AuthLogoutResponse,
     AuthMeResponse,
+    HistoricoRecenteLista,
+    HistoricoRecenteItem,
     HistoricoRegistoIn,
     LoginRequest,
 )
@@ -140,6 +142,37 @@ def me(current_user: UtilizadorDB = Depends(get_current_user)):
         "perfil_id": current_user.perfil_id,
         "perfil_nome": current_user.perfil.nome if current_user.perfil else None,
     }
+
+
+@router.get("/historico/recente", response_model=HistoricoRecenteLista)
+def historico_recente(
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: UtilizadorDB = Depends(get_current_user),
+):
+    query = (
+        db.query(LogSistemaDB)
+        .options(joinedload(LogSistemaDB.utilizador))
+        .order_by(LogSistemaDB.data_evento.desc())
+    )
+    if not is_admin_user(current_user):
+        query = query.filter(LogSistemaDB.utilizador_id == current_user.id)
+
+    registos = query.limit(limit).all()
+    return HistoricoRecenteLista(
+        itens=[
+            HistoricoRecenteItem(
+                id=r.id,
+                utilizador_id=r.utilizador_id,
+                utilizador_nome=r.utilizador.nome if r.utilizador else None,
+                utilizador_username=r.utilizador.username if r.utilizador else None,
+                acao=r.acao,
+                descricao=r.descricao,
+                data_evento=r.data_evento,
+            )
+            for r in registos
+        ]
+    )
 
 
 @router.post("/me/historico", status_code=status.HTTP_201_CREATED)

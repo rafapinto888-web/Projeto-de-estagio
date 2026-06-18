@@ -158,6 +158,7 @@ export const api = {
   me: () => request("/auth/me"),
   registarHistorico: (payload) =>
     request("/auth/me/historico", { method: "POST", body: JSON.stringify(payload) }),
+  historicoRecente: (limit = 20) => request(`/auth/historico/recente?limit=${encodeURIComponent(String(limit))}`),
   health: () => fetch(getApiBase(), { credentials: "include" }).then((r) => r.ok),
 
   inventarios: {

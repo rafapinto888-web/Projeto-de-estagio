@@ -52,12 +52,12 @@ export default function AtivosPorEstadoChart({ totais = [], total = 0 }) {
     return (
       <Box
         sx={{
-          py: 4,
-          px: 2,
+          py: 4.5,
+          px: 2.5,
           textAlign: "center",
-          borderRadius: 2,
-          bgcolor: "#f8fafc",
-          border: "1px dashed #cbd5e1",
+          borderRadius: 2.5,
+          bgcolor: "#fafafa",
+          border: "1px dashed #d4d4d8",
         }}
       >
         <Typography variant="body2" color="text.secondary">
@@ -93,9 +93,9 @@ export default function AtivosPorEstadoChart({ totais = [], total = 0 }) {
       <Box
         sx={{
           position: "relative",
-          borderRadius: 2,
-          border: "1px solid #e2e8f0",
-          bgcolor: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+          borderRadius: 2.5,
+          border: "1px solid #e5e7eb",
+          bgcolor: "#fbfcfe",
           overflow: "hidden",
         }}
         role="img"
@@ -196,15 +196,15 @@ export default function AtivosPorEstadoChart({ totais = [], total = 0 }) {
                   <Box
                     title={`${rotuloEstado(item.estado)}: ${item.total} (${percent}%)`}
                     sx={{
-                      width: "min(48px, 72%)",
+                      width: "min(44px, 68%)",
                       height: alturaPx,
-                      borderRadius: "8px 8px 4px 4px",
+                      borderRadius: "10px 10px 3px 3px",
                       background: `linear-gradient(180deg, ${cores.light} 0%, ${cores.main} 100%)`,
-                      boxShadow: "0 4px 12px rgba(15, 23, 42, 0.12)",
-                      transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                      boxShadow: "0 6px 14px rgba(15, 23, 42, 0.08)",
+                      transition: "transform 0.18s ease, box-shadow 0.18s ease",
                       "&:hover": {
-                        transform: "translateY(-2px)",
-                        boxShadow: "0 6px 16px rgba(15, 23, 42, 0.16)",
+                        transform: "translateY(-1px)",
+                        boxShadow: "0 8px 18px rgba(15, 23, 42, 0.11)",
                       },
                     }}
                   />
@@ -264,9 +264,9 @@ export default function AtivosPorEstadoChart({ totais = [], total = 0 }) {
                 gap: 0.75,
                 px: 1,
                 py: 0.5,
-                borderRadius: 1.5,
+                borderRadius: 999,
                 bgcolor: "#fff",
-                border: "1px solid #e2e8f0",
+                border: "1px solid #e5e7eb",
               }}
             >
               <Box

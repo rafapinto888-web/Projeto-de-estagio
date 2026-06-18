@@ -229,6 +229,7 @@ export default function App() {
   const [utilizadores, setUtilizadores] = useState([]);
   const [perfis, setPerfis] = useState([]);
   const [localizacoes, setLocalizacoes] = useState([]);
+  const [atividadeRecente, setAtividadeRecente] = useState([]);
   const [ativos, setAtivos] = useState([]); // lista do inventário selecionado na aba Scan
 
   // Formulários e inventário ativo (Scan + várias páginas).
@@ -294,6 +295,7 @@ export default function App() {
         perfisData,
         localizacoesData,
         ativosGruposData,
+        atividadeRecenteData,
       ] = await Promise.all([
         api.inventarios.listar(),
         api.computadores.listar(),
@@ -301,6 +303,7 @@ export default function App() {
         api.perfis.listar(),
         api.localizacoes.listar(),
         api.inventarios.ativosPorInventario(),
+        api.historicoRecente(20),
       ]);
       setInventarios(inventariosData || []);
       setComputadores(computadoresData || []);
@@ -308,6 +311,7 @@ export default function App() {
       setUtilizadores(utilizadoresData || []);
       setPerfis(perfisData || []);
       setLocalizacoes(localizacoesData || []);
+      setAtividadeRecente(Array.isArray(atividadeRecenteData?.itens) ? atividadeRecenteData.itens : []);
       const firstId = (inventariosData || [])[0]?.id;
       setSelectedInventarioId((prev) => prev || String(firstId || ""));
     } finally {
@@ -372,6 +376,15 @@ export default function App() {
     }
   }
 
+  async function refreshAtividadeRecente() {
+    try {
+      const atividadeRecenteData = await api.historicoRecente(20);
+      setAtividadeRecente(Array.isArray(atividadeRecenteData?.itens) ? atividadeRecenteData.itens : []);
+    } catch {
+      /* atualizacao opcional do dashboard */
+    }
+  }
+
   function limparEstadoAutenticado() {
     setUser(null);
     setInventarios([]);
@@ -380,6 +393,7 @@ export default function App() {
     setUtilizadores([]);
     setPerfis([]);
     setLocalizacoes([]);
+    setAtividadeRecente([]);
     setAtivos([]);
     setSelectedInventarioId("");
   }
@@ -425,6 +439,7 @@ export default function App() {
             acao: "painel",
             descricao: String(successMessage).slice(0, 3900),
           });
+          await refreshAtividadeRecente();
         } catch {
           /* não impedir a operação principal se o audit falhar */
         }
@@ -683,6 +698,7 @@ export default function App() {
               ativosPorInventario={ativosPorInventario}
               utilizadores={utilizadores}
               localizacoes={localizacoes}
+              atividadeRecente={atividadeRecente}
               isAdmin={isAdmin}
               loading={loading}
               onNavigate={handleSelectTab}
@@ -943,6 +959,7 @@ export default function App() {
                       acao: "painel",
                       descricao: "Scan de rede concluído com sucesso.",
                     });
+                    await refreshAtividadeRecente();
                   } catch {
                     /* não bloquear */
                   }
