@@ -1,5 +1,5 @@
 /*
- * Histórico de auditoria: apenas administradores; escolha de utilizador (GET /utilizadores/{id}/historico).
+ * Historico de auditoria: apenas administradores; escolha de utilizador (GET /utilizadores/{id}/historico).
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -15,6 +15,7 @@ import {
   Paper,
   Select,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 import { api } from "../api";
@@ -26,16 +27,16 @@ function eventoVisual(ev) {
   // Converte acao + descricao numa categoria visual consistente para a timeline.
   const texto = `${ev?.acao || ""} ${ev?.descricao || ""}`.toLowerCase();
   if (/apag|delete|elimin|remov/.test(texto)) {
-    return { icon: "delete", color: "#dc2626", bg: "#fef2f2", label: "Remoção" };
+    return { icon: "delete", color: "#dc2626", bg: "#fef2f2", label: "Remocao" };
   }
   if (/edit|alter|atualiz|modific|patch|put/.test(texto)) {
-    return { icon: "edit_square", color: "#ca8a04", bg: "#fffbeb", label: "Alteração" };
+    return { icon: "edit_square", color: "#ca8a04", bg: "#fffbeb", label: "Alteracao" };
   }
   if (/login|sess/.test(texto)) {
-    return { icon: "login", color: "#2563eb", bg: "#eff6ff", label: "Sessão" };
+    return { icon: "login", color: "#2563eb", bg: "#eff6ff", label: "Sessao" };
   }
   if (/scan|rede|log/.test(texto)) {
-    return { icon: "radar", color: "#16a34a", bg: "#ecfdf5", label: "Operação" };
+    return { icon: "radar", color: "#16a34a", bg: "#ecfdf5", label: "Operacao" };
   }
   return { icon: "history", color: "#64748b", bg: "#f8fafc", label: "Evento" };
 }
@@ -53,11 +54,27 @@ function mesmoDia(timestamp, ref = new Date()) {
   return data.getFullYear() === ref.getFullYear() && data.getMonth() === ref.getMonth() && data.getDate() === ref.getDate();
 }
 
+function dataLocalIso(timestamp) {
+  if (!timestamp) return "";
+  const data = new Date(timestamp);
+  if (Number.isNaN(data.getTime())) return "";
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const dia = String(data.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+function hojeIso() {
+  return dataLocalIso(Date.now());
+}
+
 export default function HistoricoContaPage({ token, active, isAdmin, utilizadores = [] }) {
   const [utilizadorId, setUtilizadorId] = useState("");
   const [itens, setItens] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
+  const [filtroAcao, setFiltroAcao] = useState("");
+  const [filtroData, setFiltroData] = useState("");
 
   const listaOrdenada = useMemo(
     // A lista e clonada antes do sort para nao mutar as props recebidas.
@@ -78,13 +95,49 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
     [itens],
   );
 
-  const totalHoje = useMemo(
-    () => itensOrdenados.filter((ev) => mesmoDia(eventoTimestamp(ev))).length,
+  const opcoesAcao = useMemo(
+    () =>
+      Array.from(new Set(itensOrdenados.map((ev) => String(ev?.acao || "").trim()).filter(Boolean))).sort((a, b) =>
+        a.localeCompare(b, "pt"),
+      ),
     [itensOrdenados],
   );
 
-  const ultimaAtividade = itensOrdenados[0]?.data_evento
-    ? formatarDataPtCurta(itensOrdenados[0].data_evento)
+  const itensFiltrados = useMemo(
+    () =>
+      itensOrdenados.filter((ev) => {
+        if (filtroAcao && String(ev?.acao || "").trim() !== filtroAcao) return false;
+        if (filtroData && dataLocalIso(eventoTimestamp(ev)) !== filtroData) return false;
+        return true;
+      }),
+    [filtroAcao, filtroData, itensOrdenados],
+  );
+
+  const temFiltros = Boolean(filtroAcao || filtroData);
+  const dataMaxFiltro = hojeIso();
+
+  const dataMinFiltro = useMemo(() => {
+    // Se um dia o backend expuser a data de criacao do utilizador, ela passa a ser o limite real.
+    const criadoEmConta =
+      utilizadorSelecionado?.criado_em ||
+      utilizadorSelecionado?.data_criacao ||
+      utilizadorSelecionado?.created_at ||
+      null;
+    const dataConta = dataLocalIso(criadoEmConta);
+    if (dataConta) return dataConta;
+
+    // Fallback: usamos a primeira atividade conhecida para evitar datas sem qualquer historico.
+    const maisAntigo = itensOrdenados[itensOrdenados.length - 1];
+    return dataLocalIso(eventoTimestamp(maisAntigo));
+  }, [itensOrdenados, utilizadorSelecionado]);
+
+  const totalHoje = useMemo(
+    () => itensFiltrados.filter((ev) => mesmoDia(eventoTimestamp(ev))).length,
+    [itensFiltrados],
+  );
+
+  const ultimaAtividade = itensFiltrados[0]?.data_evento
+    ? formatarDataPtCurta(itensFiltrados[0].data_evento)
     : "Sem registo";
 
   useEffect(() => {
@@ -113,7 +166,7 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
       } catch (e) {
         if (!cancel) {
           setItens([]);
-          setErro(e?.message || "Não foi possível carregar o histórico.");
+          setErro(e?.message || "Nao foi possivel carregar o historico.");
         }
       } finally {
         if (!cancel) setLoading(false);
@@ -125,6 +178,17 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
     };
   }, [token, active, isAdmin, utilizadorId]);
 
+  useEffect(() => {
+    if (!filtroData) return;
+    if (dataMinFiltro && filtroData < dataMinFiltro) {
+      setFiltroData("");
+      return;
+    }
+    if (dataMaxFiltro && filtroData > dataMaxFiltro) {
+      setFiltroData("");
+    }
+  }, [dataMaxFiltro, dataMinFiltro, filtroData]);
+
   function recarregar() {
     // Reutiliza o mesmo endpoint do carregamento inicial para refresh manual.
     if (!token || !active || !isAdmin || !utilizadorId) return;
@@ -135,17 +199,22 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
       .then((data) => setItens(Array.isArray(data?.itens) ? data.itens : []))
       .catch((e) => {
         setItens([]);
-        setErro(e?.message || "Não foi possível carregar o histórico.");
+        setErro(e?.message || "Nao foi possivel carregar o historico.");
       })
       .finally(() => setLoading(false));
   }
 
+  function limparFiltros() {
+    setFiltroAcao("");
+    setFiltroData("");
+  }
+
   if (!isAdmin) {
     return (
-      <SectionCard title="Histórico" subtitle="Auditoria de ações no painel.">
+      <SectionCard title="Historico" subtitle="Auditoria de acoes no painel.">
         <EmptyState
           title="Acesso reservado a administradores"
-          description="Utilizadores com perfil normal não consultam histórico de auditoria. Inicia sessão com uma conta de administrador se precisares desta informação."
+          description="Utilizadores com perfil normal nao consultam historico de auditoria. Inicia sessao com uma conta de administrador se precisares desta informacao."
         />
       </SectionCard>
     );
@@ -153,7 +222,7 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
 
   return (
     <SectionCard
-      title="Histórico de auditoria"
+      title="Historico de auditoria"
       subtitle="Escolhe um utilizador para consultar os eventos registados dessa conta."
       rightAction={
         <Button
@@ -174,32 +243,85 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
     >
       <Stack spacing={2.25}>
         <Paper variant="outlined" sx={{ p: 2, borderColor: "#dbe5f2", bgcolor: "#f8fbff" }}>
-          <Stack direction={{ xs: "column", lg: "row" }} spacing={2} alignItems={{ xs: "stretch", lg: "center" }}>
-            <FormControl fullWidth size="small" sx={{ maxWidth: { lg: 440 } }}>
-              <InputLabel id="historico-utilizador-label">Utilizador</InputLabel>
-              <Select
-                labelId="historico-utilizador-label"
-                label="Utilizador"
-                value={utilizadorId}
-                onChange={(e) => setUtilizadorId(String(e.target.value))}
-                disabled={!listaOrdenada.length || loading}
-              >
-                {listaOrdenada.map((u) => (
-                  <MenuItem key={u.id} value={String(u.id)}>
-                    {u.nome || u.username}
-                    {u.username && u.nome ? ` (${u.username})` : ""}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+          <Stack spacing={1.5}>
+            <Stack direction={{ xs: "column", xl: "row" }} spacing={1.5} alignItems={{ xs: "stretch", xl: "flex-end" }}>
+              <Box sx={{ width: "100%", maxWidth: { xl: 360 } }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5, px: 0.25 }}>
+                  Utilizador
+                </Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={utilizadorId}
+                    onChange={(e) => {
+                      setUtilizadorId(String(e.target.value));
+                      limparFiltros();
+                    }}
+                    disabled={!listaOrdenada.length || loading}
+                    inputProps={{ "aria-label": "Selecionar utilizador" }}
+                  >
+                    {listaOrdenada.map((u) => (
+                      <MenuItem key={u.id} value={String(u.id)}>
+                        {u.nome || u.username}
+                        {u.username && u.nome ? ` (${u.username})` : ""}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
 
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              flex={1}
-              justifyContent="flex-end"
-              alignItems={{ xs: "stretch", sm: "center" }}
-            >
+              <Box sx={{ width: "100%", maxWidth: { xl: 300 } }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5, px: 0.25 }}>
+                  Tipo de operacao
+                </Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={filtroAcao}
+                    onChange={(e) => setFiltroAcao(String(e.target.value))}
+                    disabled={!itensOrdenados.length || loading}
+                    inputProps={{ "aria-label": "Filtrar por tipo de operacao" }}
+                  >
+                    <MenuItem value="">Todas as operacoes</MenuItem>
+                    {opcoesAcao.map((acao) => (
+                      <MenuItem key={acao} value={acao}>
+                        {acao}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+
+              <Box sx={{ width: "100%", maxWidth: { xl: 220 } }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5, px: 0.25 }}>
+                  Data
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="date"
+                  value={filtroData}
+                  onChange={(e) => setFiltroData(e.target.value)}
+                  disabled={!itensOrdenados.length || loading}
+                  inputProps={{
+                    "aria-label": "Filtrar por data",
+                    min: dataMinFiltro || undefined,
+                    max: dataMaxFiltro || undefined,
+                  }}
+                />
+              </Box>
+
+              <Button
+                type="button"
+                variant="outlined"
+                size="small"
+                onClick={limparFiltros}
+                disabled={!temFiltros}
+                sx={{ alignSelf: { xs: "stretch", xl: "flex-end" }, minWidth: 138, height: 40 }}
+              >
+                Limpar filtros
+              </Button>
+            </Stack>
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
               <Chip
                 icon={<span className="material-symbols-outlined">person</span>}
                 label={utilizadorSelecionado?.username ? `@${utilizadorSelecionado.username}` : "Sem utilizador"}
@@ -207,7 +329,11 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
               />
               <Chip
                 icon={<span className="material-symbols-outlined">event_list</span>}
-                label={`${itensOrdenados.length} evento(s)`}
+                label={
+                  temFiltros
+                    ? `${itensFiltrados.length} de ${itensOrdenados.length} evento(s)`
+                    : `${itensOrdenados.length} evento(s)`
+                }
                 color="primary"
                 variant="outlined"
               />
@@ -222,13 +348,13 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
         </Paper>
 
         {!listaOrdenada.length ? (
-          <EmptyState title="Sem utilizadores" description="Não há contas para listar histórico." />
+          <EmptyState title="Sem utilizadores" description="Nao ha contas para listar historico." />
         ) : loading ? (
           <Paper variant="outlined" sx={{ p: 2.5, borderColor: "#dbe5f2" }}>
             <Stack direction="row" alignItems="center" spacing={1.25}>
               <CircularProgress size={18} />
               <Typography variant="body2" color="text.secondary">
-                A carregar histórico...
+                A carregar historico...
               </Typography>
             </Stack>
           </Paper>
@@ -240,7 +366,7 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
               </span>
               <Box sx={{ minWidth: 0, flex: 1 }}>
                 <Typography fontSize={14} fontWeight={700}>
-                  Erro ao carregar o histórico
+                  Erro ao carregar o historico
                 </Typography>
                 <Typography fontSize={12} color="text.secondary" sx={{ wordBreak: "break-word", mt: 0.35 }}>
                   {erro}
@@ -251,7 +377,12 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
         ) : itensOrdenados.length === 0 ? (
           <EmptyState
             title="Sem eventos registados"
-            description="Ainda não há linhas de auditoria para este utilizador. O histórico técnico da rede está na aba Logs."
+            description="Ainda nao ha linhas de auditoria para este utilizador. O historico tecnico da rede esta na aba Logs."
+          />
+        ) : itensFiltrados.length === 0 ? (
+          <EmptyState
+            title="Sem resultados para os filtros"
+            description="Nao existem eventos com esse tipo de operacao ou nessa data. Ajusta os filtros para voltares a ver atividade."
           />
         ) : (
           <Stack spacing={1.25}>
@@ -261,12 +392,12 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
                   Atividade de {utilizadorSelecionado?.nome || utilizadorSelecionado?.username || "utilizador"}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Última atividade: {ultimaAtividade}
+                  Ultima atividade: {ultimaAtividade}
                 </Typography>
               </Stack>
             </Paper>
 
-            {itensOrdenados.map((ev) => {
+            {itensFiltrados.map((ev) => {
               // Cada linha reaproveita a categorizacao visual para manter iconografia e cor alinhadas.
               const visual = eventoVisual(ev);
               return (
@@ -296,7 +427,7 @@ export default function HistoricoContaPage({ token, active, isAdmin, utilizadore
                         <Chip size="small" label={visual.label} sx={{ alignSelf: { xs: "flex-start", sm: "center" } }} />
                       </Stack>
                       <Typography fontSize={13} color="text.secondary" sx={{ mt: 0.5, wordBreak: "break-word" }}>
-                        {ev.descricao || "Sem descrição."}
+                        {ev.descricao || "Sem descricao."}
                       </Typography>
                       <Divider sx={{ my: 1 }} />
                       <Typography variant="caption" color="text.secondary">
