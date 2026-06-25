@@ -1,57 +1,72 @@
 ================================================================================
-GUIA COMPLETO — NGINX (REVERSE PROXY) NA VM + API NO WINDOWS
-Projeto: Inventário IT
+GUIA COMPLETO - NGINX (REVERSE PROXY) NA VM + FRONTEND/API NO WINDOWS
+Projeto: Inventario IT
 Ficheiro: docs/servidor-proxy-vm-passo-a-passo.txt
 Comandos.txt (resumo): docs\comandos.txt
 ================================================================================
 
-PREENCHE OS TEUS IPs (exemplo que já funcionou contigo — troca se mudar)
+PREENCHE OS TEUS IPs (exemplo que ja funcionou contigo - troca se mudar)
 ------------------------------------------------------------------------
-IP da VM Ubuntu (hostname -I):     192.168.1.63
-IP do Windows Wi-Fi (ipconfig):     192.168.1.43
-Porta API:                          8000   (NÃO 8080, NÃO 8300)
+IP da VM Ubuntu (hostname -I):      192.168.1.63
+IP do Windows Wi-Fi (ipconfig):     192.168.1.4
+Porta Frontend (Vite):              5173
+Porta API:                          8000   (NAO 8080, NAO 8300)
 
 ================================================================================
-O QUE PRECISAS DE PERCEBER (VERSÃO HONESTA — CHEGA)
+O QUE PRECISAS DE PERCEBER (VERSAO HONESTA - CHEGA)
 ================================================================================
-1. VM na mesma rede que o PC (Bridged) — IP tipo 192.168.1.63
-2. API no Windows a ouvir em 0.0.0.0:8000 (não só 127.0.0.1)
-3. Nginx na VM: quem pede http://IP-DA-VM → encaminha para http://IP-WINDOWS:8000
-4. Abrir no browser: http://IP-DA-VM/docs (Swagger via proxy)
-5. Firewall Windows a deixar entrar na porta 8000 (senão dá 504 Gateway Timeout)
+1. VM na mesma rede que o PC (Bridged) - IP tipo 192.168.1.63
+2. Frontend no Windows a ouvir em 0.0.0.0:5173 ou pelo menos acessivel na LAN
+3. API no Windows a ouvir em 0.0.0.0:8000 (nao so 127.0.0.1)
+4. Nginx na VM:
+   - porta 80  -> frontend no Windows (5173)
+   - porta 8000 -> API / Swagger no Windows (8000)
+5. Abrir no browser:
+   - http://IP-DA-VM/             -> site
+   - http://IP-DA-VM:8000/docs    -> Swagger via proxy
+6. Firewall Windows a deixar entrar na porta 8000
+7. Se o frontend pela VM abrir mas a API falhar, o problema costuma ser CORS
 
-Reverse proxy em uma frase: Nginx = ponte; API = destino no teu PC.
+Reverse proxy em uma frase: Nginx = ponte; frontend/API = destino no teu PC.
 
 ================================================================================
-QUEM É QUEM (NÃO TROCAR)
+QUEM E QUEM (NAO TROCAR)
 ================================================================================
-  192.168.1.63  →  VM (Nginx porta 80)     → browser: http://192.168.1.63/docs
-  192.168.1.43  →  Windows (API porta 8000) → vai no proxy_pass do Nginx
-  127.0.0.1     →  só dentro do próprio PC/VM, NUNCA no proxy_pass
+  192.168.1.63  -> VM (Nginx porta 80 + 8000)
+                  browser: http://192.168.1.63/
+                  browser: http://192.168.1.63:8000/docs
+
+  192.168.1.4   -> Windows (frontend 5173 + API 8000)
+                  vai no proxy_pass do Nginx
+
+  127.0.0.1     -> so dentro do proprio PC/VM, NUNCA no proxy_pass
 
 ================================================================================
-CHECKLIST — ORDEM EXACTA
+CHECKLIST - ORDEM EXACTA
 ================================================================================
 [ ] A  VirtualBox: Rede ponteado (Bridged)
 [ ] B  VM: instalar e arrancar Nginx
 [ ] C  Windows: ver IP (ipconfig) + VM ver IP (hostname -I)
-[ ] C  Browser Windows: http://IP-DA-VM → Welcome to nginx
+[ ] C  Browser Windows: http://IP-DA-VM -> Welcome to nginx
 [ ] D  Windows: API com --host 0.0.0.0 --port 8000
+[ ] D  Windows: frontend em http://127.0.0.1:5173
 [ ] D  Windows: firewall porta 8000
-[ ] E  VM: curl http://IP-WINDOWS:8000/  → JSON da API
-[ ] E  VM: editar nginx default (proxy_pass)
-[ ] E  sudo nginx -t  → syntax is ok
-[ ] E  sudo systemctl reload nginx
-[ ] F  VM browser: http://127.0.0.1/docs  OU  outro PC: http://IP-DA-VM/docs
-[ ] F  ping IP-DA-VM noutro PC (opcional; curl/docs é o teste real)
+[ ] D  Windows: backend\.env com CORS a incluir http://IP-DA-VM
+[ ] E  VM: curl http://IP-WINDOWS:8000/ -> JSON da API
+[ ] E  VM: curl http://IP-WINDOWS:5173/ -> HTML do frontend
+[ ] F  VM: editar nginx default (duas portas)
+[ ] F  sudo nginx -t -> syntax is ok
+[ ] F  sudo systemctl reload nginx
+[ ] G  Browser: http://IP-DA-VM/
+[ ] G  Browser: http://IP-DA-VM:8000/docs
 
 ================================================================================
-PARTE A — VIRTUALBOX (REDE)
+PARTE A - VIRTUALBOX (REDE)
 ================================================================================
 
 A.1  VM DESLIGADA (Power off).
 
-A.2  VirtualBox → VM Ubuntu → Configurações → Rede → Adaptador 1:
+A.2  VirtualBox -> VM Ubuntu -> Configuracoes -> Rede -> Adaptador 1:
      [x] Ativar Adaptador de Rede
      Ligado a:  Rede ponteado (Bridged Adapter)
      Nome:      Wi-Fi (o mesmo do ipconfig no Windows)
@@ -63,7 +78,7 @@ A.4  Confirmar IPs na mesma rede (ambos 192.168.1.x):
      VM (terminal):         hostname -I
 
 ================================================================================
-PARTE B — INSTALAR NGINX NA VM (UBUNTU) — TODOS OS COMANDOS
+PARTE B - INSTALAR NGINX NA VM (UBUNTU) - TODOS OS COMANDOS
 ================================================================================
 
 sudo apt update
@@ -77,19 +92,20 @@ sudo systemctl status nginx
 sudo nginx -t
 sudo systemctl reload nginx
 
-# Se precisares reiniciar à força:
+# Se precisares reiniciar a forca:
 sudo systemctl restart nginx
 
 # Parar Nginx:
 sudo systemctl stop nginx
 
-# Firewall VM (se ufw estiver active e noutro PC não abrir):
+# Firewall VM (se ufw estiver active e noutro PC nao abrir):
 sudo ufw status
 sudo ufw allow 80/tcp
+sudo ufw allow 8000/tcp
 sudo ufw reload
 
 ================================================================================
-PARTE C — TESTAR NGINX (WELCOME)
+PARTE C - TESTAR NGINX (WELCOME)
 ================================================================================
 
 C.1  Na VM:
@@ -104,26 +120,26 @@ C.2  No browser do WINDOWS:
 C.3  Dentro da VM (browser):
      http://127.0.0.1
 
-C.4  Se NÃO abrir no Windows → rever Bridged (Parte A), não NAT.
+C.4  Se NAO abrir no Windows -> rever Bridged (Parte A), nao NAT.
 
 ================================================================================
-PARTE D — WINDOWS: API (OBRIGATÓRIO PARA O NGINX)
+PARTE D - WINDOWS: API (OBRIGATORIO PARA O NGINX)
 ================================================================================
 
 D.1  PostgreSQL a correr + ficheiro backend\.env (DATABASE_URL, SECRET_KEY, etc.)
 
-D.2  Abrir PowerShell — pasta backend:
+D.2  Abrir PowerShell - pasta backend:
 
 cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
 
-# Primeira vez (se ainda não tiveres venv):
+# Primeira vez (se ainda nao tiveres venv):
 python -m venv .venv
 .\.venv\Scripts\pip install -r requirements.txt
 
-# COMANDO PRINCIPAL — API acessível pela VM (usa SEMPRE com Nginx):
+# COMANDO PRINCIPAL - API acessivel pela VM (usa SEMPRE com Nginx):
 .\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 0.0.0.0 --port 8000
 
-# Só para ti no PC (SEM Nginx / sem VM) — NÃO uses para o proxy:
+# So para ti no PC (SEM Nginx / sem VM) - NAO uses para o proxy:
 # .\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 127.0.0.1 --port 8000
 
 D.3  Confirmar que escuta na rede (OUTRO PowerShell):
@@ -133,7 +149,7 @@ netstat -an | findstr 8000
 TEM DE APARECER:
   TCP    0.0.0.0:8000    0.0.0.0:0    LISTENING
 
-Se só aparecer 127.0.0.1:8000 → a VM NUNCA liga. Para a API e usa --host 0.0.0.0.
+Se so aparecer 127.0.0.1:8000 -> a VM NUNCA liga. Para a API e usa --host 0.0.0.0.
 
 D.4  Teste no Windows (API directa, sem Nginx):
 
@@ -143,22 +159,22 @@ D.5  IP do Windows (anotar para o proxy_pass):
 
 ipconfig
 
-Wi-Fi → Endereço IPv4 → ex. 192.168.1.43
+Wi-Fi -> Endereco IPv4 -> ex. 192.168.1.4
 
 ================================================================================
-PARTE D-BIS — FIREWALL WINDOWS (SE curl NA VM DER TIMEOUT / 504)
+PARTE D-BIS - FIREWALL WINDOWS (SE curl NA VM DER TIMEOUT / 504)
 ================================================================================
 
 PowerShell como ADMINISTRADOR:
 
 New-NetFirewallRule -DisplayName "API Inventario 8000" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Private
 
-# Se a rede Wi-Fi estiver como "Pública", ou muda para Privada nas definições Wi-Fi,
-# ou também:
+# Se a rede Wi-Fi estiver como "Publica", ou muda para Privada nas definicoes Wi-Fi,
+# ou tambem:
 New-NetFirewallRule -DisplayName "API Inventario 8000 Public" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Public
 
 ================================================================================
-PARTE D-TER — FRONTEND (OPCIONAL — NÃO PASSA PELO NGINX NESTE GUIA)
+PARTE D-TER - FRONTEND (PODE CONTINUAR LOCAL E TAMBEM PASSAR PELO NGINX)
 ================================================================================
 
 cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
@@ -167,30 +183,39 @@ npm.cmd run dev
 
 http://127.0.0.1:5173
 
-# Se der erro Execution Policy, usa npm.cmd (não npm).
-# Se porta 5173 ocupada: npm.cmd run dev:local  →  http://127.0.0.1:5174
+# Se der erro Execution Policy, usa npm.cmd (nao npm).
+# Se porta 5173 ocupada: npm.cmd run dev:local -> http://127.0.0.1:5174
+
+# IMPORTANTE - para o frontend aberto pela VM (ex.: http://192.168.1.63/)
+# conseguir falar com a API, acrescenta a origem da VM ao backend\.env:
+#
+# INVENTARIO_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://192.168.1.63
+#
+# Depois reinicia a API.
 
 ================================================================================
-PARTE E — TESTAR VM → WINDOWS (ANTES DO NANO)
+PARTE E - TESTAR VM -> WINDOWS (ANTES DO NANO)
 ================================================================================
 
 Na VM (substituir pelo IP do Windows):
 
-curl http://192.168.1.43:8000/
+curl http://192.168.1.4:8000/
 
-curl -v --connect-timeout 5 http://192.168.1.43:8000/
+curl -v --connect-timeout 5 http://192.168.1.4:8000/
 
-ESPERADO (exemplo):
+curl -v --connect-timeout 5 http://192.168.1.4:5173/
+
+ESPERADO (exemplo API):
   {"mensagem":"API de inventario a funcionar"}
 
 Se TIMEOUT ou "Failed to connect":
-  → API parada, IP errado, firewall (D-BIS), ou API só em 127.0.0.1
+  -> API / frontend parados, IP errado, firewall, ou servico so em 127.0.0.1
 
 NOTA: ping pode FALHAR mesmo com tudo bem (Windows bloqueia ping).
-      O importante é o curl na porta 8000.
+      O importante e o curl na porta 8000 e 5173.
 
 ================================================================================
-PARTE F — CONFIGURAR NGINX (REVERSE PROXY)
+PARTE F - CONFIGURAR NGINX (REVERSE PROXY: FRONTEND + SWAGGER)
 ================================================================================
 
 F.1  Ativar site default (se precisares):
@@ -201,56 +226,77 @@ F.2  Editar ficheiro:
 
 sudo nano /etc/nginx/sites-available/default
 
-F.3  DENTRO de  server { ... }  :
+F.3  APAGA O FICHEIRO TODO E DEIXA APENAS ISTO
+      (SEM # nas linhas activas; troca IP Windows):
 
-  - MANTÉM: listen 80 default_server;
-  - MANTÉM: listen [::]:80 default_server;
-  - APAGA o bloco antigo:
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    server_name _;
 
     location / {
-        try_files $uri $uri/ =404;
+        proxy_pass http://192.168.1.4:5173;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
+}
 
-  - COLA ISTO (SEM # nas linhas activas; troca IP Windows):
+server {
+    listen 8000;
+    listen [::]:8000;
+
+    server_name _;
 
     location / {
-        proxy_pass http://192.168.1.43:8000;
+        proxy_pass http://192.168.1.4:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
+}
 
-F.4  ERROS QUE PARTEM O nginx -t (NÃO REPETIR):
+F.4  ERROS QUE PARTEM O nginx -t (NAO REPETIR)
 
-  proxy_sey_header     →  ERRADO  →  proxy_set_header
-  proxy_set_heder      →  ERRADO  →  proxy_set_header
-  proxy_pass ... 8080  →  ERRADO  →  porta 8000
-  proxy_pass ... 8300  →  ERRADO  →  porta 8000
-  # na frente de location ou proxy_pass  →  Nginx ignora = não funciona
+  proxy_sey_header     -> ERRADO -> proxy_set_header
+  proxy_set_heder      -> ERRADO -> proxy_set_header
+  proxy_pass ... 8080  -> ERRADO -> porta 8000 da API
+  proxy_pass ... 8300  -> ERRADO -> porta 8000 da API
+  proxy_pass ...:5174  -> ERRADO -> aqui o Vite esta em 5173
+  meter server { ... } dentro de outro server { ... }
+                       -> ERRADO -> "'server' directive is not allowed here"
+  # na frente de location ou proxy_pass
+                       -> Nginx ignora = nao funciona
 
 F.5  GRAVAR NANO:
-  Ctrl+O  → Enter
+  Ctrl+O -> Enter
   Ctrl+X
 
-  Colar no terminal Ubuntu: Ctrl+Shift+V (não Ctrl+V)
+  Colar no terminal Ubuntu: Ctrl+Shift+V (nao Ctrl+V)
 
 F.6  APLICAR:
 
 sudo nginx -t
 sudo systemctl reload nginx
 
-SAÍDA OK:
+SAIDA OK:
   nginx: the configuration file ... syntax is ok
   nginx: configuration file ... test is successful
 
-F.7  Ver se proxy_pass está no ficheiro certo:
+F.7  Ver se proxy_pass esta no ficheiro certo:
 
 grep proxy_pass /etc/nginx/sites-enabled/default
 
 ================================================================================
-PARTE F-BIS — MÉTODO ALTERNATIVO (ESCREVER FICHEIRO INTEIRO DE UMA VEZ)
+PARTE F-BIS - METODO ALTERNATIVO (ESCREVER FICHEIRO INTEIRO DE UMA VEZ)
 ================================================================================
-Se o nano for chato, na VM (troca 192.168.1.43 pelo IP Windows):
+Se o nano for chato, na VM (troca 192.168.1.4 pelo IP Windows):
 
 sudo bash -c 'cat > /etc/nginx/sites-available/default << "ENDOFFILE"
 server {
@@ -260,10 +306,29 @@ server {
     server_name _;
 
     location / {
-        proxy_pass http://192.168.1.43:8000;
+        proxy_pass http://192.168.1.4:5173;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 8000;
+    listen [::]:8000;
+
+    server_name _;
+
+    location / {
+        proxy_pass http://192.168.1.4:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ENDOFFILE'
@@ -273,75 +338,96 @@ sudo nginx -t
 sudo systemctl reload nginx
 
 ================================================================================
-PARTE G — TESTES FINAIS (TODOS OS URLS)
+PARTE G - TESTES FINAIS (TODOS OS URLS)
 ================================================================================
 
 G.1  Na VM (browser ou terminal):
-     http://127.0.0.1/docs          → Swagger via Nginx
-     curl http://127.0.0.1/docs     → HTML/redirect OK
+     http://127.0.0.1/               -> Frontend via Nginx
+     http://127.0.0.1:8000/docs      -> Swagger via Nginx
+     curl http://127.0.0.1/          -> HTML do frontend
+     curl http://127.0.0.1:8000/docs -> HTML/redirect OK
 
 G.2  No Windows (browser):
-     http://192.168.1.63/docs       → Swagger via Nginx (IP da VM)
-     http://127.0.0.1:8000/docs     → API directa (sem Nginx)
+     http://192.168.1.63/            -> Frontend via Nginx (IP da VM)
+     http://192.168.1.63:8000/docs   -> Swagger via Nginx (IP da VM)
+     http://127.0.0.1:5173           -> Frontend directo no PC
+     http://127.0.0.1:8000/docs      -> API directa no PC
 
 G.3  Noutro PC na MESMA Wi-Fi:
-     ping 192.168.1.63              → pode falhar (normal)
-     http://192.168.1.63/docs       → TESTE REAL — Swagger
+     ping 192.168.1.63               -> pode falhar (normal)
+     http://192.168.1.63/            -> TESTE REAL - Frontend
+     http://192.168.1.63:8000/docs   -> TESTE REAL - Swagger
 
-G.4  NÃO funciona:
-     http://127.0.0.1/docs no outro PC  (127.0.0.1 é o próprio PC)
-     Telefone em 4G                    (não está na LAN)
-     Internet pública sem router         (precisa port forward / VPS)
-
-================================================================================
-PARTE H — COLAR WINDOWS → VM (VIRTUALBOX)
-================================================================================
-
-Menu VM → Inserir Guest Additions → instalar na VM → reiniciar.
-Definições VM → Área de transferência → Bidirecional.
-No terminal Ubuntu colar: Ctrl+Shift+V
+G.4  NAO funciona:
+     http://127.0.0.1:5173 no outro PC
+                                     (127.0.0.1 e o proprio PC)
+     http://127.0.0.1:8000/docs no outro PC
+                                     (127.0.0.1 e o proprio PC)
+     Telefone em 4G                  (nao esta na LAN)
+     Internet publica sem router     (precisa port forward / VPS)
 
 ================================================================================
-PARTE I — PROBLEMAS E SOLUÇÕES (TODOS OS QUE APARECERAM)
+PARTE H - COLAR WINDOWS -> VM (VIRTUALBOX)
+================================================================================
+
+Menu VM -> Inserir Guest Additions -> instalar na VM -> reiniciar.
+Definicoes VM / ou menu Dispositivos -> Area de transferencia -> Bidirecional.
+No terminal Ubuntu:
+  copiar -> Ctrl+Shift+C
+  colar  -> Ctrl+Shift+V
+
+================================================================================
+PARTE I - PROBLEMAS E SOLUCOES (TODOS OS QUE APARECERAM)
 ================================================================================
 
 I.1  nginx: test failed / unknown directive "proxy_sey_header"
-     → Typo: tem de ser proxy_set_header (set + header)
+     -> Typo: tem de ser proxy_set_header (set + header)
 
 I.2  invalid number of arguments in "proxy_pass"
-     → URL partida em 2 linhas; falta ; no fim; espaços a mais
+     -> URL partida em 2 linhas; falta ; no fim; espacos a mais
 
-I.3  504 Gateway Timeout no browser (http://IP-DA-VM)
-     → Nginx OK mas não chega ao Windows: firewall 8000, API não 0.0.0.0, IP errado
+I.3  504 Gateway Timeout no browser (http://IP-DA-VM ou :8000)
+     -> Nginx OK mas nao chega ao Windows: firewall, servico parado, IP errado
 
 I.4  502 Bad Gateway
-     → Mesma causa que I.3
+     -> Mesma causa que I.3
 
-I.5  Welcome nginx mas /docs não abre
-     → location / ainda com try_files; proxy_pass não activo
+I.5  Frontend abre mas login / pedidos a API falham
+     -> faltou acrescentar http://IP-DA-VM em INVENTARIO_CORS_ORIGINS
+        e reiniciar a API
 
-I.6  Site só na VM, não no Windows
-     → NAT em vez de Bridged
+I.6  nginx: test failed / "'server' directive is not allowed here"
+     -> Colaste um bloco server { ... } dentro de outro;
+        apaga o ficheiro todo e volta a colar
 
-I.7  npm ENOENT package.json
-     → cd frontend antes de npm.cmd (não na raiz do projeto)
+I.7  Welcome nginx mas / ou :8000/docs nao abrem como esperado
+     -> o default ainda tem try_files ou config antiga;
+        confirma com:
+        cat /etc/nginx/sites-available/default
 
-I.8  Pasta sites-enable não existe
-     → O nome certo é sites-enabled (com d no fim)
+I.8  Site so na VM, nao no Windows
+     -> NAT em vez de Bridged
 
-I.9  Repor config default quebrada:
+I.9  npm ENOENT package.json
+     -> cd frontend antes de npm.cmd (nao na raiz do projeto)
+
+I.10  Pasta sites-enable nao existe
+      -> O nome certo e sites-enabled (com d no fim)
+
+I.11  Repor config default quebrada:
 
 sudo apt install --reinstall nginx -y
-# depois volta à Parte F
+# depois volta a Parte F
 
 ================================================================================
-PARTE J — COMANDOS COPIAR-COLAR (REFERÊNCIA RÁPIDA)
+PARTE J - COMANDOS COPIAR-COLAR (REFERENCIA RAPIDA)
 ================================================================================
 
 --- VM ---
 hostname -I
-ping -c 3 192.168.1.43
-curl http://192.168.1.43:8000/
+ping -c 3 192.168.1.4
+curl http://192.168.1.4:8000/
+curl http://192.168.1.4:5173/
 sudo nano /etc/nginx/sites-available/default
 sudo nginx -t
 sudo systemctl reload nginx
@@ -351,23 +437,28 @@ grep proxy_pass /etc/nginx/sites-enabled/default
 --- Windows ---
 ipconfig
 netstat -an | findstr 8000
+netstat -an | findstr 5173
 cd "C:\Users\Jose\Desktop\Projeto de estagio\backend"
 .\.venv\Scripts\python.exe -m uvicorn app.core.main:app --reload --host 0.0.0.0 --port 8000
+cd "C:\Users\Jose\Desktop\Projeto de estagio\frontend"
+npm.cmd run dev
 
 --- URLs ---
-http://192.168.1.63/docs      Swagger via Nginx (rede local)
-http://127.0.0.1:8000/docs     API directa no PC
-http://127.0.0.1:5173          Frontend (só no PC)
+http://192.168.1.63/             Frontend via Nginx (rede local)
+http://192.168.1.63:8000/docs    Swagger via Nginx (rede local)
+http://127.0.0.1:8000/docs       API directa no PC
+http://127.0.0.1:5173            Frontend directo no PC
 
 ================================================================================
-PARTE K — FRASE PARA RELATÓRIO / ORAL
+PARTE K - FRASE PARA RELATORIO / ORAL
 ================================================================================
 
 "Implementei um reverse proxy com Nginx numa VM Ubuntu em rede Bridged.
-O Nginx recebe pedidos no IP da VM (porta 80) e reencaminha para a API
-FastAPI no anfitrião Windows (porta 8000). Testei o acesso ao Swagger
-(/docs) a partir da VM e de outro equipamento na mesma rede local."
+O Nginx recebe pedidos no IP da VM e encaminha o frontend pela porta 80
+para o servidor Vite no anfitriao Windows (porta 5173), mantendo tambem
+o acesso ao Swagger / API pela porta 8000. Testei o site e o /docs a
+partir da VM e de outro equipamento na mesma rede local."
 
 ================================================================================
-FIM — Atualiza os IPs se o router mudar (ipconfig + hostname -I de novo).
+FIM - Atualiza os IPs se o router mudar (ipconfig + hostname -I de novo).
 ================================================================================

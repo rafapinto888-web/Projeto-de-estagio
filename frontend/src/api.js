@@ -23,6 +23,17 @@ function apiBaseParaSiteDocker5173() {
   return null;
 }
 
+function apiBaseViaMesmoProxy() {
+  if (typeof window === "undefined") return null;
+  const { origin, port } = window.location;
+  // Quando a app vem da VM/Nginx pela porta 80, preferimos o mesmo host em /api
+  // para evitar CORS/cookies entre origens diferentes nos outros PCs da rede.
+  if (!port || port === "80") {
+    return `${origin}/api`;
+  }
+  return null;
+}
+
 function localStorageApiBaseUsavel(saved) {
   if (!saved?.trim()) return false;
   const lower = saved.trim().toLowerCase();
@@ -72,6 +83,9 @@ export function getApiBase() {
   }
   const semOverrideManual =
     !savedNorm || savedHost === "localhost" || savedHost === "127.0.0.1";
+
+  const sameOriginProxy = semOverrideManual ? apiBaseViaMesmoProxy() : null;
+  if (sameOriginProxy) return normalizeBase(sameOriginProxy);
 
   const lanDev = semOverrideManual ? apiBaseMesmoHostQuePaginaQuandoEnvELoopback(ENV_BASE) : null;
   if (lanDev) return normalizeBase(lanDev);

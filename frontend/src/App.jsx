@@ -288,32 +288,44 @@ export default function App() {
     const { silent = false } = options;
     if (!silent) setDataLoading(true);
     try {
-      const [
-        inventariosData,
-        computadoresData,
-        utilizadoresData,
-        perfisData,
-        localizacoesData,
-        ativosGruposData,
-        atividadeRecenteData,
-      ] = await Promise.all([
-        api.inventarios.listar(),
-        api.computadores.listar(),
-        api.utilizadores.listar(),
-        api.perfis.listar(),
-        api.localizacoes.listar(),
-        api.inventarios.ativosPorInventario(),
-        api.historicoRecente(20),
-      ]);
-      setInventarios(inventariosData || []);
-      setComputadores(computadoresData || []);
-      setAtivosPorInventario(ativosGruposData || []);
-      setUtilizadores(utilizadoresData || []);
-      setPerfis(perfisData || []);
-      setLocalizacoes(localizacoesData || []);
-      setAtividadeRecente(Array.isArray(atividadeRecenteData?.itens) ? atividadeRecenteData.itens : []);
-      const firstId = (inventariosData || [])[0]?.id;
+      const pedidos = [
+        { key: "inventarios", call: () => api.inventarios.listar() },
+        { key: "computadores", call: () => api.computadores.listar() },
+        { key: "utilizadores", call: () => api.utilizadores.listar() },
+        { key: "perfis", call: () => api.perfis.listar() },
+        { key: "localizacoes", call: () => api.localizacoes.listar() },
+        { key: "ativos_por_inventario", call: () => api.inventarios.ativosPorInventario() },
+        { key: "atividade_recente", call: () => api.historicoRecente(20) },
+      ];
+      const resultados = await Promise.allSettled(pedidos.map((p) => p.call()));
+      const falhas = [];
+      const porChave = {};
+
+      resultados.forEach((resultado, idx) => {
+        const { key } = pedidos[idx];
+        if (resultado.status === "fulfilled") {
+          porChave[key] = resultado.value;
+          return;
+        }
+        porChave[key] = null;
+        falhas.push({
+          key,
+          message: resultado.reason?.message || "erro ao carregar",
+        });
+      });
+
+      setInventarios(porChave.inventarios || []);
+      setComputadores(porChave.computadores || []);
+      setAtivosPorInventario(porChave.ativos_por_inventario || []);
+      setUtilizadores(porChave.utilizadores || []);
+      setPerfis(porChave.perfis || []);
+      setLocalizacoes(porChave.localizacoes || []);
+      setAtividadeRecente(
+        Array.isArray(porChave.atividade_recente?.itens) ? porChave.atividade_recente.itens : [],
+      );
+      const firstId = (porChave.inventarios || [])[0]?.id;
       setSelectedInventarioId((prev) => prev || String(firstId || ""));
+      return { falhas };
     } finally {
       if (!silent) setDataLoading(false);
     }
@@ -356,7 +368,16 @@ export default function App() {
       const me = await api.me();
       setUser(me);
       try {
-        await loadAllData();
+        const resultadoCarga = await loadAllData();
+        if (resultadoCarga?.falhas?.length) {
+          const secoes = resultadoCarga.falhas.map((f) => f.key).join(", ");
+          setStatus({
+            type: "warn",
+            message: `Sessao iniciada. Algumas secoes nao carregaram (${secoes}).`,
+          });
+          setAuthReady(true);
+          return;
+        }
       } catch (loadErr) {
         setStatus({
           type: "ok",
